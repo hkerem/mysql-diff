@@ -42,9 +42,10 @@ class ColumnDiff(override val from: ColumnModel, override val to: ColumnModel)
   override def doDiff(x: AddDiffFunction): boolean  = {
     if (!super.doDiff(x)) return false;
     if (isTypeDiff) x(DataTypeDiff(from, to));
+    if (isNullDiff) x(NotNullDiff(from, to));
     return true;
   }
   
   def isTypeDiff = (from.dataType != null && from.dataType.equals(to.name)) || (from.dataType == null && to.dataType != null) 
-  
+  def isNullDiff = (from.isNotNull == to.isNotNull)
 }
