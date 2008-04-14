@@ -3,18 +3,17 @@ package ru.yandex.mysqlDiff.model
 import scala.collection.mutable._
 
 
-abstract class SqlObjectType(val name: String) {
-
+class SqlObjectType(val name: String) {
+  
 }
 
-
-case class DataType(override val name: String, val length: Option[Int]) 
+class DataType(override val name: String, length: Option[Int]) 
         extends SqlObjectType(name: String)
 {
-    override def toString = "" + name + "[" + length.getOrElse("default") + "]" 
+    override def toString = "" + name + "[" + length.getOrElse(-1) + "]" 
 }
 
-case class ColumnModel(override val name: String, val dataType: DataType) 
+class ColumnModel(override val name: String, val dataType: DataType) 
         extends SqlObjectType(name: String)
 {
   val isNotNull: boolean = false
@@ -25,7 +24,7 @@ case class ColumnModel(override val name: String, val dataType: DataType)
   } 
 }
 
-case class ConstraintModel(override val name: String ) 
+class ConstraintModel(override val name: String ) 
         extends SqlObjectType(name: String) {
   
 }
@@ -36,7 +35,7 @@ class IndexModel(override val name: String, val columns: Seq[ColumnModel], isUni
   
 }
 
-case class ForeighKey(override val name: String, 
+class ForeighKey(override val name: String, 
        val localColumns: Seq[ColumnModel], 
        val externalTable: TableModel,
        val externalColumns: Seq[ColumnModel])
@@ -48,7 +47,7 @@ case class ForeighKey(override val name: String,
 abstract class DatabaseDeclaration(override val name: String) 
         extends SqlObjectType(name: String);
 
-case class TableModel(override val name: String, val columns: Seq[ColumnModel]) 
+class TableModel(override val name: String, val columns: Seq[ColumnModel]) 
         extends DatabaseDeclaration(name: String) {
   val columnsMap: Map[String, ColumnModel] = new HashMap()
   val primaryKey: List[ColumnModel] = null;
