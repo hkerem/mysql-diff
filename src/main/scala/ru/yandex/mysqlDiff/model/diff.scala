@@ -1,21 +1,11 @@
 package ru.yandex.mysqlDiff.model
 
-abstract class NameDiff {
-}
+abstract class DiffType
 
-case object NoNameDiff extends NameDiff
+case class NameDiff(val oldName: String, val newName: String) extends DiffType
 
-case class DoNameDiff(val oldName: String, val newName: String) extends NameDiff
+case class TypeDiff(val oldType: DataType, val newType: DataType) extends DiffType 
 
+case class ColumnDiff(val oldColunm: ColumnModel, val newColumn: ColumnModel, val diffList: Seq[DiffType]) extends DiffType
 
-case class ColumnDiff(val oldColunm: Column, val newColumn: Column) {
-    
-}
-
-abstract class DatabaseDeclarationDiff
-
-case class TableDiff(nameDiff: NameDiff, val columnDiffs: Seq[ColumnDiff]) extends DatabaseDeclarationDiff {
-    
-}
-
-case class DatabaseDiff(val declarationDiffs: Seq[DatabaseDeclarationDiff])
+case class TableDiff(val oldTable: TableModel, val newTable: TableModel, val diffList: Seq[DiffType]) extends DiffType
