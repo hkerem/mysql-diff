@@ -10,17 +10,20 @@ abstract class AbstractDiffMaker[A >: SqlObjectType](val from: A, val to: A) {
 }
 
 
-case class ColumnDiffMaker[ColumnModel](val from: ColumnModel, val to: ColumnModel) extends AbstractDiffMaker {
+case class ColumnDiffMaker[ColumnModel](val from: ColumnModel, val to: ColumnModel) 
+        extends AbstractDiffMaker {
   
-  def doDiff: ColumnDiff = {
-    val diff = ColumnDiff(from, to);
-    return null;
+  def doDiff(x: (ColumnDiff) => unit) = {
+    if (isNameDiff) x(NameDiff(from.name, to.name))
+    if (isTypeDiff) x(DataTypeDiff(from.dataType, to.dataType))
+    if (isNotNullDiff) x(NotNullDiff(from.isNotNull, to.isNotNull))    
   }
   
   def isTypeDiff: boolean = (from.dataType != null && from.dataType.equals(to.dataType)) || from.dataType == to.DataType
-  
   def isNotNullDiff: boolean = from.isNotNull == to.isNotNull
 }
+
+
 
 class MapDiffMaker[A](val from: Map[String, A], val to: Map[String, A]) {
   

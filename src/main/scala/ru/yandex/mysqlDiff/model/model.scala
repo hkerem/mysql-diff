@@ -4,17 +4,17 @@ import scala.collection.mutable._
 
 
 abstract class SqlObjectType(val name: String) {
-  
+
 }
 
 
-class DataType(override val name: String, val length: Option[Int]) 
+case class DataType(override val name: String, val length: Option[Int]) 
         extends SqlObjectType(name: String)
 {
     override def toString = "" + name + "[" + length.getOrElse("default") + "]" 
 }
 
-class ColumnModel(override val name: String, val dataType: DataType) 
+case class ColumnModel(override val name: String, val dataType: DataType) 
         extends SqlObjectType(name: String)
 {
   val isNotNull: boolean = false
