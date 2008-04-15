@@ -3,7 +3,7 @@ package ru.yandex.mysqlDiff.model
 import scala.collection.mutable._
 
 
-class SqlObjectType(val name: String) {
+class SqlObjectType(val name: String)  {
   
 }
 
