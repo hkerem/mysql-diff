@@ -46,6 +46,14 @@ class ColumnDiff(override val from: ColumnModel, override val to: ColumnModel)
     return true;
   }
   
-  def isTypeDiff = (from.dataType != null && from.dataType.equals(to.name)) || (from.dataType == null && to.dataType != null) 
+  def isTypeDiff:boolean = {
+    if (from.dataType == to.dataType) return false;
+    if ((from.dataType == null || to.dataType == null) && from.dataType != to.dataType) return true;
+    if (from.dataType.name == to.dataType.name && from.dataType.name == null) return false;
+    if ((from.dataType.name == null || to.dataType.name == null) && from.dataType.name != to.dataType.name) return true;
+    if (!from.dataType.name.equals(to.dataType.name)) return true;
+    return !(from.dataType.length.getOrElse(-1) == to.dataType.length.getOrElse(-1))
+  }
   def isNullDiff = (from.isNotNull == to.isNotNull)
 }
+ 

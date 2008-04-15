@@ -7,7 +7,7 @@ class SqlObjectType(val name: String) {
   
 }
 
-class DataType(override val name: String, length: Option[Int]) 
+class DataType(override val name: String, val length: Option[Int]) 
         extends SqlObjectType(name: String)
 {
     override def toString = "" + name + "[" + length.getOrElse(-1) + "]" 

@@ -2,6 +2,6 @@
 
 mkdir -p target/classes
 
-scalac -d target/classes src/main/scala/**/*.scala
+/opt/lang/java/JDK/scala-2.7.0-final/bin/scalac -deprecation -d target/classes src/main/scala/**/*.scala
 
 # vim: set ts=4 sw=4 et:
