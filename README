@@ -1,0 +1,16 @@
+MySql diff project
+
+
+How to build:
+
+
+jars:
+run: ant -Dscala.home={your path to scala JDK home} jar 
+
+tests:
+run: ant -Dscala.home={your path to scala JDK home} build-tests
+
+
+How to test library by unit tests:
+
+run: ant -Dscala.home={your path to scala JDK home} run-tests

@@ -14,7 +14,7 @@ abstract class AbstractDiffMaker(val from: SqlObjectType, val to: SqlObjectType)
 }
 
 
-class NameDiff(override val from: SqlObjectType, override val to: SqlObjectType) 
+class NameDiffMaker(override val from: SqlObjectType, override val to: SqlObjectType) 
         extends AbstractDiffMaker(from: SqlObjectType, to: SqlObjectType) 
 {
   override def doDiff(x: AddDiffFunction): boolean  = {
@@ -35,7 +35,7 @@ class NameDiff(override val from: SqlObjectType, override val to: SqlObjectType)
 }
 
 
-trait ListDiff {
+trait ListDiffMaker {
   def doListDiff[A <: SqlObjectType](from: Seq[A], to: Seq[A], x: (Option[A], Option[A]) => unit) = {
     val toMap: scala.collection.Map[String, A] = Map(to.map(o => (o.name, o)): _*)
     val fromMap: scala.collection.Map[String, A] = Map(from.map(o => (o.name, o)): _*)
@@ -54,8 +54,8 @@ trait ListDiff {
 
 
 
-class ColumnDiff(override val from: ColumnModel, override val to: ColumnModel)
-        extends NameDiff(from: SqlObjectType, to: SqlObjectType) with ListDiff 
+class ColumnDiffMaker(override val from: ColumnModel, override val to: ColumnModel)
+        extends NameDiffMaker(from: SqlObjectType, to: SqlObjectType) with ListDiffMaker 
 {
   def doColumnDiff(x: AddDiffFunction): boolean = {
     if (!super.doDiff(x)) 
@@ -86,9 +86,9 @@ class ColumnDiff(override val from: ColumnModel, override val to: ColumnModel)
   def isNullDiff = (from.isNotNull == to.isNotNull)
 }
  
-class TableDiff(override val from: TableModel, override val to: TableModel) 
-        extends NameDiff(from: SqlObjectType, to: SqlObjectType) 
-        with ListDiff
+class TableDiffMaker(override val from: TableModel, override val to: TableModel) 
+        extends NameDiffMaker(from: SqlObjectType, to: SqlObjectType) 
+        with ListDiffMaker
 {
   def doTableDiff(x: AddDiffFunction):boolean  = {
     true
@@ -97,7 +97,7 @@ class TableDiff(override val from: TableModel, override val to: TableModel)
   override def doDiff(x: AddDiffFunction): boolean = {
     if (doTableDiff(x)) {
       doListDiff[ColumnModel](from.columns, to.columns, (from, to) => {
-              val c = new ColumnDiff(from.get, to.get)
+              val c = new ColumnDiffMaker(from.get, to.get)
               c.doDiff(x);
               })
       true
