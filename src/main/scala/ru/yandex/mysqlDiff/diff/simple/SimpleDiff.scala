@@ -31,7 +31,7 @@ class NameDiffMaker(override val from: SqlObjectType, override val to: SqlObject
   }
   def fromIsNull = from == null && to != null
   def toIsNull = to == null && from != null
-  def isNameDiff =  (from.name != null && from.name.equals(to.name)) || (from.name == null && to.name != null)
+  def isNameDiff =  (from.name != null && !from.name.equals(to.name)) || (from.name == null && to.name != null)
 }
 
 

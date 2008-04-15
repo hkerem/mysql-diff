@@ -44,12 +44,12 @@
 	</target>
 	
 	<target name="run-tests" depends="build-tests">
-		<java classname="ScalaxTests">
+		<java classname="ru.yandex.mysqlDiff.MySqlDiffTest">
 			<sysproperty key="java.awt.headless" value="true"/>
 			<classpath refid="build.classpath"/>
 			<classpath>
-				<pathelement location="build"/>
-				<pathelement location="build-tests"/>
+				<pathelement location="${build.dir}"/>
+				<pathelement location="${build.tests.dir}"/>
 			</classpath>
 		</java>
 	</target>
