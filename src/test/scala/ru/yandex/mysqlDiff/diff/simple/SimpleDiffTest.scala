@@ -99,4 +99,43 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
   }
   
   
+  "Table Diff" is {
+    val c1_1 = new ColumnModel("id", new DataType("int", Some(11)));
+    val c1_2 = new ColumnModel("name", new DataType("varchar", Some(100)));
+    val c1_3 = new ColumnModel("data", new DataType("blob", None));
+    
+    
+    val cList1 = List(c1_1, c1_2, c1_3);
+    val table1 = new TableModel("table1", cList1);
+    
+    
+    val c2_1 = new ColumnModel("id", new DataType("int", Some(20)));
+    val c2_2 = new ColumnModel("user_name", new DataType("varchar", Some(100)));
+    val c2_3 = new ColumnModel("data", new DataType("int", None));
+    
+    val cList2 = List(c2_1, c2_2, c2_3);
+    val table2 = new TableModel("table1", cList2);
+    
+    
+    val tableDiff = new TableDiffMaker(table1, table2);
+    
+    
+    var isDataTypeDiff = 0;
+    var isFromNull = 0;
+    var isToNull = 0;
+    
+    tableDiff.doDiff(
+        o => {
+          if (o.isInstanceOf[DataTypeDiff[ColumnModel]]) isDataTypeDiff = isDataTypeDiff + 1;
+          if (o.isInstanceOf[FromIsNull[ColumnModel]]) isFromNull = isFromNull + 1;
+          if (o.isInstanceOf[ToIsNull[ColumnModel]]) isToNull = isToNull + 1; 
+          true
+        }
+    );
+    assert(isDataTypeDiff == 2);
+    assert(isFromNull == 1);
+    assert(isToNull == 1);
+  }
+  
+  
 }

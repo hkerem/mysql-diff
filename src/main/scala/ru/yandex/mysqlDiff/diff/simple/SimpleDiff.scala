@@ -9,7 +9,8 @@ object SimpleDiffMaker {
 
 abstract class AbstractDiffMaker(val from: SqlObjectType, val to: SqlObjectType) {
   type S = SqlObjectType
-  type AddDiffFunction = (DiffType[S]) => boolean;
+  type DT = S 
+  type AddDiffFunction = (DiffType[SqlObjectType]) => boolean;
   def doDiff(x: AddDiffFunction): boolean;
 }
 
@@ -97,8 +98,16 @@ class TableDiffMaker(override val from: TableModel, override val to: TableModel)
   override def doDiff(x: AddDiffFunction): boolean = {
     if (doTableDiff(x)) {
       doListDiff[ColumnModel](from.columns, to.columns, (from, to) => {
-              val c = new ColumnDiffMaker(from.get, to.get)
-              c.doDiff(x);
+                if (!from.isDefined && to.isDefined) {
+                  x(new FromIsNull(null, to.get));
+                } else 
+                  if (!to.isDefined && from.isDefined) {
+                    x(new ToIsNull(from.get, null));
+                  } else
+                    if (to.isDefined && from.isDefined) {
+                       val c = new ColumnDiffMaker(from.get, to.get)
+                       c.doDiff(x);
+                   }
               })
       true
     } 
