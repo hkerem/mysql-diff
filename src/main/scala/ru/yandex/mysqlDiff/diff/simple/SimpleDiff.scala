@@ -83,7 +83,7 @@ class ColumnDiffMaker(override val from: ColumnModel, override val to: ColumnMod
     
     !(from.dataType.length.getOrElse(-1) == to.dataType.length.getOrElse(-1))
   }
-  def isNullDiff = (from.isNotNull == to.isNotNull)
+  def isNullDiff = !(from.isNotNull == to.isNotNull)
 }
  
 class TableDiffMaker(override val from: TableModel, override val to: TableModel) 

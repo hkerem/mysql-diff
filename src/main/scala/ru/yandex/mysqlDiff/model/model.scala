@@ -16,7 +16,7 @@ class DataType(override val name: String, val length: Option[Int])
 class ColumnModel(override val name: String, val dataType: DataType) 
         extends SqlObjectType(name: String)
 {
-  val isNotNull: boolean = false
+  val isNotNull: Boolean = false
   val indexes: Map[String, IndexModel] = new HashMap()
   override def toString: String = {
      val result = "" + name + " " + dataType + " "

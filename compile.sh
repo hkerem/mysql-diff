@@ -10,6 +10,8 @@ fi
 
 
 #-Xprint:refchecks 
-$SCALA_HOME/bin/scalac -deprecation -classpath lib/**/*.jar -d target/classes src/main/scala/**/*.scala 
+#$SCALA_HOME/bin/scalac -deprecation -classpath lib/**/*.jar -d target/classes src/main/scala/**/*.scala 
+
+ant -Dscala.nome=$SCALA_HOME
 
 # vim: set ts=4 sw=4 et:

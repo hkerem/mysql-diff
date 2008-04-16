@@ -2,7 +2,7 @@ package ru.yandex.mysqlDiff.model
 
 
 
-abstract class DiffType[A <: SqlObjectType](val from: A, val to: A) 
+abstract case class DiffType[A <: SqlObjectType](val from: A, val to: A) 
 
 case class NameDiff[A <: SqlObjectType](override val from: A, override val to:A) 
         extends DiffType(from: A, to: A)
