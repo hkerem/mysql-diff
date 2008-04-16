@@ -42,9 +42,9 @@ trait ListDiffMaker {
 
     val bothObject: Seq[(A, A)] = List(to.filter(o => fromMap.contains(o.name)).map(o => (o, fromMap.get(o.name).get)): _*);
     
-    val fromNull = toMap.filterKeys(o => fromMap.keySet.contains(o)).values //todo Map.excl use insted
-    val toNull = fromMap.filterKeys(o => toMap.keySet.contains(o)).values //todo Map.excl use insted
-    
+    val fromNull = toMap.filterKeys(o => !fromMap.keySet.contains(o)).values //todo Map.excl use insted
+    val toNull = fromMap.filterKeys(o => !toMap.keySet.contains(o)).values //todo Map.excl use insted
+
     for ((a, b) <- bothObject) x(Some(a),Some(b))
     for (a <- fromNull) x(None, Some(a))
     for (a <- toNull) x(Some(a), None)

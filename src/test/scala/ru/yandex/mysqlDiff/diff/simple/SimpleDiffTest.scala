@@ -58,8 +58,28 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
     assert("Is type find", isDataTypeFind) 
     
   }
+
+  class SimpleListDiff extends NameDiffMaker(null, null) with ListDiffMaker {
+    
+  }
+  
   
   "List Diff" is {
+    val c1 = new ColumnModel("c1", new DataType("varchar", Some(11)));
+    val c1t = new ColumnModel("c1", new DataType("int", Some(11)));
+    val c2 = new ColumnModel("c2", new DataType("varchar", Some(11)));
+    val c3 = new ColumnModel("c3", new DataType("int", Some(11)));
+    val s1 = List[ColumnModel](c1, c2, c3);
+    val s1_eq = List[ColumnModel](c1, c2, c3);
+    
+    val eqDiff = new SimpleListDiff;
+    eqDiff.doListDiff[ColumnModel](
+        s1,
+        s1_eq,
+        (a, b) => {
+          assert("A: " + a + "; B:" + b, a == b)
+        }
+    );
     
   }
   
