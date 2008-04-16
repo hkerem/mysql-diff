@@ -43,8 +43,8 @@
 		</scalac>
 	</target>
 	
-	<target name="run-tests" depends="build-tests">
-		<java classname="ru.yandex.mysqlDiff.MySqlDiffTest">
+	<target name="run-tests" depends="clean, build-tests">
+		<java classname="ru.yandex.mysqlDiff.MySqlDiffTest" failonerror="true">
 			<sysproperty key="java.awt.headless" value="true"/>
 			<classpath refid="build.classpath"/>
 			<classpath>
