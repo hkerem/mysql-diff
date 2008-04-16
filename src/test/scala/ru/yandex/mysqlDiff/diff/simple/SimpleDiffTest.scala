@@ -69,6 +69,8 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
     val c1t = new ColumnModel("c1", new DataType("int", Some(11)));
     val c2 = new ColumnModel("c2", new DataType("varchar", Some(11)));
     val c3 = new ColumnModel("c3", new DataType("int", Some(11)));
+    val c4 = new ColumnModel("c4", new DataType("int", Some(11)));
+    
     val s1 = List[ColumnModel](c1, c2, c3);
     val s1_eq = List[ColumnModel](c1, c2, c3);
     
@@ -81,6 +83,19 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
         }
     );
     
+    
+    val s2 = List[ColumnModel](c2, c3, c4);
+    var i = 0;
+    
+    
+    eqDiff.doListDiff[ColumnModel](
+        s1,
+        s2,
+        (a, b) => {
+          i = i + 1;
+        }
+    );
+    assert("diff count invalid", i == 4);
   }
   
   
