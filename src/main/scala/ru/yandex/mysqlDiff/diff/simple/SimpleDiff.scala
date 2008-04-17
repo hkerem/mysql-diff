@@ -96,23 +96,30 @@ class TableDiffMaker(override val from: TableModel, override val to: TableModel)
   }
   
   override def doDiff(x: AddDiffFunction): boolean = {
-    if (doTableDiff(x)) {
+    
+    var internalDiff = List[DiffType[SqlObjectType]]();
+    
+    def tmpX: AddDiffFunction = o => {
+      val sq = internalDiff ++ List(o)
+      internalDiff = List(sq: _*)
+      true
+    } 
+    
+    if (doTableDiff(tmpX)) {
       doListDiff[ColumnModel](from.columns, to.columns, (from, to) => {
                 if (!from.isDefined && to.isDefined) {
-                  x(new FromIsNull(null, to.get));
+                  tmpX(new FromIsNull(null, to.get));
                 } else 
                   if (!to.isDefined && from.isDefined) {
-                    x(new ToIsNull(from.get, null));
+                    tmpX(new ToIsNull(from.get, null));
                   } else
                     if (to.isDefined && from.isDefined) {
                        val c = new ColumnDiffMaker(from.get, to.get)
-                       c.doDiff(x);
+                       c.doDiff(tmpX);
                    }
               })
-      true
     } 
-    else
-      false    
+    x(TableDiff(from, to, internalDiff))      
   }
 }
 

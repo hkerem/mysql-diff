@@ -119,22 +119,18 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
     
     val tableDiff = new TableDiffMaker(table1, table2);
     
-    
-    var isDataTypeDiff = 0;
-    var isFromNull = 0;
-    var isToNull = 0;
-    
+    var tableDiffObject: DiffType[SqlObjectType] = null;
+    var i = 0;
     tableDiff.doDiff(
         o => {
-          if (o.isInstanceOf[DataTypeDiff[ColumnModel]]) isDataTypeDiff = isDataTypeDiff + 1;
-          if (o.isInstanceOf[FromIsNull[ColumnModel]]) isFromNull = isFromNull + 1;
-          if (o.isInstanceOf[ToIsNull[ColumnModel]]) isToNull = isToNull + 1; 
+          tableDiffObject = o;
+          i = i + 1;
           true
         }
     );
-    assert(isDataTypeDiff == 2);
-    assert(isFromNull == 1);
-    assert(isToNull == 1);
+    assert(i == 1)
+    assert(tableDiffObject != null)
+    assert(tableDiffObject.asInstanceOf[TableDiff[SqlObjectType, DiffType[SqlObjectType]]].diffList.size == 4)
   }
   
   
