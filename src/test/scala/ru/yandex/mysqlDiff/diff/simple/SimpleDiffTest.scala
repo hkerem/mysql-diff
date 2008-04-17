@@ -32,15 +32,17 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
   
   
   "Column Diff" is {
-    val c1 = new ColumnModel("c1", new DataType("int", None));
-    val c1_eq = new ColumnModel("c1", new DataType("int", None));
+    
+    
+    val c1: ColumnModel = new ColumnModel("c1", new DataType("int", None));
+    val c1_eq: ColumnModel = new ColumnModel("c1", new DataType("int", None));
     
     val diffEquals = new ColumnDiffMaker(c1, c1_eq);
     diffEquals.doDiff(o => {
       fail("Fail with:" + o);
     });
     
-    val c2 = new ColumnModel("c2", new DataType("varchar", Some(20)));
+    val c2: ColumnModel = new ColumnModel("c2", new DataType("varchar", Some(20)));
     val diff = new ColumnDiffMaker(c1, c2);
    
     var isNameFind = false;
@@ -65,11 +67,11 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
   
   
   "List Diff" is {
-    val c1 = new ColumnModel("c1", new DataType("varchar", Some(11)));
-    val c1t = new ColumnModel("c1", new DataType("int", Some(11)));
-    val c2 = new ColumnModel("c2", new DataType("varchar", Some(11)));
-    val c3 = new ColumnModel("c3", new DataType("int", Some(11)));
-    val c4 = new ColumnModel("c4", new DataType("int", Some(11)));
+    val c1: ColumnModel = new ColumnModel("c1", new DataType("varchar", Some(11)));
+    val c1t: ColumnModel = new ColumnModel("c1", new DataType("int", Some(11)));
+    val c2: ColumnModel = new ColumnModel("c2", new DataType("varchar", Some(11)));
+    val c3: ColumnModel = new ColumnModel("c3", new DataType("int", Some(11)));
+    val c4: ColumnModel = new ColumnModel("c4", new DataType("int", Some(11)));
     
     val s1 = List[ColumnModel](c1, c2, c3);
     val s1_eq = List[ColumnModel](c1, c2, c3);
@@ -100,21 +102,21 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
   
   
   "Table Diff" is {
-    val c1_1 = new ColumnModel("id", new DataType("int", Some(11)));
-    val c1_2 = new ColumnModel("name", new DataType("varchar", Some(100)));
-    val c1_3 = new ColumnModel("data", new DataType("blob", None));
     
+    val c1_1: ColumnModel = new ColumnModel("id", new DataType("int", Some(11)));
+    val c1_2: ColumnModel = new ColumnModel("name", new DataType("varchar", Some(100)));
+    val c1_3: ColumnModel = new ColumnModel("data", new DataType("blob", None));
     
     val cList1 = List(c1_1, c1_2, c1_3);
-    val table1 = new TableModel("table1", cList1);
+    val table1: TableModel = new TableModel("table1", cList1);
     
     
-    val c2_1 = new ColumnModel("id", new DataType("int", Some(20)));
-    val c2_2 = new ColumnModel("user_name", new DataType("varchar", Some(100)));
-    val c2_3 = new ColumnModel("data", new DataType("int", None));
+    val c2_1: ColumnModel = new ColumnModel("id", new DataType("int", Some(20)));
+    val c2_2: ColumnModel = new ColumnModel("user_name", new DataType("varchar", Some(100)));
+    val c2_3: ColumnModel = new ColumnModel("data", new DataType("int", None));
     
     val cList2 = List(c2_1, c2_2, c2_3);
-    val table2 = new TableModel("table1", cList2);
+    val table2: TableModel = new TableModel("table1", cList2);
     
     
     val tableDiff = new TableDiffMaker(table1, table2);
@@ -132,6 +134,5 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
     assert(tableDiffObject != null)
     assert(tableDiffObject.asInstanceOf[TableDiff[SqlObjectType, DiffType[SqlObjectType]]].diffList.size == 4)
   }
-  
   
 }

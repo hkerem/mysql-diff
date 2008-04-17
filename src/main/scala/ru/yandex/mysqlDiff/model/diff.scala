@@ -9,6 +9,7 @@ case class NameDiff[A <: SqlObjectType](override val from: A, override val to:A)
 
 case class DataTypeDiff[A <: SqlObjectType](override val from: A, override val to:A) 
         extends DiffType(from: A, to: A) 
+ 
 
 case class NotNullDiff[A <: SqlObjectType](override val from: A, override val to:A) 
         extends DiffType(from: A, to: A)         

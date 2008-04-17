@@ -9,7 +9,6 @@ object SimpleDiffMaker {
 
 abstract class AbstractDiffMaker(val from: SqlObjectType, val to: SqlObjectType) {
   type S = SqlObjectType
-  type DT = S 
   type AddDiffFunction = (DiffType[SqlObjectType]) => boolean;
   def doDiff(x: AddDiffFunction): boolean;
 }

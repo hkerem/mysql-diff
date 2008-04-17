@@ -10,14 +10,16 @@ class SqlObjectType(val name: String)  {
 class DataType(override val name: String, val length: Option[Int]) 
         extends SqlObjectType(name: String)
 {
-    override def toString = "" + name + "[" + length.getOrElse(-1) + "]" 
+  var parent: ColumnModel = null
+  override def toString = "" + name + "[" + length.getOrElse(-1) + "]" 
 }
 
 class ColumnModel(override val name: String, val dataType: DataType) 
         extends SqlObjectType(name: String)
 {
-  val isNotNull: Boolean = false
-  val indexes: Map[String, IndexModel] = new HashMap()
+  var parent: TableModel = null
+  var isNotNull: Boolean = false
+  var indexes: Map[String, IndexModel] = new HashMap()
   override def toString: String = {
      val result = "" + name + " " + dataType + " "
      return result
