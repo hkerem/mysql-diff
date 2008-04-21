@@ -1,6 +1,4 @@
-#!/bin/zsh -e
-
-mkdir -p target/classes
+#!/bin/bash -e
 
 if [ "$SCALA_HOME" = "" ]
 then
@@ -10,8 +8,9 @@ fi
 
 
 #-Xprint:refchecks 
-$SCALA_HOME/bin/scalac -deprecation   -Xprint:refchecks  -classpath lib/**/*.jar -d target/classes src/main/scala/**/*.scala 
+#$SCALA_HOME/bin/scalac -deprecation   -Xprint:refchecks  -classpath lib/**/*.jar -d target/classes src/main/scala/**/*.scala 
 
-#ant -Dscala.nome=$SCALA_HOME
+
+ant -Dscala.home=$SCALA_HOME $1
 
 # vim: set ts=4 sw=4 et:

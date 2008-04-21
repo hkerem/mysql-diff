@@ -7,7 +7,7 @@
 	<property name="build.tests.dir" value="${basedir}/target/build/tests"/>
 	<property name="dist.dir" value="${basedir}/target"/>
 	<property name="tmp.dir" value="${basedir}/target/tmp"/>
-    <property name="lib.dir" value="${basedir}/lib"/>
+        <property name="lib.dir" value="${basedir}/lib"/>
 	
 	<target name="init">
 		<property name="scala-library.jar" value="${scala.home}/lib/scala-library.jar"/>
@@ -70,7 +70,6 @@
 	<target name="clean">
 		<delete dir="${build.dir}"/>
 		<delete dir="${build.tests.dir}"/>
-		<delete dir="${dist.dir}"/>
 		<delete dir="${tmp.dir}"/>
 	</target>
 </project>
