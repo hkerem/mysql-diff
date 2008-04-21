@@ -1,8 +1,8 @@
-package ru.yandex.mysqlDiff.output;
+package ru.yandex.mysqlDiff.diff.simple;
 
 import ru.yandex.mysqlDiff.model._
 
-class SimpleScriptBuilder {
+object SimpleScriptBuilder {
   def getString(x: DiffType[SqlObjectType]):String = x match {
     case NameDiff(a,b) => {
       ""//nothing
@@ -21,15 +21,33 @@ class SimpleScriptBuilder {
     
     
     case ToIsNull(a, b) => {
-      ""
+      a match {
+        case TableModel(name, columns) => {
+          "DROP TABLE " + name + ";"
+        }
+        case ColumnModel(name, dataType) => {
+          "ALTER TABLE " + a.asInstanceOf[ColumnModel].parent.name + " DROP COLUMN " + name + ";"
+        }
+      }
     }
     
     case FromIsNull(a, b) => {
-      ""
+      b match {
+        case TableModel(name, columns) => {
+          b.asInstanceOf[TableModel].toCreateStatement
+        }
+        case ColumnModel(name, dataType) => {
+          "ALTER TABLE " + b.asInstanceOf[ColumnModel].parent.name + " ADD COLUMN " + b.toCreateStatement + ";"
+        }
+      }
     }
     
     case TableDiff(a, b, diffList) => {
-      ""
+      var result = ""
+      for (x <- diffList) {
+        result = result + getString(x) + "\n"
+      }
+      return result
     }
   }
 }

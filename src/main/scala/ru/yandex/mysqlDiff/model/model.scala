@@ -7,7 +7,7 @@ class SqlObjectType(val name: String)  {
   def toCreateStatement: String = ""
 }
 
-class DataType(override val name: String, val length: Option[Int]) 
+case class DataType(override val name: String, val length: Option[Int]) 
         extends SqlObjectType(name: String)
 {
   var parent: ColumnModel = null
@@ -21,7 +21,7 @@ class DataType(override val name: String, val length: Option[Int])
   };
 }
 
-class ColumnModel(override val name: String, val dataType: DataType) 
+case class ColumnModel(override val name: String, val dataType: DataType) 
         extends SqlObjectType(name: String)
 {
   var parent: TableModel = null
@@ -39,18 +39,18 @@ class ColumnModel(override val name: String, val dataType: DataType)
   }
 }
 
-class ConstraintModel(override val name: String ) 
+case class ConstraintModel(override val name: String ) 
         extends SqlObjectType(name: String) {
   override def toCreateStatement: String = ""
 }
 
-class IndexModel(override val name: String, val columns: Seq[ColumnModel], isUnique: boolean) 
+case class IndexModel(override val name: String, val columns: Seq[ColumnModel], isUnique: boolean) 
        extends ConstraintModel(name: String) 
 {
   override def toCreateStatement: String = ""
 }
 
-class ForeighKey(override val name: String, 
+case class ForeighKey(override val name: String, 
        val localColumns: Seq[ColumnModel], 
        val externalTable: TableModel,
        val externalColumns: Seq[ColumnModel])
@@ -62,11 +62,11 @@ class ForeighKey(override val name: String,
 abstract class DatabaseDeclaration(override val name: String) 
         extends SqlObjectType(name: String);
 
-class TableModel(override val name: String, val columns: Seq[ColumnModel]) 
+case class TableModel(override val name: String, val columns: Seq[ColumnModel]) 
         extends DatabaseDeclaration(name: String) {
-  val columnsMap: Map[String, ColumnModel] = new HashMap()
-  val primaryKey: List[ColumnModel] = null;
-  val constraints: List[ConstraintModel] = null;
+  var columnsMap: Map[String, ColumnModel] = new HashMap()
+  var primaryKey: List[ColumnModel] = null;
+  var constraints: List[ConstraintModel] = null;
   
   override def toCreateStatement: String = {
     var result = "CREATE TABLE " + name + " (";
@@ -75,6 +75,7 @@ class TableModel(override val name: String, val columns: Seq[ColumnModel])
     if (primaryKey != null && primaryKey.size > 0) {
       result = result + ",\nPRIMARY KEY ("
       for (x <- primaryKey) result  = result + ", " + x.name
+      result = result + ")"
     }
     if (constraints != null && constraints.size > 0) {
       for (x <- constraints) {
