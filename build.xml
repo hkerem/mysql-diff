@@ -59,6 +59,13 @@
 		<jar basedir="${build.dir}"
 			jarfile="${dist.dir}/${ant.project.name}-${version}.jar" index="true"/>
 	</target>
+	
+
+	<target name="dist" depends="clean,jar">
+		<mkdir dir="${dist.dir}/dist"/>
+		<echo message="${dist.dir}/${ant.project.name}-${version}.jar"/> 
+		<copy file="${dist.dir}/${ant.project.name}-${version}.jar" todir="${dist.dir}/dist"/>
+	</target>
 
 	<target name="clean">
 		<delete dir="${build.dir}"/>
