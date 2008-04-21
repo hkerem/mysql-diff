@@ -135,4 +135,18 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
     assert(tableDiffObject.asInstanceOf[TableDiff[SqlObjectType, DiffType[SqlObjectType]]].diffList.size == 4)
   }
   
+  
+  "Table CreateDiff" is {
+    val c1: ColumnModel = new ColumnModel("id", new DataType("int", Some(11)))
+    val c2: ColumnModel = new ColumnModel("name", new DataType("varchar", Some(100)))
+    val c3: ColumnModel = new ColumnModel("size", new DataType("integer", None))
+    val cList = List(c1, c2, c3)
+    val table = new TableModel("test_table", cList)
+    val createStatement = table.toCreateStatement.trim.replaceAll("\\s[\\n\\s]*", " ")
+    
+    /*
+        CREATE TABLE test_table (id int(11), name varchar(100), size integer);
+    */
+    assert("Now create Statement is: " + createStatement,"CREATE TABLE test_table (id int(11), name varchar(100), size integer);".equals(createStatement))
+  }
 }
