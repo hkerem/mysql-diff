@@ -45,7 +45,7 @@ trait ListDiffMaker {
     val fromNull = toMap.filterKeys(o => !fromMap.keySet.contains(o)).values //todo Map.excl use insted
     val toNull = fromMap.filterKeys(o => !toMap.keySet.contains(o)).values //todo Map.excl use insted
 
-    for ((a, b) <- bothObject) x(Some(a),Some(b))
+    for ((a, b) <- bothObject) x(Some(b),Some(a))
     for (a <- fromNull) x(None, Some(a))
     for (a <- toNull) x(Some(a), None)
     true

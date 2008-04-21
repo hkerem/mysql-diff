@@ -8,15 +8,22 @@ object SimpleScriptBuilder {
       ""//nothing
     }
     case DataTypeDiff(a, b) => {
+      val A = a.asInstanceOf[ColumnModel]
+      val B = b.asInstanceOf[ColumnModel]
+
+      val aType = A.dataType
+      val bType = B.dataType
+      
       var typeLength: String = "";
-      if (b.asInstanceOf[DataType].length.isDefined) 
-        typeLength = "(" + b.asInstanceOf[DataType].length.get + ")"
+      if (bType.length.isDefined) 
+        typeLength = "(" + bType.length.get + ")"
         else
           typeLength = ""
-      if (a.name.equals(b.name)) 
-           "ALTER TABLE " + b.asInstanceOf[DataType].parent.parent.name + " MODIFY " + b.asInstanceOf[DataType].parent.name + " " + b.asInstanceOf[DataType].name + typeLength + "";
+            
+      if (B.name.equals(A.name)) 
+           "ALTER TABLE " + B.parent.name + " MODIFY COLUMN " + B.name + " " + bType.name + typeLength + ";";
       else
-        "ALTER TABLE " + b.asInstanceOf[DataType].parent.parent.name + " CHANGE " + a.asInstanceOf[DataType].parent.name + " "  + b.asInstanceOf[DataType].parent.name + "" + b.asInstanceOf[DataType].name + typeLength + "";
+        "ALTER TABLE " + A.parent.name + " CHANGE COLUMN " + A.name + " "  + B.name + " " + bType.name + typeLength + ";";
     }
     
     

@@ -26,5 +26,76 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
    })
  }
  
+ "Column change type" is {
+   val c1_1 = new ColumnModel("id", new DataType("int", None))
+   val c1List = List(c1_1)
+   val table1 = new TableModel("table_test", c1List)
+   c1_1.parent = table1
+   
+   val c2_1 = new ColumnModel("id", new DataType("varchar", Some(100)))
+   val table2 = new TableModel("table_test", List(c2_1))
+   c2_1.parent = table2
+   val tMaker = new TableDiffMaker(table1, table2)
+   tMaker.doDiff(x => {
+     val res = SimpleScriptBuilder.getString(x).replaceAll("[\\n]+", "")
+     assert("Alter value is: " + res, "ALTER TABLE table_test MODIFY COLUMN id varchar(100);".equals(res))
+     true
+   })
+ }
+ 
+ "Column droped" is {
+   val c1_1 = new ColumnModel("id", new DataType("int", None))
+   val c1List = List(c1_1)
+   val table1 = new TableModel("table_test", c1List)
+   c1_1.parent = table1
+   
+   
+   val c2_1 = new ColumnModel("id", new DataType("int", None))
+   val c2_2 = new ColumnModel("name", new DataType("varchar", Some(1000)))
+   val table2 = new TableModel("table_test", List(c2_1, c2_2))
+   c2_1.parent = table2
+   c2_2.parent = table2
+   
+   
+   val tMaker = new TableDiffMaker(table2, table1)
+   tMaker.doDiff(x => {
+     val res = SimpleScriptBuilder.getString(x).replaceAll("[\\n]+", "")
+     assert("Alter value is:" + res, "ALTER TABLE table_test DROP COLUMN name;".equals(res))
+     true
+   });
+   
+   
+   "Double test" is {
+     val c1_1 = new ColumnModel("id", new DataType("int", None))
+     val c1List = List(c1_1)
+     val table1 = new TableModel("table_test", c1List)
+     c1_1.parent = table1
+     
+     
+     val c2_1 = new ColumnModel("id", new DataType("int", Some(12)))
+     val c2_2 = new ColumnModel("name", new DataType("varchar", Some(1000)))
+     val table2 = new TableModel("table_test", List(c2_1, c2_2))
+     c2_1.parent = table2
+     c2_2.parent = table2
+     
+     
+     val tMaker = new TableDiffMaker(table1, table2)
+     
+     var typeDiff = false
+     var columnAdd = false
+     
+     tMaker.doDiff(x => {
+       val res = SimpleScriptBuilder.getString(x)
+       val strings = res.split("\n")
+       assert(strings.length == 2)
+       assert("ALTER TABLE table_test MODIFY COLUMN id int(12);".equals(strings(0)) || "ALTER TABLE table_test MODIFY COLUMN id int(12);".equals(strings(1)))
+       assert("ALTER TABLE table_test ADD COLUMN name varchar(1000);".equals(strings(0)) || "ALTER TABLE table_test ADD COLUMN name varchar(1000);".equals(strings(1)))
+       assert(!strings(0).equals(strings(1)))
+       true
+     })
+   }
+   
+ }
+ 
  
 }
