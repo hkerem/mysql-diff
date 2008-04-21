@@ -31,3 +31,7 @@ case class ToIsNull[A <: SqlObjectType](override val from: A, override val to:A)
 
 case class FromIsNull[A <: SqlObjectType](override val from: A, override val to:A) 
         extends DiffType(from: A, to: A)  
+
+case class DatabaseDiff[A <: SqlObjectType, B <: DiffType[A]]
+        (override val from: A, override val to:A, override val diffList : Seq[B])
+        extends DiffContainter(from: A, to: A, diffList: Seq[B])

@@ -123,3 +123,34 @@ class TableDiffMaker(override val from: TableModel, override val to: TableModel)
 }
 
 
+class DatabaseDiffMaker(override val from: DatabaseModel, override val to: DatabaseModel)
+        extends NameDiffMaker(from: SqlObjectType, to: SqlObjectType)
+        with ListDiffMaker
+{
+  override def doDiff(x :AddDiffFunction): boolean = {
+    var internalDiff = List[DiffType[SqlObjectType]]();
+    
+    def tmpX: AddDiffFunction = o => {
+      val sq = internalDiff ++ List(o)
+      internalDiff = List(sq: _*)
+      true
+    } 
+    
+    doListDiff[TableModel](from.declarations, to.declarations, (from, to) => {
+      if (!from.isDefined && to.isDefined) {
+        tmpX(new FromIsNull(null, to.get));
+      } else 
+        if (!to.isDefined && from.isDefined) {
+          tmpX(new ToIsNull(from.get, null));
+        } else
+          if (to.isDefined && from.isDefined) {
+             val c = new TableDiffMaker(from.get, to.get)
+             c.doDiff(tmpX);
+         }
+    })
+    x(DatabaseDiff(from, to, internalDiff))
+  }        
+}
+
+
+

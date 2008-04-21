@@ -59,9 +59,6 @@ case class ForeighKey(override val name: String,
   override def toCreateStatement: String = ""
 }
 
-abstract class DatabaseDeclaration(override val name: String) 
-        extends SqlObjectType(name: String);
-
 case class TableModel(override val name: String, val columns: Seq[ColumnModel]) 
         extends DatabaseDeclaration(name: String) {
   var columnsMap: Map[String, ColumnModel] = new HashMap()
@@ -89,4 +86,8 @@ case class TableModel(override val name: String, val columns: Seq[ColumnModel])
   }
 }
 
-case class DatabaseModel(val declarations: Seq[DatabaseDeclaration])
+abstract class DatabaseDeclaration(override val name: String) 
+extends SqlObjectType(name: String);
+
+case class DatabaseModel(override val name: String, val declarations: Seq[TableModel])
+        extends DatabaseDeclaration(name);

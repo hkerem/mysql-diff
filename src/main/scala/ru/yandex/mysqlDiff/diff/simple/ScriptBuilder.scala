@@ -4,7 +4,16 @@ import ru.yandex.mysqlDiff.model._
 
 object SimpleScriptBuilder {
   def getString(x: DiffType[SqlObjectType]):String = x match {
-    case NameDiff(a,b) => {
+    
+  case DatabaseDiff(a, b, diffList) => {
+    var result = ""
+    for (x <- diffList) {
+      result = result + getString(x) + "\n"
+    }
+    return result    
+  }
+  
+  case NameDiff(a,b) => {
       ""//nothing
     }
     case DataTypeDiff(a, b) => {
