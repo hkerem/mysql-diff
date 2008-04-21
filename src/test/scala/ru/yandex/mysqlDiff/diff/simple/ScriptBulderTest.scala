@@ -90,8 +90,8 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
        val res = SimpleScriptBuilder.getString(x)
        val strings = res.split("\n")
        assert(strings.length == 2)
-       assert("ALTER TABLE table_test MODIFY COLUMN id int(12);".equals(strings(0)) || "ALTER TABLE table_test MODIFY COLUMN id int(12);".equals(strings(1)))
-       assert("ALTER TABLE table_test ADD COLUMN name varchar(1000);".equals(strings(0)) || "ALTER TABLE table_test ADD COLUMN name varchar(1000);".equals(strings(1)))
+       assert("ALTER TABLE table_test MODIFY COLUMN id int(12);".equalsIgnoreCase(strings(0)) || "ALTER TABLE table_test MODIFY COLUMN id int(12);".equalsIgnoreCase(strings(1)))
+       assert("ALTER TABLE table_test ADD COLUMN name varchar(1000);".equalsIgnoreCase(strings(0)) || "ALTER TABLE table_test ADD COLUMN name varchar(1000);".equalsIgnoreCase(strings(1)))
        assert(!strings(0).equals(strings(1)))
        true
      })

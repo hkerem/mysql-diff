@@ -3,6 +3,30 @@ package ru.yandex.mysqlDiff.diff.simple;
 import ru.yandex.mysqlDiff.model._
 
 object SimpleScriptBuilder {
+  
+  
+  private def makeDiffForColumn(a: SqlObjectType, b: SqlObjectType): String = {
+    val A = a.asInstanceOf[ColumnModel]
+    val B = b.asInstanceOf[ColumnModel]
+
+    val aType = A.dataType
+    val bType = B.dataType
+    
+    var typeLength: String = "";
+    if (bType.length.isDefined) 
+      typeLength = "(" + bType.length.get + ")"
+      else
+        typeLength = ""
+    
+    var notNullDef = ""
+    if (B.isNotNull) notNullDef = " NOT NULL ";
+          
+    if (B.name.equals(A.name)) 
+         "ALTER TABLE " + B.parent.name + " MODIFY COLUMN " + B.name + " " + bType.name + typeLength + notNullDef + ";";
+    else
+      "ALTER TABLE " + A.parent.name + " CHANGE COLUMN " + A.name + " "  + B.name + " " + bType.name + typeLength + notNullDef + ";";
+  } 
+  
   def getString(x: DiffType[SqlObjectType]):String = x match {
     
   case DatabaseDiff(a, b, diffList) => {
@@ -17,25 +41,13 @@ object SimpleScriptBuilder {
       ""//nothing
     }
     case DataTypeDiff(a, b) => {
-      val A = a.asInstanceOf[ColumnModel]
-      val B = b.asInstanceOf[ColumnModel]
-
-      val aType = A.dataType
-      val bType = B.dataType
-      
-      var typeLength: String = "";
-      if (bType.length.isDefined) 
-        typeLength = "(" + bType.length.get + ")"
-        else
-          typeLength = ""
-            
-      if (B.name.equals(A.name)) 
-           "ALTER TABLE " + B.parent.name + " MODIFY COLUMN " + B.name + " " + bType.name + typeLength + ";";
-      else
-        "ALTER TABLE " + A.parent.name + " CHANGE COLUMN " + A.name + " "  + B.name + " " + bType.name + typeLength + ";";
+      makeDiffForColumn(a, b)
     }
     
-    
+    case NotNullDiff(a, b) => {
+      makeDiffForColumn(a, b)
+    }
+
     case ToIsNull(a, b) => {
       a match {
         case TableModel(name, columns) => {
