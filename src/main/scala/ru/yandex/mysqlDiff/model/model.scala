@@ -28,7 +28,10 @@ case class ColumnModel(override val name: String, val dataType: DataType)
   var isNotNull: Boolean = false
   var indexes: Map[String, IndexModel] = new HashMap()
   override def toString: String = {
-     val result = "" + name + " " + dataType + " "
+    var nullDef = "";
+    if (isNotNull) nullDef = " NOT NULL"
+
+    val result = "" + name + " " + dataType + " " + nullDef
      return result
   }
   
