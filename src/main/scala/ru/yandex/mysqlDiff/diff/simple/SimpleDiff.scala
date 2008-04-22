@@ -75,12 +75,13 @@ class ColumnDiffMaker(override val from: ColumnModel, override val to: ColumnMod
   }
   
   def isTypeDiff:boolean = {
-    if (from.dataType == to.dataType) return false;
-    if ((from.dataType == null || to.dataType == null) && from.dataType != to.dataType) return true;
-    if (from.dataType.name == to.dataType.name && from.dataType.name == null) return false;
-    if ((from.dataType.name == null || to.dataType.name == null) && from.dataType.name != to.dataType.name) return true;
-    if (!from.dataType.name.equalsIgnoreCase(to.dataType.name)) return true;
-
+    if (from.dataType == to.dataType) return false
+    if ((from.dataType == null || to.dataType == null) && from.dataType != to.dataType) return true
+    if (from.dataType.name == to.dataType.name && from.dataType.name == null) return false
+    if ((from.dataType.name == null || to.dataType.name == null) && from.dataType.name != to.dataType.name) return true
+    if (!from.dataType.name.equalsIgnoreCase(to.dataType.name)) return true
+    if (from.dataType.isZerofill != to.dataType.isZerofill) return true
+    if (from.dataType.isUnsigned != to.dataType.isUnsigned) return true
     !(from.dataType.length.getOrElse(-1) == to.dataType.length.getOrElse(-1))
   }
   def isNullDiff = !(from.isNotNull == to.isNotNull)

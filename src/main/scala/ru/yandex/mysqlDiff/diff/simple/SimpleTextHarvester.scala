@@ -5,11 +5,11 @@ import java.util.regex.Pattern
 
 object SimpleTextHarvester {
   
-  private def inQuote(data: String, pos: int): boolean = {
-    var i: int = 1;
+  private def inQuote(data: String, startCheckPos: int, pos: int): boolean = {
+    var i: int = startCheckPos + 1;
     var quoteType: int = 0;
-    if (data.charAt(0) == '\'') quoteType = -1;
-    if (data.charAt(0) == '"') quoteType = 1;
+    if (data.charAt(i - 1) == '\'') quoteType = -1;
+    if (data.charAt(i - 1) == '"') quoteType = 1;
     
     while (i < pos) {
         if (data.charAt(i) == '\'' && quoteType == 0) quoteType = -1;
@@ -18,7 +18,11 @@ object SimpleTextHarvester {
         if (data.charAt(i) == '"' && quoteType == 1 && data.charAt(i - 1) != '\\') quoteType = 0;
         i = i + 1;
     }
-    return !(quoteType == 0);
+    !(quoteType == 0);
+  }
+  
+  private def inQuote(data: String, pos: int): boolean = {
+    inQuote(data, 0, pos)
   }  
 
 
@@ -71,7 +75,7 @@ object SimpleTextHarvester {
     val uncommedText = data.substring(lastCommaPos + 1) 
     val sq = result ++ List(uncommedText)
     result = List(sq: _*)
-    return result;
+    result;
   }
   
   
@@ -85,32 +89,47 @@ object SimpleTextHarvester {
     if (cdef.startsWith("FULLTEXT")) return false;
     if (cdef.startsWith("SPATIAL")) return false;
     if (cdef.startsWith("UNIQUE")) return false;
-    return cdef.matches("[\\w\\_\\-`]+ [\\w\\(\\)]+[\\w\\W]*");
+    cdef.matches("[\\w\\_\\-`]+ [\\w\\(\\)]+[\\w\\W]*");
   }  
   
   
-  private def parseDataTypeDefition(x: String): DataType = {
-    var dataTypeStr = x.trim.toUpperCase
-    if (dataTypeStr.matches("[\\w-\\_]+[\\s]+[\\w]+[\\w\\W]*"))
-      new DataType(dataTypeStr.split(" ")(0), None)
-      else
-      {
-        val p = Pattern.compile("([\\w_-`]+)[\\s\\n]*\\((([\\d]+)([\\s\\n]*\\,[\\s\\n]*([\\d]+))?)\\)")
-        val m = p.matcher(dataTypeStr);
-        if (m.find) 
-          new DataType(m.group(1), Some(0 + Integer.parseInt(m.group(3))));
-        else
-          null
-      }
+  private def parseDataTypeDefition(x: String): Tuple3[DataType, int, int] = {
+    val witeSpaces = "[\\n\\s]*"
+    val nameDefinition = "[\\w\\-\\_]+"
+    val UNSIGNED = "unsigned"
+    val ZEROFILL = "zerofill"
+    val CHARACTER_SET = "character" + witeSpaces + "set" + witeSpaces + "([\\w\\'\\-\\_]+)";
+    val COLLATE = "collate" + witeSpaces + "(" + nameDefinition + ")";
+    val p = Pattern.compile("(" + nameDefinition + ")" + witeSpaces + "(\\([\\d\\n\\s,]*\\))?" + witeSpaces + "("
+            + UNSIGNED + ")?" + witeSpaces + "(" + ZEROFILL + ")?" + witeSpaces + "(" + CHARACTER_SET + ")?"
+            + witeSpaces + "(" + COLLATE + ")?",
+            Pattern.CASE_INSENSITIVE)    
+    val m = p.matcher(x)
+    if (!m.find) return null
+
+    var length: Option[Int] = None;
+    
+    if (m.group(2) != null) {
+      val lengthStr = m.group(2).replaceAll("[\\s\\n]*", "")
+      val endPos = Math.max(lengthStr.indexOf(','), lengthStr.indexOf(')'))
+      length = Some(Integer.parseInt(lengthStr.substring(1, endPos)))
+    }
+    val dataType = new DataType(m.group(1), length)
+    
+    dataType.isZerofill = m.group(4) != null
+    dataType.isUnsigned = m.group(3) != null
+    dataType.characterSet = m.group(6)
+    dataType.collate = m.group(8)
+    new Tuple3(dataType, m.start, m.end)
   }
   
   private def parseColumnDefinition(x: String): ColumnModel = {
-    val columnPattern = Pattern.compile("[\\s\\n]*([\\w`\\-\\_]+) ([\\w\\s\\n\\(\\),]+)[\\w\\W]*")
+    val columnPattern = Pattern.compile("[\\s\\n]*([\\w`\\-\\_]+) ([\\w\\W]*)?? ")
     val m = columnPattern.matcher(x)
     var result: ColumnModel = null
     if (m.find) {
       val dataType = parseDataTypeDefition(m.group(2));
-      if (dataType != null) result = new ColumnModel(m.group(1), dataType)
+      if (dataType != null) result = new ColumnModel(m.group(1), dataType._1)
     }
     val isNotNullPattern = Pattern.compile("not[\\s\\n]+null", Pattern.CASE_INSENSITIVE);
     val notNullMatcher = isNotNullPattern.matcher(x)

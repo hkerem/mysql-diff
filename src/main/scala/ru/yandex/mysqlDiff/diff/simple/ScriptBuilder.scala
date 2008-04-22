@@ -20,11 +20,18 @@ object SimpleScriptBuilder {
     
     var notNullDef = ""
     if (B.isNotNull) notNullDef = " NOT NULL ";
-          
+    
+    var unsigned = ""
+    if (bType.isUnsigned) unsigned = " UNSIGNED ";
+    
+    var zerofill = ""
+    if (bType.isZerofill) zerofill = " ZEROFILL ";
+    
+     
     if (B.name.equals(A.name)) 
-         "ALTER TABLE " + B.parent.name + " MODIFY COLUMN " + B.name + " " + bType.name + typeLength + notNullDef + ";";
+         "ALTER TABLE " + B.parent.name + " MODIFY COLUMN " + B.name + " " + bType.name + typeLength + unsigned + zerofill + notNullDef + ";";
     else
-      "ALTER TABLE " + A.parent.name + " CHANGE COLUMN " + A.name + " "  + B.name + " " + bType.name + typeLength + notNullDef + ";";
+      "ALTER TABLE " + A.parent.name + " CHANGE COLUMN " + A.name + " "  + B.name + " " + bType.name + typeLength + unsigned + zerofill + notNullDef + ";";
   } 
   
   def getString(x: DiffType[SqlObjectType]):String = x match {

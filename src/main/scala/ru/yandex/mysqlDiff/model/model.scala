@@ -11,7 +11,13 @@ case class DataType(override val name: String, val length: Option[Int])
         extends SqlObjectType(name: String)
 {
   var parent: ColumnModel = null
-  override def toString = "" + name + "[" + length.getOrElse(-1) + "]"
+  
+  var isUnsigned: boolean = false
+  var isZerofill: boolean = false
+  var characterSet: String = null
+  var collate: String = null
+  
+  override def toString = "" + name + "[" + length.getOrElse(-1) + "] is unsigned: " + isUnsigned + " is zerofill:" + isZerofill
   
     
   override def toCreateStatement = {
