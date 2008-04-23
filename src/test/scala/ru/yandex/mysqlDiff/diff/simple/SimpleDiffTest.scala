@@ -101,6 +101,21 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
   }
   
   
+  "Auto_increment option for column diff test" is {
+    val c1: ColumnModel = new ColumnModel("id", new DataType("int", Some(11)))
+    c1.isAutoIncrement = true
+    val c2: ColumnModel = new ColumnModel("id", new DataType("int", Some(11)))
+    val cDiffMaker = new ColumnDiffMaker(c1, c2);
+    var i = 0;
+    cDiffMaker.doDiff(x => {
+      assert(x.isInstanceOf[AutoIncrementDiff[ColumnModel]])
+      i = i + 1
+      true
+    })
+    assert(i == 1)
+  }
+  
+  
   "Table Diff" is {
     
     val c1_1: ColumnModel = new ColumnModel("id", new DataType("int", Some(11)));
