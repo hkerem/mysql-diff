@@ -64,6 +64,7 @@ class ColumnDiffMaker(override val from: ColumnModel, override val to: ColumnMod
        { 
          if (isTypeDiff) x(DataTypeDiff(from, to));
          if (isNullDiff) x(NotNullDiff(from, to));
+         if (isAutoIncrementDiff) x(AutoIncrementDiff(from, to));
          else true;        
        }
   }
@@ -73,6 +74,8 @@ class ColumnDiffMaker(override val from: ColumnModel, override val to: ColumnMod
 //todo con diff
     true
   }
+  
+  def isAutoIncrementDiff: boolean  = from.isAutoIncrement != to.isAutoIncrement
   
   def isTypeDiff:boolean = {
     if (from.dataType == to.dataType) return false

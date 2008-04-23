@@ -14,6 +14,10 @@ case class DataTypeDiff[A <: SqlObjectType](override val from: A, override val t
 case class NotNullDiff[A <: SqlObjectType](override val from: A, override val to:A) 
         extends DiffType(from: A, to: A)         
 
+
+case class AutoIncrementDiff[A <: SqlObjectType](override val from: A, override val to:A) 
+        extends DiffType(from: A, to: A)
+
 abstract class DiffContainter[A <: SqlObjectType, B <: DiffType[A]]
         (override val from: A, override val to:A, val diffList : Seq[B])
         extends DiffType(from: A, to: A)

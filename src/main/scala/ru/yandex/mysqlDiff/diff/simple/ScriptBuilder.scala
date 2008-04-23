@@ -27,11 +27,14 @@ object SimpleScriptBuilder {
     var zerofill = ""
     if (bType.isZerofill) zerofill = " ZEROFILL ";
     
+    var autoIncreament = ""
+    if (B.isAutoIncrement) autoIncreament = " AUTO_INCREMENT "
+    
      
     if (B.name.equals(A.name)) 
-         "ALTER TABLE " + B.parent.name + " MODIFY COLUMN " + B.name + " " + bType.name + typeLength + unsigned + zerofill + notNullDef + ";";
+         "ALTER TABLE " + B.parent.name + " MODIFY COLUMN " + B.name + " " + bType.name + typeLength + unsigned + zerofill + notNullDef + autoIncreament  + ";";
     else
-      "ALTER TABLE " + A.parent.name + " CHANGE COLUMN " + A.name + " "  + B.name + " " + bType.name + typeLength + unsigned + zerofill + notNullDef + ";";
+      "ALTER TABLE " + A.parent.name + " CHANGE COLUMN " + A.name + " "  + B.name + " " + bType.name + typeLength + unsigned + zerofill + notNullDef + autoIncreament + ";";
   } 
   
   def getString(x: DiffType[SqlObjectType]):String = x match {
