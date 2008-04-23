@@ -158,6 +158,16 @@ object SimpleTextHarvester {
           stopSearch = true
         }
       }
+      
+      val commentPattern = Pattern.compile("comment[\\s\\n]+'([\\w\\W]*)'", Pattern.CASE_INSENSITIVE)
+      val commentMatcher = commentPattern.matcher(x)
+      stopSearch = false;
+      while (commentMatcher.find && !stopSearch) {
+        if (!inQuote(x, commentMatcher.start)) {
+          result.comment = commentMatcher.group(1)
+          stopSearch = true
+        }
+      }
     }
     result
   }

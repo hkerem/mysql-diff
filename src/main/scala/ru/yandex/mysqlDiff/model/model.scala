@@ -5,6 +5,7 @@ import scala.collection.mutable._
 
 class SqlObjectType(val name: String)  {
   def toCreateStatement: String = ""
+  var comment: String = null
 }
 
 case class DataType(override val name: String, val length: Option[Int]) 

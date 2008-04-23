@@ -12,7 +12,7 @@ object SimpleTextHarvesterTest extends TestSuite("Simple SQL script harvester") 
         "    user_id BIGINT NOT NULL,\n" +
         "    file_id INT UNSIGNED ZEROFILL NOT NULL,\n" +
         "    moderator_login VARCHAR(20) NOT NULL,\n" +
-        "    moderation_time TIMESTAMP NOT NULL DEFAULT NOW(),\n" +
+        "    moderation_time TIMESTAMP NOT NULL DEFAULT NOW() comment 'test comment rename_from: test',\n" +
         "    reason INT NOT NULL,\n" +
         "    resolution INT NOT NULL,\n" +
         "    message VARCHAR(8192) DEFAULT '',\n" +
@@ -27,6 +27,9 @@ object SimpleTextHarvesterTest extends TestSuite("Simple SQL script harvester") 
     assert(table.name.equals("file_moderation_history_"))
     assert(table.columns.size == 8)
     val cols = table.columns
+    
+    
+    assert(cols(4).comment != null && cols(4).comment.equals("test comment rename_from: test"))
     
     assert(cols(0).isAutoIncrement)
     assert(!cols(1).isAutoIncrement)
