@@ -138,15 +138,27 @@ object SimpleTextHarvester {
       val dataType = parseDataTypeDefition(m.group(2));
       if (dataType != null) result = new ColumnModel(m.group(1), dataType._1)
     }
-    val isNotNullPattern = Pattern.compile("not[\\s\\n]+null", Pattern.CASE_INSENSITIVE);
-    val notNullMatcher = isNotNullPattern.matcher(x)
-    var stopSearch = false;
-    while (notNullMatcher.find && !stopSearch && result != null) {
-      if (!inQuote(x, notNullMatcher.start)) {
-        result.isNotNull = true;
-        stopSearch = true
+    if (result != null) {
+    
+      val isNotNullPattern = Pattern.compile("not[\\s\\n]+null", Pattern.CASE_INSENSITIVE);
+      val notNullMatcher = isNotNullPattern.matcher(x)
+      var stopSearch = false;
+      while (notNullMatcher.find && !stopSearch) {
+         if (!inQuote(x, notNullMatcher.start)) {
+             result.isNotNull = true;
+             stopSearch = true
+         }
       }
-    } 
+      val autoIncreamentPattern = Pattern.compile("AUTO_INCREMENT", Pattern.CASE_INSENSITIVE)
+      val autoMatcher = autoIncreamentPattern.matcher(x);
+      stopSearch = false;
+      while (autoMatcher.find && !stopSearch) {
+        if (!inQuote(x, autoMatcher.start)) {
+          result.isAutoIncrement = true;
+          stopSearch = true
+        }
+      }
+    }
     result
   }
   

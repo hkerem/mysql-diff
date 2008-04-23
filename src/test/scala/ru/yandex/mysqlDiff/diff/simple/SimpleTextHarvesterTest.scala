@@ -28,6 +28,15 @@ object SimpleTextHarvesterTest extends TestSuite("Simple SQL script harvester") 
     assert(table.columns.size == 8)
     val cols = table.columns
     
+    assert(cols(0).isAutoIncrement)
+    assert(!cols(1).isAutoIncrement)
+    assert(!cols(2).isAutoIncrement)
+    assert(!cols(3).isAutoIncrement)
+    assert(!cols(4).isAutoIncrement)
+    assert(!cols(5).isAutoIncrement)
+    assert(!cols(6).isAutoIncrement)
+    assert(!cols(7).isAutoIncrement)
+    
     assert(cols(0).name.equals("id"))
     assert(cols(1).name.equals("user_id"))
     assert(cols(2).name.equals("file_id"))
@@ -73,6 +82,8 @@ object SimpleTextHarvesterTest extends TestSuite("Simple SQL script harvester") 
     assert(!cols(5).dataType.isZerofill)    
     assert(!cols(6).dataType.isZerofill)
     assert(!cols(7).dataType.isZerofill)
+    
+    
     
     
     assert(!cols(0).dataType.length.isDefined)
