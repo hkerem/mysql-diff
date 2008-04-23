@@ -3,6 +3,12 @@ package ru.yandex.mysqlDiff.diff.simple;
 import ru.yandex.mysqlDiff.model._
 import java.util.regex.Pattern
 
+
+object ContentType extends Enumeration {
+  val PRIMARY_KEY, INDEX, KEY, CONSTRAINT, CHECK, FULLTEXT, SPATIAL, UNIQUE, COLUMN, UNKNOWN = Value
+}
+
+
 object SimpleTextHarvester {
   
   private def inQuote(data: String, startCheckPos: int, pos: int): boolean = {
@@ -79,17 +85,18 @@ object SimpleTextHarvester {
   }
   
   
-  private def isColumnDefinition(testDef: String): boolean = {
+  private def isColumnDefinition(testDef: String): ContentType.Value = {
     var cdef = testDef.trim().toUpperCase();
-    if (cdef.startsWith("PRIMARY")) return false;
-    if (cdef.startsWith("INDEX")) return false;
-    if (cdef.startsWith("KEY")) return false;
-    if (cdef.startsWith("CONSTRAINT")) return false;
-    if (cdef.startsWith("CHECK")) return false;
-    if (cdef.startsWith("FULLTEXT")) return false;
-    if (cdef.startsWith("SPATIAL")) return false;
-    if (cdef.startsWith("UNIQUE")) return false;
-    cdef.matches("[\\w\\_\\-`]+ [\\w\\(\\)]+[\\w\\W]*");
+    if (cdef.startsWith("PRIMARY")) return ContentType.PRIMARY_KEY;
+    if (cdef.startsWith("INDEX")) return ContentType.INDEX;
+    if (cdef.startsWith("KEY")) return ContentType.KEY;
+    if (cdef.startsWith("CONSTRAINT")) return ContentType.CONSTRAINT;
+    if (cdef.startsWith("CHECK")) return ContentType.CHECK;
+    if (cdef.startsWith("FULLTEXT")) return ContentType.FULLTEXT;
+    if (cdef.startsWith("SPATIAL")) return ContentType.SPATIAL;
+    if (cdef.startsWith("UNIQUE")) return ContentType.UNIQUE;
+    if (cdef.matches("[\\w\\_\\-`]+ [\\w\\(\\)]+[\\w\\W]*")) return ContentType.COLUMN
+    ContentType.UNKNOWN
   }  
   
   
@@ -174,7 +181,7 @@ object SimpleTextHarvester {
                   
                   
                   for (x <- definitions) {
-                    if (isColumnDefinition(x)) {
+                    if (isColumnDefinition(x) == ContentType.COLUMN) {
                       var cModel = parseColumnDefinition(x)
                       if (cModel != null) {
                         val sqc = columns ++ List(cModel)
