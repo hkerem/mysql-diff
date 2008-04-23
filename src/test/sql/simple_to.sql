@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS complaints (
-    id INT (11),
+    id INT (11) AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
     file_id INT NOT NULL,
     created_time TIMESTAMP DEFAULT NOW(),

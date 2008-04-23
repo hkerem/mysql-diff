@@ -46,7 +46,9 @@ case class ColumnModel(override val name: String, val dataType: DataType)
   override def toCreateStatement = {
     var nullDef = "";
     if (isNotNull) nullDef = " NOT NULL"
-    "" + name + " " + dataType.toCreateStatement + nullDef
+    var autoIncrementDef = "";
+    if (isAutoIncrement) autoIncrementDef = " AUTO_INCREMENT"
+    "" + name + " " + dataType.toCreateStatement + nullDef + autoIncrementDef
   }
 }
 
