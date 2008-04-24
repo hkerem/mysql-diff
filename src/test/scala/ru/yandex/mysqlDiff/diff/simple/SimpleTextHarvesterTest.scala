@@ -28,8 +28,14 @@ object SimpleTextHarvesterTest extends TestSuite("Simple SQL script harvester") 
     assert(table.columns.size == 8)
     val cols = table.columns
     
-    
+    assert(cols(0).comment == null)
+    assert(cols(1).comment == null)
+    assert(cols(2).comment == null)
+    assert(cols(3).comment == null)
     assert(cols(4).comment != null && cols(4).comment.equals("test comment rename_from: test"))
+    assert(cols(5).comment == null)
+    assert(cols(6).comment == null)
+    assert(cols(7).comment == null)
     
     assert(cols(0).isAutoIncrement)
     assert(!cols(1).isAutoIncrement)

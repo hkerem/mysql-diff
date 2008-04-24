@@ -133,4 +133,44 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
    })
  }
  
+ 
+ "Alternative for drop" is {
+   val c1_1 = new ColumnModel("id", new DataType("int", None))
+   val c1_2 = new ColumnModel("name2", new DataType("varchar", Some(1000)))
+   val c1_3 = new ColumnModel("name3", new DataType("varchar", Some(1000)))
+   val c1List = List(c1_1, c1_2, c1_3)
+   val table1 = new TableModel("table_test", c1List)
+   c1_1.parent = table1
+   c1_2.parent = table1
+   c1_3.parent = table1
+   
+   val c2_1 = new ColumnModel("id", new DataType("int", None))
+   val c2_2 = new ColumnModel("name", new DataType("varchar", Some(1000)))
+   val table2 = new TableModel("table_test", List(c2_1, c2_2))
+   c2_1.parent = table2
+   c2_2.parent = table2
+   
+   /*
+     ALTER TABLE table_test ADD COLUMN name2 varchar(1000);
+     ALTER TABLE table_test ADD COLUMN name3 varchar(1000);
+     ALTER TABLE table_test DROP COLUMN name;
+     --alternative actions for column "table_test.name" from source
+     -- ALTER TABLE table_test CHANGE COLUMN name name2 varchar(1000);
+     -- ALTER TABLE table_test CHANGE COLUMN name name3 varchar(1000);
+   */
+   
+   val resultOutput = "ALTER TABLE table_test ADD COLUMN name2 varchar(1000);"+
+                      "ALTER TABLE table_test ADD COLUMN name3 varchar(1000);" +
+                      "ALTER TABLE table_test DROP COLUMN name;" +
+                      "--alternative actions for column \"table_test.name\" from source" +
+                      "-- ALTER TABLE table_test CHANGE COLUMN name name2 varchar(1000);"+
+                      "-- ALTER TABLE table_test CHANGE COLUMN name name3 varchar(1000);"
+   
+   val tMaker = new TableDiffMaker(table2, table1)
+   tMaker.doDiff(x => {
+     val res = SimpleScriptBuilder.getString(x).trim().replaceAll("[\\s]*[\\n]+[\\s]*", "")
+     assert(resultOutput.equals(res))
+     true
+   });
+ }
 }

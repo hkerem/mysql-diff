@@ -54,7 +54,6 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
       i = i + 1;
       true
     });
-    
     assert("Diff count: " + i, i == 2)
     assert("Is name find", isNameFind)
     assert("Is type find", isDataTypeFind) 
