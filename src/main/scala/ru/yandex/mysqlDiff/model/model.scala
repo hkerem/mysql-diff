@@ -40,8 +40,7 @@ case class ColumnModel(override val name: String, val dataType: DataType)
     var nullDef = "";
     if (isNotNull) nullDef = " NOT NULL"
 
-    val result = "" + name + " " + dataType + " " + nullDef
-     return result
+    "" + name + " " + dataType + " " + nullDef
   }
   
   override def toCreateStatement = {
@@ -85,23 +84,23 @@ case class TableModel(override val name: String, val columns: Seq[ColumnModel])
   var keys: List[IndexModel] = null
   
   override def toCreateStatement: String = {
+    
     var result = "CREATE TABLE " + name + " (";
-    for (x <- columns) result = result + ",\n" + x.toCreateStatement
+    columns.foreach(x => result = result + ",\n" + x.toCreateStatement)
     
     if (primaryKey != null && primaryKey.columns != null && primaryKey.columns.size > 0) {
       result = result + ",\nPRIMARY KEY ("
       for (x <- primaryKey.columns) result  = result + ", " + x.name
       result = result + ")"
     }
+ 
     if (constraints != null && constraints.size > 0) {
       for (x <- constraints) {
         val xCreate = x.toCreateStatement
         if (!xCreate.trim().equals("")) result = result + ",\n" + xCreate;        
       }
     }
-    result = result + ");"
-    result = result.replaceAll("\\([\\s\\n]*,[\\s\\n]*", "(")
-    result
+    (result + ");").replaceAll("\\([\\s\\n]*,[\\s\\n]*", "(")
   }
 }
 

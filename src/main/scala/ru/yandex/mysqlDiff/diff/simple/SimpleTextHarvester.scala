@@ -79,9 +79,7 @@ object SimpleTextHarvester {
          i = i + 1;
        }
     val uncommedText = data.substring(lastCommaPos + 1) 
-    val sq = result ++ List(uncommedText)
-    result = List(sq: _*)
-    result;
+    List(result ++ List(uncommedText): _*)
   }
   
   
@@ -189,9 +187,8 @@ object SimpleTextHarvester {
             
             var createTableData = data.substring(startPos);
             val tableNameMatcher = tableNamePattern.matcher(createTableData);
-            if (tableNameMatcher.find()) {
-                tableName = tableNameMatcher.group(1).trim();
-            }
+
+            if (tableNameMatcher.find()) tableName = tableNameMatcher.group(1).trim();
            
             if (!tableName.equals("")) {
               val startBracketsPos = createTableData.indexOf('(');
@@ -202,23 +199,20 @@ object SimpleTextHarvester {
                   var columns = List[ColumnModel]();
                   
                   
-                  for (x <- definitions) {
+                  definitions.foreach(x => {
                     if (isColumnDefinition(x) == ContentType.COLUMN) {
                       var cModel = parseColumnDefinition(x)
-                      if (cModel != null) {
-                        val sqc = columns ++ List(cModel)
-                        columns = List(sqc: _*)
-                      }
+                      if (cModel != null) columns = List((columns ++ List(cModel)): _*)
                     }
-                  }
+                    //todo other def
+                  })
 
                   var tableModel = new TableModel(tableName, columns);
-                  for (x <- columns) {
+                  columns.foreach(x => {
                     x.parent = tableModel
-                  }
+                  })
                   
-                  val sqr = result ++ List(tableModel)
-                  result = List(sqr: _*)
+                  result = List((result ++ List(tableModel)): _*)
                 }
               }
             }
