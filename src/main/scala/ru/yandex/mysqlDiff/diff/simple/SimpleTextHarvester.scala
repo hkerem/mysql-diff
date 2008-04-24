@@ -166,15 +166,26 @@ object SimpleTextHarvester {
           stopSearch = true
         }
       }
+      
+      val primaryKeyPattern = Pattern.compile("PRIMARY[\\s\\n]+KEY", Pattern.CASE_INSENSITIVE)
+      val primaryKeyMatcher = primaryKeyPattern.matcher(x)
+      stopSearch = false
+      while (primaryKeyMatcher.find && !stopSearch) {
+        if (!inQuote(x, primaryKeyMatcher.start)) {
+          result.primaryKey = true
+          stopSearch = true;
+        }
+      }
+    
     }
     result
   }
   
   
   private def parsePrimaryKeyDefinition(x: String) : PrimaryKeyModel = {
-    val bStart = x.indexOf('(')
+    val bStart = x.indexOf('(') + 1
     val bEnd = x.indexOf(')')
-    val data = x.substring(bStart + 1, bEnd).trim();
+    val data = x.substring(bStart, bEnd).trim();
     var columns = Set[String]()
     for (colName <- data.split(",")) columns = columns + (colName.trim()) 
     
@@ -204,8 +215,10 @@ object SimpleTextHarvester {
             if (!tableName.equals("")) {
               val startBracketsPos = createTableData.indexOf('(');
               val stopBraketsPos = findStopBraketsPos(createTableData, startBracketsPos);
-              if (startBracketsPos != -1) {
-                val definitions = splitByComma(createTableData.substring(startBracketsPos + 1, stopBraketsPos));
+              if (startBracketsPos != -1 && stopBraketsPos != -1) {
+                var tableStringDiff = createTableData.substring(startBracketsPos, stopBraketsPos)
+                if (tableStringDiff.startsWith("(")) tableStringDiff = tableStringDiff.substring(1)
+                val definitions = splitByComma(tableStringDiff);
                 if (definitions.size > 0) {
                   var columns = List[ColumnModel]();
                   var primaryKey: PrimaryKeyModel = null;
@@ -229,6 +242,11 @@ object SimpleTextHarvester {
                   if (primaryKey != null) { 
                     primaryKey.parent = tableModel
                     tableModel.primaryKey = primaryKey
+                  } else {
+                    val primaryKeyColumns = columns.filter(x => x.primaryKey)
+                    if (primaryKeyColumns.size > 0) {
+                      tableModel.primaryKey = new PrimaryKeyModel("", primaryKeyColumns.map(x => x.name))
+                    }
                   }
                   columns.foreach(x => x.parent = tableModel)
 

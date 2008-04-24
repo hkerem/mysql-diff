@@ -19,20 +19,20 @@ object SimpleTextHarvesterTest extends TestSuite("Simple SQL script harvester") 
         "    PRIMARY KEY (id, user_id, file_id, moderator_login)\n" +
         ")";
     var db1 = SimpleTextHarvester.parse(dataBase1);
-
     assert(db1.name.equals("database"))
     assert(db1.declarations.size == 1)
     val table = db1.declarations(0)
-    
     assert(table.name.equals("file_moderation_history_"))
     
     assert(table.primaryKey != null)
     assert(table.primaryKey.columns.size == 4)
     val pCols = table.primaryKey.columns
+    //id, user_id, file_id, moderator_login
     assert(pCols(0).equals("id"))
     assert(pCols(1).equals("user_id"))
     assert(pCols(2).equals("file_id"))
     assert(pCols(3).equals("moderator_login"))
+    
     
     assert(table.columns.size == 8)
     val cols = table.columns
@@ -113,4 +113,20 @@ object SimpleTextHarvesterTest extends TestSuite("Simple SQL script harvester") 
     assert(!cols(6).dataType.length.isDefined)
     assert(cols(7).dataType.length.isDefined && cols(7).dataType.length.get == 8192)
   }
+  
+  
+  
+  "Primary key parse test" is {
+    val db1Text = "create table bla_bla ( " +
+        "id integet primary key" + 
+        ")"
+    val db1 = SimpleTextHarvester.parse(db1Text);
+    val table = db1.declarations(0)
+    assert(table.name.equals("bla_bla"))
+    assert(table.columns.size == 1)
+    assert(table.primaryKey != null)
+    assert(table.primaryKey.columns.size == 1)
+    assert(table.primaryKey.columns(0).equals("id"))
+  }
+  
 }

@@ -35,7 +35,8 @@ case class ColumnModel(override val name: String, val dataType: DataType)
   var isNotNull: Boolean = false
   var isAutoIncrement: Boolean = false
   
-  var indexes: Map[String, IndexModel] = new HashMap()
+  var primaryKey: Boolean = false
+  
   override def toString: String = {
     var nullDef = "";
     if (isNotNull) nullDef = " NOT NULL"
