@@ -52,25 +52,26 @@ case class ColumnModel(override val name: String, val dataType: DataType)
   }
 }
 
-case class ConstraintModel(override val name: String, val columns: Seq[ColumnModel]) 
+case class ConstraintModel(override val name: String, val columns: Seq[String]) 
         extends SqlObjectType(name: String) 
 {
-  override def toCreateStatement: String = ""
+    override def toCreateStatement: String = ""
+    var parent: TableModel = null
 }
 
-case class IndexModel(override val name: String, override val columns: Seq[ColumnModel], isUnique: boolean) 
+case class IndexModel(override val name: String, override val columns: Seq[String], isUnique: boolean) 
        extends ConstraintModel(name, columns) 
 {
   override def toCreateStatement: String = ""
 }
 
-case class PrimaryKeyModel(override val name: String, override val columns: Seq[ColumnModel])
+case class PrimaryKeyModel(override val name: String, override val columns: Seq[String])
         extends IndexModel(name, columns, true)
 
 case class ForeighKey(override val name: String, 
-       val localColumns: Seq[ColumnModel], 
+       val localColumns: Seq[String], 
        val externalTable: TableModel,
-       val externalColumns: Seq[ColumnModel])
+       val externalColumns: Seq[String])
        extends ConstraintModel(name: String, localColumns)
 {
   override def toCreateStatement: String = ""
@@ -90,7 +91,7 @@ case class TableModel(override val name: String, val columns: Seq[ColumnModel])
     
     if (primaryKey != null && primaryKey.columns != null && primaryKey.columns.size > 0) {
       result = result + ",\nPRIMARY KEY ("
-      for (x <- primaryKey.columns) result  = result + ", " + x.name
+      for (x <- primaryKey.columns) result  = result + ", " + x
       result = result + ")"
     }
  

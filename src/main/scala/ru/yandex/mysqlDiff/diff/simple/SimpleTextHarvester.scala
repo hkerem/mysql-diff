@@ -83,7 +83,7 @@ object SimpleTextHarvester {
   }
   
   
-  private def isColumnDefinition(testDef: String): ContentType.Value = {
+  private def getDefinitionType(testDef: String): ContentType.Value = {
     var cdef = testDef.trim().toUpperCase();
     if (cdef.startsWith("PRIMARY")) return ContentType.PRIMARY_KEY;
     if (cdef.startsWith("INDEX")) return ContentType.INDEX;
@@ -171,6 +171,17 @@ object SimpleTextHarvester {
   }
   
   
+  private def parsePrimaryKeyDefinition(x: String) : PrimaryKeyModel = {
+    val bStart = x.indexOf('(')
+    val bEnd = x.indexOf(')')
+    val data = x.substring(bStart + 1, bEnd).trim();
+    var columns = Set[String]()
+    for (colName <- data.split(",")) columns = columns + (colName.trim()) 
+    
+    new PrimaryKeyModel("", List(columns.toArray: _*))
+  }
+  
+  
   def search(inputData: String): Seq[TableModel] = {
     var data = inputData.replaceAll("--[\\w\\W]*?\n", "")
     val p = Pattern.compile("CREATE[\\s\\n]+TABLE", Pattern.CASE_INSENSITIVE);
@@ -197,21 +208,30 @@ object SimpleTextHarvester {
                 val definitions = splitByComma(createTableData.substring(startBracketsPos + 1, stopBraketsPos));
                 if (definitions.size > 0) {
                   var columns = List[ColumnModel]();
-                  
+                  var primaryKey: PrimaryKeyModel = null;
                   
                   definitions.foreach(x => {
-                    if (isColumnDefinition(x) == ContentType.COLUMN) {
+                    val defType = getDefinitionType(x);
+                    if (defType == ContentType.COLUMN) {
                       var cModel = parseColumnDefinition(x)
                       if (cModel != null) columns = List((columns ++ List(cModel)): _*)
                     }
+                    
+                    if (defType == ContentType.PRIMARY_KEY) {
+                      primaryKey = parsePrimaryKeyDefinition(x);
+                    }
+                    
                     //todo other def
                   })
 
                   var tableModel = new TableModel(tableName, columns);
-                  columns.foreach(x => {
-                    x.parent = tableModel
-                  })
                   
+                  if (primaryKey != null) { 
+                    primaryKey.parent = tableModel
+                    tableModel.primaryKey = primaryKey
+                  }
+                  columns.foreach(x => x.parent = tableModel)
+
                   result = List((result ++ List(tableModel)): _*)
                 }
               }
