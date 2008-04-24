@@ -53,22 +53,26 @@ case class ColumnModel(override val name: String, val dataType: DataType)
   }
 }
 
-case class ConstraintModel(override val name: String ) 
-        extends SqlObjectType(name: String) {
-  override def toCreateStatement: String = ""
-}
-
-case class IndexModel(override val name: String, val columns: Seq[ColumnModel], isUnique: boolean) 
-       extends ConstraintModel(name: String) 
+case class ConstraintModel(override val name: String, val columns: Seq[ColumnModel]) 
+        extends SqlObjectType(name: String) 
 {
   override def toCreateStatement: String = ""
 }
+
+case class IndexModel(override val name: String, override val columns: Seq[ColumnModel], isUnique: boolean) 
+       extends ConstraintModel(name, columns) 
+{
+  override def toCreateStatement: String = ""
+}
+
+case class PrimaryKeyModel(override val name: String, override val columns: Seq[ColumnModel])
+        extends IndexModel(name, columns, true)
 
 case class ForeighKey(override val name: String, 
        val localColumns: Seq[ColumnModel], 
        val externalTable: TableModel,
        val externalColumns: Seq[ColumnModel])
-       extends ConstraintModel(name: String)
+       extends ConstraintModel(name: String, localColumns)
 {
   override def toCreateStatement: String = ""
 }
@@ -76,16 +80,17 @@ case class ForeighKey(override val name: String,
 case class TableModel(override val name: String, val columns: Seq[ColumnModel]) 
         extends DatabaseDeclaration(name: String) {
   var columnsMap: Map[String, ColumnModel] = new HashMap()
-  var primaryKey: List[ColumnModel] = null;
+  var primaryKey: PrimaryKeyModel = null;
   var constraints: List[ConstraintModel] = null;
+  var keys: List[IndexModel] = null
   
   override def toCreateStatement: String = {
     var result = "CREATE TABLE " + name + " (";
     for (x <- columns) result = result + ",\n" + x.toCreateStatement
     
-    if (primaryKey != null && primaryKey.size > 0) {
+    if (primaryKey != null && primaryKey.columns != null && primaryKey.columns.size > 0) {
       result = result + ",\nPRIMARY KEY ("
-      for (x <- primaryKey) result  = result + ", " + x.name
+      for (x <- primaryKey.columns) result  = result + ", " + x.name
       result = result + ")"
     }
     if (constraints != null && constraints.size > 0) {

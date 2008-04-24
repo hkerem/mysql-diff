@@ -176,7 +176,7 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
     val c2 = new ColumnModel("name", new DataType("varchar", Some(100)))
     val cList = List(c1, c2)
     val table = new TableModel("test_table", cList)
-    table.primaryKey = cList
+    table.primaryKey = new PrimaryKeyModel("", cList)
     val createStatement = table.toCreateStatement.trim.replaceAll("\\s[\\n\\s]*", " ")
     assert("Now create statement is: " + createStatement, "CREATE TABLE test_table (id int(11), name varchar(100), PRIMARY KEY (id, name));".equals(createStatement))
   }
