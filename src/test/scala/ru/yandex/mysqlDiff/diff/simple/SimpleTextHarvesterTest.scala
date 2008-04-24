@@ -25,6 +25,15 @@ object SimpleTextHarvesterTest extends TestSuite("Simple SQL script harvester") 
     val table = db1.declarations(0)
     
     assert(table.name.equals("file_moderation_history_"))
+    
+    assert(table.primaryKey != null)
+    assert(table.primaryKey.columns.size == 4)
+    val pCols = table.primaryKey.columns
+    assert(pCols(0).equals("id"))
+    assert(pCols(1).equals("user_id"))
+    assert(pCols(2).equals("file_id"))
+    assert(pCols(3).equals("moderator_login"))
+    
     assert(table.columns.size == 8)
     val cols = table.columns
     
