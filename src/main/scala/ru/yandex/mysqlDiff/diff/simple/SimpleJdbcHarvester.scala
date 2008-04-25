@@ -40,13 +40,24 @@ object SimpleJdbcHarvester {
   
   
   def parsePrimaryKeys(table: TableModel, data: DatabaseMetaData): PrimaryKeyModel = {
+    
+    var pkColumns = List[String]()
+    
+    var pkName = ""
+    
     val primaryKeys: ResultSet = data.getPrimaryKeys(null, null, table.name)
     while (primaryKeys.next) {
       val column = primaryKeys.getString("COLUMN_NAME")
       val indexName = primaryKeys.getString("PK_NAME")
-      System.out.println("p name: " + indexName + " c name: " + column)
+      pkColumns = List((pkColumns ++ List(column)): _*)
+      pkName = indexName
     }
-    return null;
+    if (pkColumns.size > 0) {
+      var pk = new PrimaryKeyModel(pkName, pkColumns);
+      pk.parent = table;
+      table.primaryKey = pk;
+      pk
+    } else null
   }
   
   
