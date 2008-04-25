@@ -2,9 +2,9 @@
 <project name="mysqlDiff" default="jar">
 	<property name="version" value="0.0"/>
 	<property name="src.dir" value="${basedir}/src/main/scala"/>
-	<property name="src.tests.dir" value="${basedir}/src/test/scala"/>
+	<!--property name="src.tests.dir" value="${basedir}/src/test/scala"/-->
 	<property name="build.dir" value="${basedir}/target/build/classes"/>
-	<property name="build.tests.dir" value="${basedir}/target/build/tests"/>
+	<!--property name="build.tests.dir" value="${basedir}/target/build/tests"/-->
 	<property name="dist.dir" value="${basedir}/target"/>
 	<property name="tmp.dir" value="${basedir}/target/tmp"/>
         <property name="lib.dir" value="${basedir}/lib"/>
@@ -30,7 +30,8 @@
 			deprecation="on" unchecked="on" encoding="UTF-8"
 			classpathref="build.classpath" force="changed"/>
 	</target>
-	
+
+	<!--
 	<target name="build-tests" depends="build">
 		<mkdir dir="${build.tests.dir}"/>
 		<scalac srcdir="${src.tests.dir}" destdir="${build.tests.dir}"
@@ -42,8 +43,9 @@
 			</classpath>
 		</scalac>
 	</target>
-	
-	<target name="run-tests" depends="clean, build-tests">
+	-->
+
+	<target name="run-tests" depends="clean, build">
 		<java classname="ru.yandex.mysqlDiff.MySqlDiffTest" failonerror="true">
 			<sysproperty key="java.awt.headless" value="true"/>
 			<classpath refid="build.classpath"/>
