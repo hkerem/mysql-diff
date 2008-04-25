@@ -12,7 +12,7 @@ object SimpleJdbcHarvester {
     val tableName = tables.getString("TABLE_NAME");
     val columns = data.getColumns(null, null, tableName, "%");
     var columnsList = List[ColumnModel]()
-    System.out.println("Table: " + tableName);
+
     while (columns.next) {
         val colName = columns.getString("COLUMN_NAME");
         val colType = columns.getString("TYPE_NAME");
@@ -67,14 +67,14 @@ object SimpleJdbcHarvester {
     while (indexes.next) {
        val colName = indexes.getString("COLUMN_NAME");
        val indexName = indexes.getString("INDEX_NAME");
-       indexesMap(indexName) = List((indexesMap(indexName) ++ List(colName)): _*)
+       indexesMap(indexName) = (indexesMap(indexName) ++ List(colName)).toList
     }
     
     val resultList = indexesMap.map(x => new IndexModel(x._1, x._2, false)).filter(x => {x.parent = table; true})
     if (table.keys == null) 
-      table.keys = List(resultList.toList: _*)
+      table.keys = resultList.toList
       else
-        table.keys = List((table.keys ++ resultList.toList): _*)
+        table.keys = (table.keys ++ resultList.toList).toList
     resultList.toList
   }
 
@@ -91,9 +91,9 @@ object SimpleJdbcHarvester {
     
     val resultList = indexesMap.map(x => new IndexModel(x._1, x._2, false)).filter(x => {x.parent = table; true})
     if (table.keys == null) 
-      table.keys = List(resultList.toList: _*)
+      table.keys = resultList.toList
       else
-        table.keys = List((table.keys ++ resultList.toList): _*)
+        table.keys = (table.keys ++ resultList.toList).toList
     resultList.toList
   }
   
@@ -114,7 +114,7 @@ object SimpleJdbcHarvester {
         val indexes = parseIndexes(tableModel, data);
         val unique = parseUnique(tableModel, data);
                 
-        returnTables = List((returnTables ++ List(tableModel)): _*)
+        returnTables = (returnTables ++ List(tableModel)).toList
     }
     returnTables
   }
