@@ -83,7 +83,7 @@ case class TableModel(override val name: String, val columns: Seq[ColumnModel])
   var columnsMap: Map[String, ColumnModel] = new HashMap()
   var primaryKey: PrimaryKeyModel = null;
   var constraints: List[ConstraintModel] = null;
-  var keys: List[IndexModel] = null
+  var keys =  List[IndexModel]()
   
   override def toCreateStatement: String = {
     

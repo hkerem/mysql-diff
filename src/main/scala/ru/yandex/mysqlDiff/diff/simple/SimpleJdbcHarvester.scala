@@ -62,14 +62,41 @@ object SimpleJdbcHarvester {
   
   
   def parseIndexes(table: TableModel, data: DatabaseMetaData): Seq[IndexModel] = {
+    var indexesMap: Map[String, List[String]] = Map()  
     val indexes = data.getIndexInfo(null, null, table.name, false, true)
     while (indexes.next) {
        val colName = indexes.getString("COLUMN_NAME");
        val indexName = indexes.getString("INDEX_NAME");
-       System.out.println("non unique name: " + indexName + " c name: " + colName);
+       indexesMap(indexName) = List((indexesMap(indexName) ++ List(colName)): _*)
     }
-    List()
+    
+    val resultList = indexesMap.map(x => new IndexModel(x._1, x._2, false)).filter(x => {x.parent = table; true})
+    if (table.keys == null) 
+      table.keys = List(resultList.toList: _*)
+      else
+        table.keys = List((table.keys ++ resultList.toList): _*)
+    resultList.toList
   }
+
+  
+  def parseUnique(table: TableModel, data: DatabaseMetaData): Seq[IndexModel] = {
+    var indexesMap: Map[String, List[String]] = Map()  
+    val indexes = data.getIndexInfo(null, null, table.name, false, true)
+    while (indexes.next) {
+       val colName = indexes.getString("COLUMN_NAME");
+       val indexName = indexes.getString("INDEX_NAME");
+       if (table.primaryKey == null || table.primaryKey.name == null || !table.primaryKey.name.equals(indexName))
+          indexesMap(indexName) = List((indexesMap(indexName) ++ List(colName)): _*)
+    }
+    
+    val resultList = indexesMap.map(x => new IndexModel(x._1, x._2, false)).filter(x => {x.parent = table; true})
+    if (table.keys == null) 
+      table.keys = List(resultList.toList: _*)
+      else
+        table.keys = List((table.keys ++ resultList.toList): _*)
+    resultList.toList
+  }
+  
   
   def search(url: String, user: String, pass: String): Seq[TableModel] = {
     Class.forName("com.mysql.jdbc.Driver").newInstance;
@@ -85,6 +112,8 @@ object SimpleJdbcHarvester {
         val tableModel = parseTable(tables, data);    
         val pk = parsePrimaryKeys(tableModel, data)
         val indexes = parseIndexes(tableModel, data);
+        val unique = parseUnique(tableModel, data);
+                
         returnTables = List((returnTables ++ List(tableModel)): _*)
     }
     returnTables
