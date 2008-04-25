@@ -11,7 +11,7 @@ object SimpleJdbcHarvester {
   def parseTable(tables: ResultSet, data: DatabaseMetaData): TableModel = {
     val tableName = tables.getString("TABLE_NAME");
     val columns = data.getColumns(null, null, tableName, "%");
-
+    var columnsList = List[ColumnModel]()
     System.out.println("Table: " + tableName);
     while (columns.next) {
         val colName = columns.getString("COLUMN_NAME");
@@ -21,10 +21,21 @@ object SimpleJdbcHarvester {
         
         val isNotNull = !columns.getString("IS_NULLABLE").equalsIgnoreCase("yes");
         val isAutoinrement = columns.getString("IS_AUTOINCREMENT").equalsIgnoreCase("YES");
-
-        System.out.println("Column: " + colName + ", type: " + colType + ", colTypeSize: " + colTypeSize + " IsNotnull: " + isNotNull + ", isautoincrement:" +  isAutoinrement);
+        
+        
+        var typeSizeOption: Option[int] = None;
+        if (colTypeSize  != -1) typeSizeOption = Some(colTypeSize)
+        
+        val cm = new ColumnModel(colName, new DataType(colType, typeSizeOption))
+        cm.isNotNull = isNotNull
+        cm.isAutoIncrement = isAutoinrement
+        
+        columnsList = List((columnsList ++ List(cm)): _*)
     }
-    null
+    
+    val tm  = new TableModel(tableName, columnsList)
+    columnsList.foreach(x => x.parent = tm)
+    tm
   }
   
   
@@ -57,16 +68,15 @@ object SimpleJdbcHarvester {
     
     val tables: ResultSet = data.getTables(null, "%", "%", List("TABLE").toArray);
 
-    
+    var returnTables = List[TableModel]()
     
     while (tables.next) {
         val tableModel = parseTable(tables, data);    
-
-        Console.println("Primary key:")
         val pk = parsePrimaryKeys(tableModel, data)
         val indexes = parseIndexes(tableModel, data);
+        returnTables = List((returnTables ++ List(tableModel)): _*)
     }
-    null
+    returnTables
   }
   
   
