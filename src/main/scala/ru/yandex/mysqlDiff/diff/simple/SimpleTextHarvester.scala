@@ -182,7 +182,11 @@ object SimpleTextHarvester {
   }
   
   
-  private def parsePrimaryKeyDefinition(x: String) : PrimaryKeyModel = {
+  
+  
+  
+  
+  private def parsePrimaryKeyDefinition(x: String): PrimaryKeyModel = {
     val bStart = x.indexOf('(') + 1
     val bEnd = x.indexOf(')')
     val data = x.substring(bStart, bEnd).trim();
@@ -192,6 +196,47 @@ object SimpleTextHarvester {
     new PrimaryKeyModel("", List(columns.toArray: _*))
   }
   
+  private def parseKeyKeyDefinition(x: String): IndexModel = {
+    parseKeyDefinition("KEY", x)
+  }
+  
+  private def parseIndexKeyDefinition(x: String): IndexModel = {
+    parseKeyDefinition("INDEX", x)
+  }
+  
+  private def parseUniqueKeyDefinition(x: String): IndexModel = {
+    val indexPattern = Pattern.compile("UNIQUE[\\s\\n]+((INDEX)|(KEY))?[\\s\\n]+([\\w\\-\\_]+)?[\\s\\n]+(USING[\\s\\n]+[\\w\\-\\_])?[\\n\\s]+\\((\\w\\-\\_\\s\\n,)+\\)", Pattern.CASE_INSENSITIVE)
+    val matcher = indexPattern.matcher(x)
+    if (matcher.find) {
+      var name = ""
+        if (matcher.group(4) != null) 
+           name = matcher.group(4) 
+          else
+            name = ""
+
+      val typeName = matcher.group(5)
+      val columnNames = matcher.group(6).split(",").map(x => x.trim)
+      new IndexModel(name, columnNames, true)
+    } else
+      null
+  }
+  
+  private def parseKeyDefinition(tp:String, x: String): IndexModel = {
+    val indexPattern = Pattern.compile(tp + "[\\s\\n]+([\\w\\-\\_]+)?[\\s\\n]+(USING[\\s\\n]+[\\w\\-\\_])?[\\n\\s]+\\((\\w\\-\\_\\s\\n,)+\\)", Pattern.CASE_INSENSITIVE)
+    val matcher = indexPattern.matcher(x)
+    if (matcher.find) {
+      var name = ""
+      if (matcher.group(1) != null) 
+         name = matcher.group(1) 
+        else
+          name = ""
+            
+      val typeName = matcher.group(2)
+      val columnNames = matcher.group(3).split(",").map(x => x.trim)
+      new IndexModel(name, columnNames, false)
+    } else
+      null
+  }
   
   def search(inputData: String): Seq[TableModel] = {
     var data = inputData.replaceAll("--[\\w\\W]*?\n", "")
@@ -222,6 +267,8 @@ object SimpleTextHarvester {
                 if (definitions.size > 0) {
                   var columns = List[ColumnModel]();
                   var primaryKey: PrimaryKeyModel = null;
+                  var indexes =  List[IndexModel]();
+                  
                   
                   definitions.foreach(x => {
                     val defType = getDefinitionType(x);
@@ -231,8 +278,25 @@ object SimpleTextHarvester {
                     }
                     
                     if (defType == ContentType.PRIMARY_KEY) {
-                      primaryKey = parsePrimaryKeyDefinition(x);
+                      primaryKey = parsePrimaryKeyDefinition(x)
                     }
+                    
+                    if (defType == ContentType.INDEX) {
+                      val idx = parseIndexKeyDefinition(x)
+                      if (idx != null) indexes = List((indexes ++ List(idx)): _*)
+                    }
+                    
+                    if (defType == ContentType.KEY) {
+                      val idx = parseKeyKeyDefinition(x)
+                      if (idx != null) indexes = List((indexes ++ List(idx)): _*)
+                    }
+                    
+                    if (defType == ContentType.UNIQUE) {
+                      val idx = parseUniqueKeyDefinition(x)
+                      if (idx != null) indexes = List((indexes ++ List(idx)): _*)
+                    }
+                    
+                    
                     
                     //todo other def
                   })

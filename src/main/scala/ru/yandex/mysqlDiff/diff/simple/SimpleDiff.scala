@@ -53,6 +53,39 @@ trait ListDiffMaker {
 }
 
 
+trait StringListDiffMaker {
+  def doStringListDiff(from: Seq[String], to: Seq[String], x: (Option[String], Option[String]) => unit) = {
+    
+  } 
+}
+
+
+class PrimaryKeyDiffMaker(override val from: PrimaryKeyModel, override val to: PrimaryKeyModel)
+        extends NameDiffMaker(from: SqlObjectType, to: SqlObjectType) with StringListDiffMaker 
+{
+  override def doDiff(x: AddDiffFunction) = {
+    if (super.doDiff(x)) {
+      doStringListDiff(from.columns, to.columns, (a, b) => {if (!a.isDefined || !b.isDefined) x(PrimaryKeyDiff(from, to)); true})
+      true
+    } else
+      false
+  }
+}
+
+
+class IndexDiffMaker(override val from: IndexModel, override val to: IndexModel)
+        extends NameDiffMaker(from: SqlObjectType, to: SqlObjectType) with StringListDiffMaker
+{
+  override def doDiff(x: AddDiffFunction) = {
+    if (super.doDiff(x)) {
+      doStringListDiff(from.columns, to.columns, (a, b) => {if (!a.isDefined || !b.isDefined) x(PrimaryKeyDiff(from, to)); true})
+      if (from.isUnique != to.isUnique) x(UniqueKeyDiff(from, to))
+      true
+    } else
+      false
+  }
+}
+
 
 class ColumnDiffMaker(override val from: ColumnModel, override val to: ColumnModel)
         extends NameDiffMaker(from: SqlObjectType, to: SqlObjectType) with ListDiffMaker 
@@ -69,7 +102,7 @@ class ColumnDiffMaker(override val from: ColumnModel, override val to: ColumnMod
        }
   }
   
-  override def doDiff(x: AddDiffFunction)  = {
+  override def doDiff(x: AddDiffFunction) = {
     if (!doColumnDiff(x)) false
 //todo con diff
     true
