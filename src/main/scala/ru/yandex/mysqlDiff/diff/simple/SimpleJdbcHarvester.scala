@@ -61,13 +61,15 @@ object SimpleJdbcHarvester {
   }
   
   
-  def parseIndexes(table: TableModel, data: DatabaseMetaData): Seq[IndexModel] = {
+  
+  def parseIndexes(table: TableModel, data: DatabaseMetaData, checkPrimaryKey: boolean): Seq[IndexModel] = {
     var indexesMap: Map[String, List[String]] = Map()  
     val indexes = data.getIndexInfo(null, null, table.name, false, true)
     while (indexes.next) {
        val colName = indexes.getString("COLUMN_NAME");
        val indexName = indexes.getString("INDEX_NAME");
-       indexesMap(indexName) = (indexesMap(indexName) ++ List(colName)).toList
+       if (!checkPrimaryKey || table.primaryKey == null || table.primaryKey.name == null || !table.primaryKey.name.equals(indexName))
+         indexesMap(indexName) = List((indexesMap(indexName) ++ List(colName)): _*)
     }
     
     val resultList = indexesMap.map(x => new IndexModel(x._1, x._2, false)).filter(x => {x.parent = table; true})
@@ -77,24 +79,16 @@ object SimpleJdbcHarvester {
         table.keys = (table.keys ++ resultList.toList).toList
     resultList.toList
   }
+  
+  
+  
+  def parseIndexes(table: TableModel, data: DatabaseMetaData): Seq[IndexModel] = {
+    parseIndexes(table, data, false)
+  }
 
   
   def parseUnique(table: TableModel, data: DatabaseMetaData): Seq[IndexModel] = {
-    var indexesMap: Map[String, List[String]] = Map()  
-    val indexes = data.getIndexInfo(null, null, table.name, false, true)
-    while (indexes.next) {
-       val colName = indexes.getString("COLUMN_NAME");
-       val indexName = indexes.getString("INDEX_NAME");
-       if (table.primaryKey == null || table.primaryKey.name == null || !table.primaryKey.name.equals(indexName))
-          indexesMap(indexName) = List((indexesMap(indexName) ++ List(colName)): _*)
-    }
-    
-    val resultList = indexesMap.map(x => new IndexModel(x._1, x._2, false)).filter(x => {x.parent = table; true})
-    if (table.keys == null) 
-      table.keys = resultList.toList
-      else
-        table.keys = (table.keys ++ resultList.toList).toList
-    resultList.toList
+    parseIndexes(table, data, true)
   }
   
   
