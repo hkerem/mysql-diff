@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS complaints (
 
 CREATE TABLE IF NOT EXISTS test (
     id INT NOT NULL,
-    test1 VARCHAR(1000)
+    test1 VARCHAR(1000),
+    blim INT
 );
 

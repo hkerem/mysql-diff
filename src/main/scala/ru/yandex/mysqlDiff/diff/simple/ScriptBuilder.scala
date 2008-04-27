@@ -39,19 +39,21 @@ object SimpleScriptBuilder {
   
   def getString(x: DiffType[SqlObjectType]):String = x match {
     
-  case DatabaseDiff(a, b, diffList) => {
-    var result = ""
-    for (x <- diffList) {
-      result = result + getString(x) + "\n"
+    case DatabaseDiff(a, b, diffList) => {
+      var result = ""
+      for (x <- diffList) {
+        result = result + getString(x) + "\n"
+      }
+      return result    
     }
-    return result    
-  }
-  
-  case NameDiff(a,b) => {
+
+    case NameDiff(a,b) => {
       ""//nothing
     }
+
     case DataTypeDiff(a, b) => makeDiffForColumn(a, b)
     case NotNullDiff(a, b) => makeDiffForColumn(a, b)
+    
     case ToIsNull(a, b) =>  a match {
         case TableModel(name, columns) => "DROP TABLE " + name + ";"
         case ColumnModel(name, dataType) => "ALTER TABLE " + a.asInstanceOf[ColumnModel].parent.name + " DROP COLUMN " + name + ";"

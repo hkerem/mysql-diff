@@ -128,5 +128,26 @@ object SimpleTextHarvesterTest extends TestSuite("Simple SQL script harvester") 
     assert(table.primaryKey.columns.size == 1)
     assert(table.primaryKey.columns(0).equals("id"))
   }
-  
+
+
+  "Some more table create" is {
+     val dbText = "Create table bla1 (" + 
+     "id int,\n" + 
+     "name varchar(500)\n" +
+     ") ENGINE = mysql ; \n" + 
+     "\n\n\n" + 
+     "Create table bla2 (" + 
+     "id2 int,\n" + 
+     "name varchar(300));"
+
+
+     val db = SimpleTextHarvester.parse(dbText);
+     val tables = db.declarations;
+
+     assert(tables.size == 2)
+     assert(tables(0).columns.size == 2)
+     assert(tables(1).columns.size == 2)
+   }
+
+
 }

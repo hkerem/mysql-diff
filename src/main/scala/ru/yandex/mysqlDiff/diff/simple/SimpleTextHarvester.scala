@@ -128,8 +128,9 @@ object SimpleTextHarvester {
     new Tuple3(dataType, m.start, m.end)
   }
   
-  private def parseColumnDefinition(x: String): ColumnModel = {
-    val columnPattern = Pattern.compile("[\\s\\n]*([\\w`\\-\\_]+) ([\\w\\W]*)?? ")
+  private def parseColumnDefinition(data: String): ColumnModel = {
+    var x = data.trim
+    val columnPattern = Pattern.compile("[\\s\\n]*([\\w`\\-\\_]+)[\\s\\n]+([\\w\\W]*)?")
     val m = columnPattern.matcher(x)
     var result: ColumnModel = null
     if (m.find) {
@@ -260,21 +261,23 @@ object SimpleTextHarvester {
             if (!tableName.equals("")) {
               val startBracketsPos = createTableData.indexOf('(');
               val stopBraketsPos = findStopBraketsPos(createTableData, startBracketsPos);
-              if (startBracketsPos != -1 && stopBraketsPos != -1) {
+	      
+	      if (startBracketsPos != -1 && stopBraketsPos != -1) {
                 var tableStringDiff = createTableData.substring(startBracketsPos, stopBraketsPos)
                 if (tableStringDiff.startsWith("(")) tableStringDiff = tableStringDiff.substring(1)
+
                 val definitions = splitByComma(tableStringDiff);
-                if (definitions.size > 0) {
+
+		if (definitions.size > 0) {
                   var columns = List[ColumnModel]();
                   var primaryKey: PrimaryKeyModel = null;
                   var indexes =  List[IndexModel]();
                   
-                  
                   definitions.foreach(x => {
-                    val defType = getDefinitionType(x);
+		    val defType = getDefinitionType(x);
                     if (defType == ContentType.COLUMN) {
                       var cModel = parseColumnDefinition(x)
-                      if (cModel != null) columns = List((columns ++ List(cModel)): _*)
+                      if (cModel != null) columns = (columns ++ List(cModel)).toList
                     }
                     
                     if (defType == ContentType.PRIMARY_KEY) {
@@ -283,17 +286,17 @@ object SimpleTextHarvester {
                     
                     if (defType == ContentType.INDEX) {
                       val idx = parseIndexKeyDefinition(x)
-                      if (idx != null) indexes = List((indexes ++ List(idx)): _*)
+                      if (idx != null) indexes = (indexes ++ List(idx)).toList
                     }
                     
                     if (defType == ContentType.KEY) {
                       val idx = parseKeyKeyDefinition(x)
-                      if (idx != null) indexes = List((indexes ++ List(idx)): _*)
+                      if (idx != null) indexes = (indexes ++ List(idx)).toList
                     }
                     
                     if (defType == ContentType.UNIQUE) {
                       val idx = parseUniqueKeyDefinition(x)
-                      if (idx != null) indexes = List((indexes ++ List(idx)): _*)
+                      if (idx != null) indexes = (indexes ++ List(idx)).toList
                     }
                     
                     
