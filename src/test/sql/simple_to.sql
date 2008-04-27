@@ -8,3 +8,8 @@ CREATE TABLE IF NOT EXISTS complaints (
     PRIMARY KEY(user_id, file_id, reporter_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+CREATE TABLE IF NOT EXISTS test (
+    id INT NOT NULL,
+    test1 VARCHAR(1000)
+);
+
