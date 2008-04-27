@@ -177,7 +177,17 @@ object SimpleTextHarvester {
           stopSearch = true;
         }
       }
-    
+
+      val defaultPattern = Pattern.compile("DEFAULT[\\s\\n]+(('[\\w\\W]*')|([\\d\\-\\,\\.]+)|(NOW[\\s]\\(\\)))", Pattern.CASE_INSENSITIVE)
+      val defaultMatcher = defaultPattern.matcher(x)
+      stopSearch = false
+      while (defaultMatcher.find && !stopSearch) {
+        if (!inQuote(x, defaultMatcher.start)) {
+	  result.defaultValue = defaultMatcher.group(1)
+	  stopSearch = true
+	}
+      }
+
     }
     result
   }

@@ -34,7 +34,9 @@ case class ColumnModel(override val name: String, val dataType: DataType)
   var parent: TableModel = null
   var isNotNull: Boolean = false
   var isAutoIncrement: Boolean = false
-  
+  var defaultValue: String = null
+
+
   var primaryKey: Boolean = false
   
   override def toString: String = {
