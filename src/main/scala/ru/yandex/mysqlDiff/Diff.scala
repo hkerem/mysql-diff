@@ -1,13 +1,16 @@
 package ru.yandex.mysqlDiff
 
-import ru.yandex.mysqlDiff.diff.simple._
-import scala.io._
+
 import java.io.File
+import scala.io._
+
+import ru.yandex.mysqlDiff.diff.simple._
+import ru.yandex.mysqlDiff.model._
 
 object Diff {
     val helpBanner: String = "MySql diff maker\n" + 
       "How to use:\n" +
-      "mysqlDiff file_name_from file_name_to"
+      "mysqlDiff.sh file_name_from|jdbc:jdbc_url_to_source  file_name_to|jdbc:jdbc_url_to_destination\n" 
       
     def main(args: Array[String]) {
         if (args.length < 2) {
@@ -26,31 +29,43 @@ object Diff {
           return
 	}
 	
-        var fromStr = ""
-	var toStr = ""
-
-
-        if (!fromArgs.toUpperCase.startsWith("JDBC")) {
+        var fromdb: DatabaseModel = null
+        var todb: DatabaseModel = null
+          
+          
+        if (fromArgs.toUpperCase.startsWith("JDBC:")) {
+          val fromUrl = fromArgs.trim
+          fromdb = SimpleJdbcHarvester.parse(fromUrl)
+        } 
+        else
+        {
           val from = new File(args(0))
           if (!from.isFile) {
 	   Console.println("\"From\" file is not a file.")
+           return
 	  }
-	  Source.fromFile(from).getLines.foreach(x => {fromStr = fromStr + x})
-	}
+          var fromStr = ""
+          Source.fromFile(from).getLines.foreach(x => {fromStr = fromStr + x})
+          fromdb = SimpleTextHarvester.parse(fromStr);
+        }
 
 
 	
 	
-	if (!toArgs.toUpperCase.startsWith("JDBC")) {
+	if (toArgs.toUpperCase.startsWith("JDBC:")) {
+          val toUrl = toArgs.trim
+          todb = SimpleJdbcHarvester.parse(toUrl)
+        } else {
 	  val to = new File(args(1))
           if (!to.isFile) {
             Console.println("\"to\" file is not a file.")
+            return;
           }
+          var toStr = ""
           Source.fromFile(to).getLines.foreach(x => {toStr = toStr + x})
+          todb = SimpleTextHarvester.parse(toStr);
         }        
  
-        val fromdb = SimpleTextHarvester.parse(fromStr);
-        val todb = SimpleTextHarvester.parse(toStr);
         
         Console.println("-- start diff script from " + fromArgs  + " to " + toArgs + "\n");
         val dbDiffMaker = new DatabaseDiffMaker(fromdb, todb);

@@ -308,9 +308,6 @@ object SimpleTextHarvester {
                       val idx = parseUniqueKeyDefinition(x)
                       if (idx != null) indexes = (indexes ++ List(idx)).toList
                     }
-                    
-                    
-                    
                     //todo other def
                   })
 

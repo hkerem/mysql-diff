@@ -91,7 +91,6 @@ case class TableModel(override val name: String, val columns: Seq[ColumnModel])
     
     var result = "CREATE TABLE " + name + " (";
     columns.foreach(x => result = result + ",\n" + x.toCreateStatement)
-    //Console.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" + columns + "\n" + result + "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     
     if (primaryKey != null && primaryKey.columns != null && primaryKey.columns.size > 0) {
       result = result + ",\nPRIMARY KEY ("

@@ -69,7 +69,10 @@ object SimpleJdbcHarvester {
        val colName = indexes.getString("COLUMN_NAME");
        val indexName = indexes.getString("INDEX_NAME");
        if (!checkPrimaryKey || table.primaryKey == null || table.primaryKey.name == null || !table.primaryKey.name.equals(indexName))
-         indexesMap(indexName) = List((indexesMap(indexName) ++ List(colName)): _*)
+         if (indexesMap.contains(indexName))
+           indexesMap(indexName) = (indexesMap(indexName) ++ List(colName)).toList
+         else
+           indexesMap(indexName) = List(colName)
     }
     
     val resultList = indexesMap.map(x => new IndexModel(x._1, x._2, false)).filter(x => {x.parent = table; true})
@@ -92,10 +95,10 @@ object SimpleJdbcHarvester {
   }
   
   
-  def search(url: String, user: String, pass: String): Seq[TableModel] = {
+  def search(url: String): Seq[TableModel] = {
     Class.forName("com.mysql.jdbc.Driver").newInstance;
 
-    val conn: Connection = DriverManager.getConnection(url, user, pass);
+    val conn: Connection = DriverManager.getConnection(url);
     val data: DatabaseMetaData = conn.getMetaData;
     
     val tables: ResultSet = data.getTables(null, "%", "%", List("TABLE").toArray);
@@ -114,7 +117,7 @@ object SimpleJdbcHarvester {
   }
   
   
-  def parse(connectionString: String, user: String, pass: String): DatabaseModel = {
-    new DatabaseModel("database", search(connectionString, user, pass))
+  def parse(connectionString: String): DatabaseModel = {
+    new DatabaseModel("database", search(connectionString))
   }  
 }
