@@ -192,4 +192,21 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
    });
  }
  
+ 
+ 
+ "Primary Index removed" is {
+   val db1Text = "CREATE TABLE table1 (id INT(11) PRIMARY KEY, nameId INT(12))"
+     val db2Text = "CREATE TABLE table1 (id INT(11), nameId INT(12))"
+     val db1 = SimpleTextHarvester.parse(db1Text)
+     val db2 = SimpleTextHarvester.parse(db2Text)
+     
+     //ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);
+     val dbDiffMaker = new DatabaseDiffMaker(db1, db2);
+     dbDiffMaker.doDiff(x => {
+       val outputScript = SimpleScriptBuilder.getString(x).trim
+       assert(outputScript.equals("ALTER TABLE table1 DROP PRIMARY KEY;"))
+       true
+     });
+ }
+ 
 }

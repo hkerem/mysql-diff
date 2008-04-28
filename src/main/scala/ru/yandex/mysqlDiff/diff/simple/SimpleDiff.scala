@@ -175,6 +175,19 @@ class TableDiffMaker(override val from: TableModel, override val to: TableModel)
               })
       val pkDiffMaker = new PrimaryKeyDiffMaker(from.primaryKey, to.primaryKey)
       pkDiffMaker.doDiff(tmpX)
+      
+      doListDiff[IndexModel](from.keys, to.keys, (from, to) => {
+        if (!from.isDefined && to.isDefined) {
+          tmpX(new FromIsNull(null, to.get));
+        } else 
+          if (!to.isDefined && from.isDefined) {
+            tmpX(new ToIsNull(from.get, null));
+          } else
+            if (to.isDefined && from.isDefined) {
+               val idxDiffMaker = new IndexDiffMaker(from.get, to.get)
+               idxDiffMaker.doDiff(tmpX)
+           }
+      })
     } 
     x(TableDiff(from, to, internalDiff))      
   }

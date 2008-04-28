@@ -57,7 +57,21 @@ object SimpleScriptBuilder {
     case ToIsNull(a, b) =>  a match {
         case TableModel(name, columns) => "DROP TABLE " + name + ";"
         case ColumnModel(name, dataType) => "ALTER TABLE " + a.asInstanceOf[ColumnModel].parent.name + " DROP COLUMN " + name + ";"
-        case _ => ""
+
+          
+//        case PrimaryKeyModel(name, cList) => "ALTER TABLE " + a.asInstanceOf[IndexModel].parent.name + " DROP PRIMARY KEY;" 
+//        case IndexModel(name, cList, isUnique) => "ALTER TABLE " + a.asInstanceOf[IndexModel].parent.name + " DROP INDEX " + name + ";"
+//      hack for bug: https://lampsvn.epfl.ch/trac/scala/ticket/816
+        case _ => {
+          if (a.isInstanceOf[PrimaryKeyModel]) {
+            "ALTER TABLE " + a.asInstanceOf[IndexModel].parent.name + " DROP PRIMARY KEY;"
+          } else
+            if (a.isInstanceOf[IndexModel]) {
+              "ALTER TABLE " + a.asInstanceOf[IndexModel].parent.name + " DROP INDEX " + a.name + ";"
+            } else {
+              ""
+            }
+        }
     }
     
     case PrimaryKeyDiff(a, b) => {
@@ -68,6 +82,15 @@ object SimpleScriptBuilder {
       "ALTER TABLE " + pk.parent.name +" DROP PRIMARY KEY, ADD PRIMARY KEY (" + pkList + ");"
     }
     
+    case IndexKeyDiff(a, b) => {
+      val idx = b.asInstanceOf[IndexModel] 
+      var idxList = ""
+      idx.columns.foreach(x => idxList = idxList + ", " + x)
+      idxList = idxList.substring(2)
+      var isUnique = ""
+      if (idx.isUnique) isUnique = "UNIQUE"
+      "ALTER TABLE " + idx.parent.name +" DROP INDEX " + a.name + ", ADD " + isUnique + " INDEX " + b.name + " (" + idxList + ");"
+    }
     
     case FromIsNull(a, b) => b match {
         case TableModel(name, columns) =>  b.asInstanceOf[TableModel].toCreateStatement
