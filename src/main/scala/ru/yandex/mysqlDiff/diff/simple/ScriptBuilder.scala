@@ -60,6 +60,15 @@ object SimpleScriptBuilder {
         case _ => ""
     }
     
+    case PrimaryKeyDiff(a, b) => {
+      val pk = b.asInstanceOf[PrimaryKeyModel] 
+      var pkList = ""
+      pk.columns.foreach(x => pkList = pkList + ", " + x)
+      pkList = pkList.substring(2)
+      "ALTER TABLE " + pk.parent.name +" DROP PRIMARY KEY, ADD PRIMARY KEY (" + pkList + ");"
+    }
+    
+    
     case FromIsNull(a, b) => b match {
         case TableModel(name, columns) =>  b.asInstanceOf[TableModel].toCreateStatement
         case ColumnModel(name, dataType) => "ALTER TABLE " + b.asInstanceOf[ColumnModel].parent.name + " ADD COLUMN " + b.toCreateStatement + ";"
@@ -108,7 +117,8 @@ object SimpleScriptBuilder {
             if (!alternative.trim.equals("")) result = result + "--alternative actions for column \"" + a.asInstanceOf[ColumnModel].parent.name + "." + a.name + "\" from source\n" + alternative
             
             blockedObjects = blockedObjects ++ forPrint ++ List(x)
-          }  
+          }
+          
           case _ => {}
         }
       })

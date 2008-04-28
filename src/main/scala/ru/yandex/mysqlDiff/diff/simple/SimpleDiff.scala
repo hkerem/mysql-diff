@@ -26,9 +26,12 @@ class NameDiffMaker(override val from: SqlObjectType, override val to: SqlObject
       x(ToIsNull(from, to))
       return false
     }
+    if (bothIsNull) return false
     if (isNameDiff) x(NameDiff(from, to))
     return true;
   }
+  
+  def bothIsNull = from == null && to == null
   def fromIsNull = from == null && to != null
   def toIsNull = to == null && from != null
   def isNameDiff =  (from.name != null && !from.name.equals(to.name)) || (from.name == null && to.name != null)
@@ -54,8 +57,24 @@ trait ListDiffMaker {
 
 
 trait StringListDiffMaker {
-  def doStringListDiff(from: Seq[String], to: Seq[String], x: (Option[String], Option[String]) => unit) = {
+  def doStringListDiff(from: Seq[String], to: Seq[String], x: (Option[String], Option[String]) => boolean) = {
+    val fromSet: Set[String] = Set(from: _*)
+    val toSet: Set[String] = Set(to: _*)
     
+    var fullSet = fromSet ++ toSet
+    
+    var resume = true 
+    
+    if (!(fromSet.size == toSet.size && fromSet.subsetOf(toSet) && toSet.subsetOf(fromSet))) {
+      fullSet.foreach(e => if (resume) {
+        var oFrom: Option[String] = None
+        if (fromSet.contains(e)) oFrom = Some(e)
+
+        var oTo: Option[String] = None
+        if (toSet.contains(e)) oTo = Some(e)
+        resume = x(oFrom, oTo)
+      })
+    }
   } 
 }
 
@@ -65,7 +84,7 @@ class PrimaryKeyDiffMaker(override val from: PrimaryKeyModel, override val to: P
 {
   override def doDiff(x: AddDiffFunction) = {
     if (super.doDiff(x)) {
-      doStringListDiff(from.columns, to.columns, (a, b) => {if (!a.isDefined || !b.isDefined) x(PrimaryKeyDiff(from, to)); true})
+      doStringListDiff(from.columns, to.columns, (a, b) => {if (!a.isDefined || !b.isDefined) {x(PrimaryKeyDiff(from, to)); false} else true})
       true
     } else
       false
@@ -78,7 +97,7 @@ class IndexDiffMaker(override val from: IndexModel, override val to: IndexModel)
 {
   override def doDiff(x: AddDiffFunction) = {
     if (super.doDiff(x)) {
-      doStringListDiff(from.columns, to.columns, (a, b) => {if (!a.isDefined || !b.isDefined) x(PrimaryKeyDiff(from, to)); true})
+      doStringListDiff(from.columns, to.columns, (a, b) => {if (!a.isDefined || !b.isDefined) {x(IndexKeyDiff(from, to)); false} else true})
       if (from.isUnique != to.isUnique) x(UniqueKeyDiff(from, to))
       true
     } else
@@ -154,6 +173,8 @@ class TableDiffMaker(override val from: TableModel, override val to: TableModel)
                        c.doDiff(tmpX);
                    }
               })
+      val pkDiffMaker = new PrimaryKeyDiffMaker(from.primaryKey, to.primaryKey)
+      pkDiffMaker.doDiff(tmpX)
     } 
     x(TableDiff(from, to, internalDiff))      
   }

@@ -180,4 +180,33 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
     val createStatement = table.toCreateStatement.trim.replaceAll("\\s[\\n\\s]*", " ")
     assert("Now create statement is: " + createStatement, "CREATE TABLE test_table (id int(11), name varchar(100), PRIMARY KEY (id, name));".equals(createStatement))
   }
+  
+  
+  "Primary keys diff" is {
+    val c1_1 = new ColumnModel("id", new DataType("int", Some(11)))
+    val c1_2 = new ColumnModel("name", new DataType("varchar", Some(100)))
+    val cList_1 = List(c1_1, c1_2)
+    val table1 = new TableModel("test_table", cList_1)
+    table1.primaryKey = new PrimaryKeyModel("PRIMARY", List(c1_1.name, c1_2.name))
+
+    
+    val c2_1 = new ColumnModel("id", new DataType("int", Some(11)))
+    val c2_2 = new ColumnModel("name", new DataType("varchar", Some(100)))
+    val cList2 = List(c2_1, c2_2)
+    val table2 = new TableModel("test_table", cList2)
+    table2.primaryKey = new PrimaryKeyModel("PRIMARY", List(c2_1.name))
+    
+    val tdf = new TableDiffMaker(table1, table2)
+    tdf.doDiff(x => {
+      assert(x.isInstanceOf[TableDiff[SqlObjectType, DiffType[SqlObjectType]]])
+      val diffList = x.asInstanceOf[TableDiff[SqlObjectType, DiffType[SqlObjectType]]].diffList
+      assert(diffList.size == 1)
+      assert(diffList(0).isInstanceOf[PrimaryKeyDiff[SqlObjectType]])
+      val diff = diffList(0).asInstanceOf[PrimaryKeyDiff[SqlObjectType]]
+      assert(diff.from == table1.primaryKey)
+      assert(diff.to == table2.primaryKey)
+      true
+    })
+  }
+  
 }

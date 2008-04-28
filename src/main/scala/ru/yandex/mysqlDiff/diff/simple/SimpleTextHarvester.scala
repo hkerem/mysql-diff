@@ -320,6 +320,7 @@ object SimpleTextHarvester {
                     val primaryKeyColumns = columns.filter(x => x.primaryKey)
                     if (primaryKeyColumns.size > 0) {
                       tableModel.primaryKey = new PrimaryKeyModel("", primaryKeyColumns.map(x => x.name))
+                      tableModel.primaryKey.parent = tableModel
                     }
                   }
                   columns.foreach(x => x.parent = tableModel)
