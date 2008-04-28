@@ -120,8 +120,8 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
      val diffList = x.asInstanceOf[DatabaseDiff[SqlObjectType, DiffType[SqlObjectType]]].diffList;
      val res = SimpleScriptBuilder.getString(x)
      assert(diffList.size == 2)
-     assert(diffList(0).isInstanceOf[FromIsNull[TableModel]] || diffList(1).isInstanceOf[FromIsNull[TableModel]])
-     assert(diffList(0).isInstanceOf[ToIsNull[TableModel]] || diffList(1).isInstanceOf[ToIsNull[TableModel]])
+     assert(diffList(0).isInstanceOf[FromIsNull[_]] || diffList(1).isInstanceOf[FromIsNull[_]])
+     assert(diffList(0).isInstanceOf[ToIsNull[_]] || diffList(1).isInstanceOf[ToIsNull[_]])
      assert(diffList(0).getClass != diffList(1).getClass)
      /*
         CREATE TABLE table_test (id int, name varchar(1000));DROP TABLE table_test1;       

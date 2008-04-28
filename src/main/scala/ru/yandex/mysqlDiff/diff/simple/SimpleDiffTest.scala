@@ -49,8 +49,8 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
     var isDataTypeFind = false;
     var i = 0;
     diff.doDiff(o => {
-      if (o.isInstanceOf[NameDiff[ColumnModel]]) isNameFind = true;
-      if (o.isInstanceOf[DataTypeDiff[ColumnModel]]) isDataTypeFind = true;
+      if (o.isInstanceOf[NameDiff[_]]) isNameFind = true;
+      if (o.isInstanceOf[DataTypeDiff[_]]) isDataTypeFind = true;
       i = i + 1;
       true
     });
@@ -107,7 +107,7 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
     val cDiffMaker = new ColumnDiffMaker(c1, c2);
     var i = 0;
     cDiffMaker.doDiff(x => {
-      assert(x.isInstanceOf[AutoIncrementDiff[ColumnModel]])
+      assert(x.isInstanceOf[AutoIncrementDiff[_]])
       i = i + 1
       true
     })
@@ -198,10 +198,10 @@ object SimpleDiffTest extends TestSuite("Simple Diff") {
     
     val tdf = new TableDiffMaker(table1, table2)
     tdf.doDiff(x => {
-      assert(x.isInstanceOf[TableDiff[SqlObjectType, DiffType[SqlObjectType]]])
+      assert(x.isInstanceOf[TableDiff[_, _]])
       val diffList = x.asInstanceOf[TableDiff[SqlObjectType, DiffType[SqlObjectType]]].diffList
       assert(diffList.size == 1)
-      assert(diffList(0).isInstanceOf[PrimaryKeyDiff[SqlObjectType]])
+      assert(diffList(0).isInstanceOf[PrimaryKeyDiff[_]])
       val diff = diffList(0).asInstanceOf[PrimaryKeyDiff[SqlObjectType]]
       assert(diff.from == table1.primaryKey)
       assert(diff.to == table2.primaryKey)
