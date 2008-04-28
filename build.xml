@@ -1,5 +1,8 @@
 <?xml version="1.0"?>
 <project name="mysqlDiff" default="jar">
+	<!-- local properties, scala.home for example -->
+	<property file="build.properties"/>
+	
 	<property name="version" value="0.0"/>
 	<property name="src.dir" value="${basedir}/src/main/scala"/>
 	<!--property name="src.tests.dir" value="${basedir}/src/test/scala"/-->
