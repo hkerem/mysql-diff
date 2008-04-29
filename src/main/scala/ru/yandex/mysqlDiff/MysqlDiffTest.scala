@@ -1,4 +1,4 @@
-package ru.yandex.mysqlDiff;
+package ru.yandex.mysqlDiff
 
 import scalax.testing._
 

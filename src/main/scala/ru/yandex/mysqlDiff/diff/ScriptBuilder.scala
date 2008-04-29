@@ -1,4 +1,4 @@
-package ru.yandex.mysqlDiff.diff;
+package ru.yandex.mysqlDiff.diff
 
 import ru.yandex.mysqlDiff.model._
 
