@@ -49,7 +49,7 @@
 	-->
 
 	<target name="run-tests" depends="clean, build">
-		<java classname="ru.yandex.mysqlDiff.MySqlDiffTest" failonerror="true">
+		<java classname="ru.yandex.mysqlDiff.MysqlDiffTest" failonerror="true">
 			<sysproperty key="java.awt.headless" value="true"/>
 			<classpath refid="build.classpath"/>
 			<classpath>
