@@ -35,7 +35,7 @@ object ScriptBuilder {
            "ALTER TABLE " + A.parent.name + " CHANGE COLUMN " + A.name + " "  + B.name + " " + bType.name + typeLength + unsigned + zerofill + notNullDef + autoIncreament + ";";
    } 
   
-   def getString(x: DiffType[SqlObjectType]):String = x match {
+   def getString(x: DiffType):String = x match {
     
        case DatabaseDiff(a, b, diffList) => {
            var result = ""
@@ -129,7 +129,7 @@ object ScriptBuilder {
            var toNullList =  List[ToIsNull[ColumnModel]]()
            var fromNullList = List[FromIsNull[ColumnModel]]()
       
-           var blockedObjects = Set[DiffType[SqlObjectType]]()
+           var blockedObjects = Set[DiffType]()
       
            diffList.foreach(x => x match {
                case ToIsNull(a, b) =>  {
@@ -139,7 +139,7 @@ object ScriptBuilder {
           
                case FromIsNull(a, b) => {
                    val sq = fromNullList ++ List(x.asInstanceOf[FromIsNull[ColumnModel]])
-                   fromNullList = List(sq: _*)
+                   fromNullList = sq.toList
                }
                case _ => {}
            })
@@ -150,18 +150,18 @@ object ScriptBuilder {
            diffList.foreach(x => if (!blockedObjects.contains(x)) {
                x match {
                    case ToIsNull(a, b) => {
-                       var forPrint = Set[DiffType[SqlObjectType]]()
+                       var forPrint = Set[DiffType]()
             
                        var alternative = ""
                        fromNullList.foreach(e => {
                            if (e.to.dataType.name.equals(a.asInstanceOf[ColumnModel].dataType.name)) {
-                               val diff = new DataTypeDiff(a, e.to)
-                               forPrint = forPrint ++ Set[DiffType[SqlObjectType]](e.asInstanceOf[DiffType[SqlObjectType]])
+                               val diff = new DataTypeDiff(a.asInstanceOf[ColumnModel], e.to)
+                               forPrint = forPrint ++ Set[DiffType](e.asInstanceOf[DiffType])
                                alternative  = alternative  + "-- " + ScriptBuilder.getString(diff) + "\n"
                            }
                        })
 
-                       forPrint.foreach(e => result = result + ScriptBuilder.getString(e.asInstanceOf[DiffType[SqlObjectType]]) + "\n")
+                       forPrint.foreach(e => result = result + ScriptBuilder.getString(e.asInstanceOf[DiffType]) + "\n")
                        result = result + ScriptBuilder.getString(x) + "\n"
             
                        if (!alternative.trim.equals(""))

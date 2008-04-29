@@ -3,37 +3,32 @@ package ru.yandex.mysqlDiff.diff
 
 import ru.yandex.mysqlDiff.model._
 
-object AbstractDiffMaker
-
-abstract class AbstractDiffMaker(val from: SqlObjectType, val to: SqlObjectType) {
-    type S = SqlObjectType
-    type AddDiffFunction = (DiffType[SqlObjectType]) => Boolean;
-    def doDiff(x: AddDiffFunction): Boolean;
+trait AbstractDiffMaker {
+    type AddDiffFunction = (DiffType) => Boolean;
 }
 
 
-class NameDiffMaker(override val from: SqlObjectType, override val to: SqlObjectType)
-    extends AbstractDiffMaker(from: SqlObjectType, to: SqlObjectType)
-{
-    override def doDiff(x: AddDiffFunction): Boolean  = {
-        if (fromIsNull) {
-            x(FromIsNull(from,to))
+trait NameDiffMaker extends AbstractDiffMaker {
+    def doNameDiff(from: SqlObjectType, to: SqlObjectType, x: AddDiffFunction): Boolean  = {
+        if (fromIsNull(from, to)) {
+            x(FromIsNull(from, to))
             return false
         }
-        if (toIsNull) {
+
+        if (toIsNull(from, to)) {
             x(ToIsNull(from, to))
             return false
         }
 
-        if (bothIsNull) return false
-        if (isNameDiff) x(NameDiff(from, to))
+        if (bothIsNull(from, to)) return false
+        if (isNameDiff(from, to)) x(NameDiff(from, to))
         return true;
     }
 
-    def bothIsNull = from == null && to == null
-    def fromIsNull = from == null && to != null
-    def toIsNull = to == null && from != null
-    def isNameDiff =  (from.name != null && !from.name.equals(to.name)) || (from.name == null && to.name != null)
+    def bothIsNull(from: SqlObjectType, to: SqlObjectType) = from == null && to == null
+    def fromIsNull(from: SqlObjectType, to: SqlObjectType) = from == null && to != null
+    def toIsNull(from: SqlObjectType, to: SqlObjectType) = to == null && from != null
+    def isNameDiff(from: SqlObjectType, to: SqlObjectType) =  (from.name != null && !from.name.equals(to.name)) || (from.name == null && to.name != null)
 }
 
 
@@ -75,11 +70,10 @@ trait StringListDiffMaker {
 }
 
 
-class PrimaryKeyDiffMaker(override val from: PrimaryKeyModel, override val to: PrimaryKeyModel)
-    extends NameDiffMaker(from: SqlObjectType, to: SqlObjectType) with StringListDiffMaker
+object PrimaryKeyDiffMaker extends NameDiffMaker with StringListDiffMaker 
 {
-    override def doDiff(x: AddDiffFunction) = {
-        if (super.doDiff(x)) {
+    def doDiff(from: PrimaryKeyModel, to: PrimaryKeyModel, x: AddDiffFunction) = {
+        if (super.doNameDiff(from, to, x)) {
             doStringListDiff(from.columns, to.columns, (a, b) => {if (!a.isDefined || !b.isDefined) {x(PrimaryKeyDiff(from, to)); false} else true})
             true
         } else
@@ -88,11 +82,10 @@ class PrimaryKeyDiffMaker(override val from: PrimaryKeyModel, override val to: P
 }
 
 
-class IndexDiffMaker(override val from: IndexModel, override val to: IndexModel)
-    extends NameDiffMaker(from: SqlObjectType, to: SqlObjectType) with StringListDiffMaker
+object IndexDiffMaker extends NameDiffMaker with StringListDiffMaker
 {
-    override def doDiff(x: AddDiffFunction) = {
-        if (super.doDiff(x)) {
+    def doDiff(from:IndexModel, to:IndexModel, x: AddDiffFunction) = {
+        if (super.doNameDiff(from, to, x)) {
             doStringListDiff(from.columns, to.columns, (a, b) => {if (!a.isDefined || !b.isDefined) {x(IndexKeyDiff(from, to)); false} else true})
             if (from.isUnique != to.isUnique) x(UniqueKeyDiff(from, to))
             true
@@ -102,30 +95,30 @@ class IndexDiffMaker(override val from: IndexModel, override val to: IndexModel)
 }
 
 
-class ColumnDiffMaker(override val from: ColumnModel, override val to: ColumnModel)
-    extends NameDiffMaker(from: SqlObjectType, to: SqlObjectType) with ListDiffMaker
+object ColumnDiffMaker extends NameDiffMaker with ListDiffMaker
 {
-    def doColumnDiff(x: AddDiffFunction): Boolean = {
-        if (!super.doDiff(x)) false
+
+    def doColumnDiff(from: ColumnModel, to: ColumnModel, x: AddDiffFunction): Boolean = {
+        if (!super.doNameDiff(from, to, x)) false
            else
         {
-            if (isTypeDiff) x(DataTypeDiff(from, to));
-            if (isNullDiff) x(NotNullDiff(from, to));
-            if (isAutoIncrementDiff) x(AutoIncrementDiff(from, to))
-                else
+            if (isTypeDiff(from, to)) x(DataTypeDiff(from, to))
+            if (isNullDiff(from, to)) x(NotNullDiff(from, to))
+            if (isAutoIncrementDiff(from, to)) x(AutoIncrementDiff(from, to))
+            if (isDefaultDiff(from, to)) x(DefaultValueDiff(from, to))        
             true
        }
     }
 
-    override def doDiff(x: AddDiffFunction) = {
-        if (!doColumnDiff(x)) false
+    def doDiff(from: ColumnModel, to: ColumnModel, x: AddDiffFunction) = {
+        if (!doColumnDiff(from, to, x)) false
 //todo con diff
         true
     }
 
-    def isAutoIncrementDiff: Boolean  = from.isAutoIncrement != to.isAutoIncrement
+    def isAutoIncrementDiff(from: ColumnModel, to: ColumnModel): Boolean  = from.isAutoIncrement != to.isAutoIncrement
 
-    def isTypeDiff:Boolean = {
+    def isTypeDiff(from: ColumnModel, to: ColumnModel):Boolean = {
         if (from.dataType == to.dataType) return false
         if ((from.dataType == null || to.dataType == null) && from.dataType != to.dataType) return true
         if (from.dataType.name == to.dataType.name && from.dataType.name == null) return false
@@ -135,21 +128,20 @@ class ColumnDiffMaker(override val from: ColumnModel, override val to: ColumnMod
         if (from.dataType.isUnsigned != to.dataType.isUnsigned) return true
         !(from.dataType.length.getOrElse(-1) == to.dataType.length.getOrElse(-1))
     }
-    def isNullDiff = !(from.isNotNull == to.isNotNull)
+    def isNullDiff(from: ColumnModel, to: ColumnModel) = !(from.isNotNull == to.isNotNull)
+
+    def isDefaultDiff(from: ColumnModel, to: ColumnModel) = !(from.defaultValue == to.defaultValue)
+
 }
 
-class TableDiffMaker(override val from: TableModel, override val to: TableModel)
-    extends NameDiffMaker(from: SqlObjectType, to: SqlObjectType)
-    with ListDiffMaker
-{
+object TableDiffMaker extends NameDiffMaker with ListDiffMaker {
     def doTableDiff(x: AddDiffFunction):Boolean  = true
 
-    override def doDiff(x: AddDiffFunction): Boolean = {
-        var internalDiff = List[DiffType[SqlObjectType]]();
+    def doDiff(from:TableModel, to: TableModel, x: AddDiffFunction): Boolean = {
+        var internalDiff = List[DiffType]();
 
         def tmpX: AddDiffFunction = o => {
-            val sq = internalDiff ++ List(o)
-            internalDiff = List(sq: _*)
+            internalDiff = (internalDiff ++ List(o)).toList 
             true
         }
 
@@ -160,13 +152,11 @@ class TableDiffMaker(override val from: TableModel, override val to: TableModel)
                     if (!to.isDefined && from.isDefined) tmpX(new ToIsNull(from.get, null))
                         else
                         if (to.isDefined && from.isDefined) {
-                            val c = new ColumnDiffMaker(from.get, to.get)
-                            c.doDiff(tmpX);
+                            ColumnDiffMaker.doDiff(from.get, to.get, tmpX)
                         }
                 })
 
-        val pkDiffMaker = new PrimaryKeyDiffMaker(from.primaryKey, to.primaryKey)
-        pkDiffMaker.doDiff(tmpX)
+        PrimaryKeyDiffMaker.doDiff(from.primaryKey, to.primaryKey, tmpX)
 
         doListDiff[IndexModel](from.keys, to.keys, (from, to) => {
             if (!from.isDefined && to.isDefined) tmpX(new FromIsNull(null, to.get))
@@ -175,8 +165,7 @@ class TableDiffMaker(override val from: TableModel, override val to: TableModel)
                     tmpX(new ToIsNull(from.get, null))
                   } else
                         if (to.isDefined && from.isDefined) {
-                            val idxDiffMaker = new IndexDiffMaker(from.get, to.get)
-                            idxDiffMaker.doDiff(tmpX)
+                            IndexDiffMaker.doDiff(from.get, to.get, tmpX)
                         }
             })
         }
@@ -185,12 +174,9 @@ class TableDiffMaker(override val from: TableModel, override val to: TableModel)
 }
 
 
-class DatabaseDiffMaker(override val from: DatabaseModel, override val to: DatabaseModel)
-    extends NameDiffMaker(from: SqlObjectType, to: SqlObjectType)
-    with ListDiffMaker
-{
-    override def doDiff(x :AddDiffFunction): Boolean = {
-        var internalDiff = List[DiffType[SqlObjectType]]();
+object DatabaseDiffMaker extends NameDiffMaker with ListDiffMaker {
+    def doDiff(from: DatabaseModel, to: DatabaseModel, x: AddDiffFunction): Boolean = {
+        var internalDiff = List[DiffType]();
 
         def tmpX: AddDiffFunction = o => {
             val sq = internalDiff ++ List(o)
@@ -206,9 +192,8 @@ class DatabaseDiffMaker(override val from: DatabaseModel, override val to: Datab
                     tmpX(new ToIsNull(from.get, null));
                 } else
                     if (to.isDefined && from.isDefined) {
-                    val c = new TableDiffMaker(from.get, to.get)
-                    c.doDiff(tmpX);
-                }
+                        TableDiffMaker.doDiff(from.get, to.get, tmpX)
+                    }
             })
         x(DatabaseDiff(from, to, internalDiff))
     }

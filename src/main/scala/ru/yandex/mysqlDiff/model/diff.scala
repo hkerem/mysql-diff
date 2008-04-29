@@ -1,25 +1,26 @@
 package ru.yandex.mysqlDiff.model
 
-abstract class DiffType[A <: SqlObjectType](val from: A, val to: A) 
+abstract class DiffType(val from: SqlObjectType, val to: SqlObjectType)
 
 case class NameDiff[A <: SqlObjectType](override val from: A, override val to:A) 
-    extends DiffType(from: A, to: A)
+    extends DiffType(from, to)
 
-case class DataTypeDiff[A <: SqlObjectType](override val from: A, override val to:A) 
-    extends DiffType(from: A, to: A)
+case class DataTypeDiff(override val from: ColumnModel, override val to: ColumnModel) 
+    extends DiffType(from, to)
  
 
-case class NotNullDiff[A <: SqlObjectType](override val from: A, override val to:A) 
-    extends DiffType(from: A, to: A)
+case class NotNullDiff(override val from: ColumnModel, override val to: ColumnModel)
+    extends DiffType(from, to)
 
-case class AutoIncrementDiff[A <: SqlObjectType](override val from: A, override val to:A) 
-    extends DiffType(from: A, to: A)
+case class AutoIncrementDiff(override val from: ColumnModel, override val to: ColumnModel)
+    extends DiffType(from, to)
 
-
+case class DefaultValueDiff(override val from: ColumnModel, override val to:ColumnModel) 
+    extends DiffType(from, to)
 
 //keys diff
-case class PrimaryKeyDiff[A <: SqlObjectType](override val from: A, override val to:A)
-    extends DiffType(from: A, to: A)
+case class PrimaryKeyDiff(override val from: PrimaryKeyModel, override val to: PrimaryKeyModel)
+    extends DiffType(from, to)
 
 case class UniqueKeyDiff[A <: SqlObjectType](override val from: A, override val to:A)
     extends DiffType(from: A, to: A)
@@ -38,17 +39,17 @@ case class FulltextKeyDiff[A <: SqlObjectType](override val from: A, override va
 //end keys diff
 
 
-abstract class DiffContainter[A <: SqlObjectType, B <: DiffType[A]]
+abstract class DiffContainter[A <: SqlObjectType, B <: DiffType]
     (override val from: A, override val to:A, val diffList : Seq[B])
     extends DiffType(from: A, to: A)
         
-case class ColumnDiff[A <: SqlObjectType, B <: DiffType[A]] 
-    (override val from: A, override val to:A, override val diffList : Seq[B])
-    extends DiffContainter(from: A, to: A, diffList: Seq[B])
+case class ColumnDiff
+    (override val from: ColumnModel, override val to: ColumnModel, override val diffList : Seq[DiffType])
+    extends DiffContainter(from, to, diffList)
 
-case class TableDiff[A <: SqlObjectType, B <: DiffType[A]] 
-    (override val from: A, override val to:A, override val diffList : Seq[B])
-    extends DiffContainter(from: A, to: A, diffList: Seq[B])
+case class TableDiff
+    (override val from: TableModel, override val to:TableModel, override val diffList : Seq[DiffType])
+    extends DiffContainter(from, to, diffList)
 
 case class ToIsNull[A <: SqlObjectType](override val from: A, override val to:A) 
     extends DiffType(from: A, to: A)  
@@ -56,6 +57,6 @@ case class ToIsNull[A <: SqlObjectType](override val from: A, override val to:A)
 case class FromIsNull[A <: SqlObjectType](override val from: A, override val to:A) 
     extends DiffType(from: A, to: A)  
 
-case class DatabaseDiff[A <: SqlObjectType, B <: DiffType[A]]
-    (override val from: A, override val to:A, override val diffList : Seq[B])
-    extends DiffContainter(from: A, to: A, diffList: Seq[B])
+case class DatabaseDiff[A <: SqlObjectType]
+    (override val from: A, override val to:A, override val diffList: Seq[DiffType])
+    extends DiffContainter(from: A, to: A, diffList)

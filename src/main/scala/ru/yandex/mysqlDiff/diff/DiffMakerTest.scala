@@ -5,60 +5,59 @@ import ru.yandex.mysqlDiff.model._
 
 
 object DiffTest extends TestSuite("Simple Diff") {
-  
+/*
     "Name Diff" is {
     
         val o1 = new SqlObjectType("o1")
         val o2 = new SqlObjectType("o2")
         val o1_eq = new SqlObjectType("o1")
-    
-        val diffEquals = new NameDiffMaker(o1, o1_eq)
-    
+
         var i = 0
-        diffEquals.doDiff(o => {
+        NameDiffMaker.doDiff(o1, o1_eq, o => {
             fail("FAIL ME:" + o)
         })
         assert("Diff is runned", i == 0)
     
-        val diffIs = new NameDiffMaker(o1, o2)
-        diffIs.doDiff(o => {
+        NameDiffMaker.doDiff(o1, o2, o => {
             i = i + 1
             assert("First of diff is fail", o.from == o1)
             assert("First of diff is fail", o.to == o2)
            true
-        });
-  
+        })
     }
-  
+*/  
   
     "Column Diff" is {
     
         val c1: ColumnModel = new ColumnModel("c1", new DataType("int", None));
         val c1_eq: ColumnModel = new ColumnModel("c1", new DataType("int", None));
+
+
+        val m: ColumnDiffMaker.AddDiffFunction = o => {
+            fail("Fail with:" + o)
+        }
+        ColumnDiffMaker.doDiff(c1, c1_eq, m);
     
-        val diffEquals = new ColumnDiffMaker(c1, c1_eq);
-        diffEquals.doDiff(o => {
-            fail("Fail with:" + o);
-        });
-    
-        val c2: ColumnModel = new ColumnModel("c2", new DataType("varchar", Some(20)));
-        val diff = new ColumnDiffMaker(c1, c2);
+        val c2: ColumnModel = ColumnModel("c2", new DataType("varchar", Some(20)))
 
         var isNameFind = false;
         var isDataTypeFind = false;
         var i = 0;
-        diff.doDiff(o => {
-            if (o.isInstanceOf[NameDiff[_]]) isNameFind = true;
-            if (o.isInstanceOf[DataTypeDiff[_]]) isDataTypeFind = true;
-            i = i + 1;
+
+
+        val m2: ColumnDiffMaker.AddDiffFunction = o => {
+            if (o.isInstanceOf[NameDiff[SqlObjectType]]) isNameFind = true
+            if (o.isInstanceOf[DataTypeDiff]) isDataTypeFind = true
+            i = i + 1
             true
-        });
+        }
+        ColumnDiffMaker.doDiff(c1, c2, m2)
         assert("Diff count: " + i, i == 2)
         assert("Is name find", isNameFind)
         assert("Is type find", isDataTypeFind)
     }
 
-    class SimpleListDiff extends NameDiffMaker(null, null) with ListDiffMaker {
+    object SimpleListDiff extends NameDiffMaker with ListDiffMaker {
 
     }
   
@@ -73,8 +72,7 @@ object DiffTest extends TestSuite("Simple Diff") {
         val s1 = List[ColumnModel](c1, c2, c3);
         val s1_eq = List[ColumnModel](c1, c2, c3);
 
-        val eqDiff = new SimpleListDiff;
-        eqDiff.doListDiff[ColumnModel](
+        SimpleListDiff.doListDiff[ColumnModel](
             s1,
             s1_eq,
             (a, b) => {
@@ -82,12 +80,11 @@ object DiffTest extends TestSuite("Simple Diff") {
             }
         )
     
-    
         val s2 = List[ColumnModel](c2, c3, c4);
         var i = 0;
     
     
-        eqDiff.doListDiff[ColumnModel](
+        SimpleListDiff.doListDiff[ColumnModel](
             s1,
             s2,
             (a, b) => i = i + 1
@@ -100,13 +97,14 @@ object DiffTest extends TestSuite("Simple Diff") {
         val c1: ColumnModel = new ColumnModel("id", new DataType("int", Some(11)))
         c1.isAutoIncrement = true
         val c2: ColumnModel = new ColumnModel("id", new DataType("int", Some(11)))
-        val cDiffMaker = new ColumnDiffMaker(c1, c2);
         var i = 0;
-        cDiffMaker.doDiff(x => {
-            assert(x.isInstanceOf[AutoIncrementDiff[_]])
+
+        val m : ColumnDiffMaker.AddDiffFunction = x => {
+            assert(x.isInstanceOf[AutoIncrementDiff])
             i = i + 1
             true
-        })
+        }
+        ColumnDiffMaker.doDiff(c1, c2, m)
         assert(i == 1)
     }
 
@@ -129,20 +127,20 @@ object DiffTest extends TestSuite("Simple Diff") {
         val table2: TableModel = new TableModel("table1", cList2);
     
     
-        val tableDiff = new TableDiffMaker(table1, table2);
+
     
-        var tableDiffObject: DiffType[SqlObjectType] = null;
+        var tableDiffObject: DiffType = null;
         var i = 0;
-        tableDiff.doDiff(
-            o => {
+
+        val m: TableDiffMaker.AddDiffFunction = o => {
                 tableDiffObject = o
                 i = i + 1
                 true
-            }
-        )
+        }
+        TableDiffMaker.doDiff(table1, table2, m)
         assert(i == 1)
         assert(tableDiffObject != null)
-        assert(tableDiffObject.asInstanceOf[TableDiff[SqlObjectType, DiffType[SqlObjectType]]].diffList.size == 4)
+        assert(tableDiffObject.asInstanceOf[TableDiff].diffList.size == 4)
     }
   
     "Column Create Statement" is {
@@ -191,17 +189,17 @@ object DiffTest extends TestSuite("Simple Diff") {
         val cList2 = List(c2_1, c2_2)
         val table2 = new TableModel("test_table", cList2)
         table2.primaryKey = new PrimaryKeyModel("PRIMARY", List(c2_1.name))
-    
-        val tdf = new TableDiffMaker(table1, table2)
-        tdf.doDiff(x => {
-            assert(x.isInstanceOf[TableDiff[_, _]])
-            val diffList = x.asInstanceOf[TableDiff[SqlObjectType, DiffType[SqlObjectType]]].diffList
+
+        val m: TableDiffMaker.AddDiffFunction = x => {
+            assert(x.isInstanceOf[TableDiff])
+            val diffList = x.asInstanceOf[TableDiff].diffList
             assert(diffList.size == 1)
-            assert(diffList(0).isInstanceOf[PrimaryKeyDiff[_]])
-            val diff = diffList(0).asInstanceOf[PrimaryKeyDiff[SqlObjectType]]
+            assert(diffList(0).isInstanceOf[PrimaryKeyDiff])
+            val diff = diffList(0).asInstanceOf[PrimaryKeyDiff]
             assert(diff.from == table1.primaryKey)
             assert(diff.to == table2.primaryKey)
             true
-        })
+        }
+        TableDiffMaker.doDiff(table1, table2, m)
     }
 }
