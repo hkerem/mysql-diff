@@ -16,14 +16,14 @@ object JdbcHarvester {
        while (columns.next) {
            val colName = columns.getString("COLUMN_NAME");
            val colType = columns.getString("TYPE_NAME");
-           var colTypeSize: int = -1;
+           var colTypeSize: Int = -1;
            if (columns.getObject("COLUMN_SIZE") != null) colTypeSize = columns.getInt("COLUMN_SIZE");
 
            val isNotNull = !columns.getString("IS_NULLABLE").equalsIgnoreCase("yes");
            val isAutoinrement = columns.getString("IS_AUTOINCREMENT").equalsIgnoreCase("YES");
 
 
-           var typeSizeOption: Option[int] = None;
+           var typeSizeOption: Option[Int] = None;
            if (colTypeSize  != -1) typeSizeOption = Some(colTypeSize)
 
            val cm = new ColumnModel(colName, new DataType(colType, typeSizeOption))
@@ -62,7 +62,7 @@ object JdbcHarvester {
 
 
 
-    def parseIndexes(table: TableModel, data: DatabaseMetaData, checkPrimaryKey: boolean): Seq[IndexModel] = {
+    def parseIndexes(table: TableModel, data: DatabaseMetaData, checkPrimaryKey: Boolean): Seq[IndexModel] = {
         var indexesMap: Map[String, List[String]] = Map()
         val indexes = data.getIndexInfo(null, null, table.name, false, true)
         while (indexes.next) {

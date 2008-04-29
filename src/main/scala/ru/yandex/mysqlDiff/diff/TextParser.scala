@@ -11,10 +11,10 @@ object ContentType extends Enumeration {
 
 object TextParser {
   
-    private def inQuote(data: String, startCheckPos: int, pos: int): boolean =
+    private def inQuote(data: String, startCheckPos: Int, pos: Int): Boolean =
     {
-        var i: int = startCheckPos + 1
-        var quoteType: int = 0;
+        var i: Int = startCheckPos + 1
+        var quoteType: Int = 0;
         if (data.charAt(i - 1) == '\'') quoteType = -1
         if (data.charAt(i - 1) == '"') quoteType = 1
     
@@ -29,13 +29,13 @@ object TextParser {
         !(quoteType == 0)
     }
   
-    private def inQuote(data: String, pos: int): boolean = {
+    private def inQuote(data: String, pos: Int): Boolean = {
         inQuote(data, 0, pos)
     }
 
 
   
-     private def findStopBraketsPos(data: String, startBracketsPos: int): int = {
+     private def findStopBraketsPos(data: String, startBracketsPos: Int): Int = {
          var countOfBrakets = 1;
 
          var i = startBracketsPos + 1;
@@ -100,7 +100,7 @@ object TextParser {
         ContentType.UNKNOWN
     }
 
-    private def parseDataTypeDefition(x: String): Tuple3[DataType, int, int] = {
+    private def parseDataTypeDefition(x: String): Tuple3[DataType, Int, Int] = {
         val witeSpaces = "[\\n\\s]*"
         val nameDefinition = "[\\w\\-\\_]+"
         val UNSIGNED = "unsigned"

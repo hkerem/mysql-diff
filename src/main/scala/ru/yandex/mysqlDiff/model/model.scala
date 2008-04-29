@@ -13,8 +13,8 @@ case class DataType(override val name: String, val length: Option[Int])
 {
     var parent: ColumnModel = null
   
-    var isUnsigned: boolean = false
-    var isZerofill: boolean = false
+    var isUnsigned: Boolean = false
+    var isZerofill: Boolean = false
     var characterSet: String = null
     var collate: String = null
   
@@ -62,7 +62,7 @@ case class ConstraintModel(override val name: String, val columns: Seq[String])
     var parent: TableModel = null
 }
 
-case class IndexModel(override val name: String, override val columns: Seq[String], isUnique: boolean)
+case class IndexModel(override val name: String, override val columns: Seq[String], isUnique: Boolean)
     extends ConstraintModel(name, columns)
 {
     override def toCreateStatement: String = ""
