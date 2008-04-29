@@ -1,80 +1,80 @@
 <?xml version="1.0"?>
 <project name="mysqlDiff" default="dist">
-	<!-- local properties, scala.home for example -->
-	<property file="build.properties"/>
-	
-	<property name="version" value="0.0"/>
-	<property name="src.dir" value="${basedir}/src/main/scala"/>
-	<!--property name="src.tests.dir" value="${basedir}/src/test/scala"/-->
-	<property name="build.dir" value="${basedir}/target/build/classes"/>
-	<!--property name="build.tests.dir" value="${basedir}/target/build/tests"/-->
-	<property name="dist.dir" value="${basedir}/target"/>
-	<property name="tmp.dir" value="${basedir}/target/tmp"/>
-        <property name="lib.dir" value="${basedir}/lib"/>
-	
-	<target name="init">
-		<property name="scala-library.jar" value="${scala.home}/lib/scala-library.jar"/>
-		<path id="build.classpath">
-			<pathelement location="${scala-library.jar}"/>
-			<fileset dir="${lib.dir}" includes="**/*.jar"/>
-		</path>
-		
-		<taskdef resource="scala/tools/ant/antlib.xml">
-			<classpath>
-				<pathelement location="${scala.home}/lib/scala-compiler.jar"/>
-				<pathelement location="${scala-library.jar}"/>
-			</classpath>
-		</taskdef>
-	</target>
+    <!-- local properties, scala.home for example -->
+    <property file="build.properties"/>
 
-	<target name="build" depends="init">
-		<mkdir dir="${build.dir}"/>
-		<scalac srcdir="${src.dir}" destdir="${build.dir}"
-			deprecation="on" unchecked="on" encoding="UTF-8"
-			classpathref="build.classpath" force="changed"/>
-	</target>
+    <property name="version" value="0.0"/>
+    <property name="src.dir" value="${basedir}/src/main/scala"/>
+    <!--property name="src.tests.dir" value="${basedir}/src/test/scala"/-->
+    <property name="build.dir" value="${basedir}/target/build/classes"/>
+    <!--property name="build.tests.dir" value="${basedir}/target/build/tests"/-->
+    <property name="dist.dir" value="${basedir}/target"/>
+    <property name="tmp.dir" value="${basedir}/target/tmp"/>
+    <property name="lib.dir" value="${basedir}/lib"/>
 
-	<!--
-	<target name="build-tests" depends="build">
-		<mkdir dir="${build.tests.dir}"/>
-		<scalac srcdir="${src.tests.dir}" destdir="${build.tests.dir}"
-			deprecation="on" unchecked="on" encoding="UTF-8"
-			force="changed">
-			<classpath refid="build.classpath"/>
-			<classpath>
-				<pathelement location="${build.dir}"/>
-			</classpath>
-		</scalac>
-	</target>
-	-->
+    <target name="init">
+        <property name="scala-library.jar" value="${scala.home}/lib/scala-library.jar"/>
+        <path id="build.classpath">
+            <pathelement location="${scala-library.jar}"/>
+            <fileset dir="${lib.dir}" includes="**/*.jar"/>
+        </path>
 
-	<target name="run-tests" depends="clean, build">
-		<java classname="ru.yandex.mysqlDiff.MysqlDiffTest" failonerror="true">
-			<sysproperty key="java.awt.headless" value="true"/>
-			<classpath refid="build.classpath"/>
-			<classpath>
-				<pathelement location="${build.dir}"/>
-				<pathelement location="${build.tests.dir}"/>
-			</classpath>
-		</java>
-	</target>
+        <taskdef resource="scala/tools/ant/antlib.xml">
+            <classpath>
+                <pathelement location="${scala.home}/lib/scala-compiler.jar"/>
+                <pathelement location="${scala-library.jar}"/>
+            </classpath>
+        </taskdef>
+    </target>
 
-	<target name="jar" depends="build">
-		<mkdir dir="${dist.dir}"/>
-		<jar basedir="${build.dir}"
-			jarfile="${dist.dir}/${ant.project.name}-${version}.jar" index="true"/>
-	</target>
-	
+    <target name="build" depends="init">
+        <mkdir dir="${build.dir}"/>
+        <scalac srcdir="${src.dir}" destdir="${build.dir}"
+                deprecation="on" unchecked="on" encoding="UTF-8"
+                classpathref="build.classpath" force="changed"/>
+    </target>
 
-	<target name="dist" depends="clean,jar">
-		<mkdir dir="${dist.dir}/dist"/>
-		<echo message="${dist.dir}/${ant.project.name}-${version}.jar"/> 
-		<copy file="${dist.dir}/${ant.project.name}-${version}.jar" todir="${dist.dir}/dist"/>
-	</target>
+    <!--
+     <target name="build-tests" depends="build">
+         <mkdir dir="${build.tests.dir}"/>
+         <scalac srcdir="${src.tests.dir}" destdir="${build.tests.dir}"
+             deprecation="on" unchecked="on" encoding="UTF-8"
+             force="changed">
+             <classpath refid="build.classpath"/>
+             <classpath>
+                 <pathelement location="${build.dir}"/>
+             </classpath>
+         </scalac>
+     </target>
+     -->
 
-	<target name="clean">
-		<delete dir="${build.dir}"/>
-		<delete dir="${build.tests.dir}"/>
-		<delete dir="${tmp.dir}"/>
-	</target>
+    <target name="run-tests" depends="clean, build">
+        <java classname="ru.yandex.mysqlDiff.MysqlDiffTest" failonerror="true">
+            <sysproperty key="java.awt.headless" value="true"/>
+            <classpath refid="build.classpath"/>
+            <classpath>
+                <pathelement location="${build.dir}"/>
+                <pathelement location="${build.tests.dir}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="jar" depends="build">
+        <mkdir dir="${dist.dir}"/>
+        <jar basedir="${build.dir}"
+             jarfile="${dist.dir}/${ant.project.name}-${version}.jar" index="true"/>
+    </target>
+
+
+    <target name="dist" depends="clean,jar">
+        <mkdir dir="${dist.dir}/dist"/>
+        <echo message="${dist.dir}/${ant.project.name}-${version}.jar"/>
+        <copy file="${dist.dir}/${ant.project.name}-${version}.jar" todir="${dist.dir}/dist"/>
+    </target>
+
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+        <delete dir="${build.tests.dir}"/>
+        <delete dir="${tmp.dir}"/>
+    </target>
 </project>

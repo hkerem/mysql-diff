@@ -4,7 +4,7 @@ package ru.yandex.mysqlDiff
 import java.io.File
 import scala.io._
 
-import ru.yandex.mysqlDiff.diff.simple._
+import ru.yandex.mysqlDiff.diff._
 import ru.yandex.mysqlDiff.model._
 
 object Diff {

@@ -1,8 +1,8 @@
-package ru.yandex.mysqlDiff.diff.simple;
+package ru.yandex.mysqlDiff.diff;
 
 import scalax.testing._
 import ru.yandex.mysqlDiff.model._
-import ru.yandex.mysqlDiff.diff.simple._
+import ru.yandex.mysqlDiff.diff._
 
 
 object TextParserTest extends TestSuite("Simple SQL script harvester") {
