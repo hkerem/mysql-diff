@@ -22,20 +22,20 @@ case class DefaultValueDiff(override val from: ColumnModel, override val to:Colu
 case class PrimaryKeyDiff(override val from: PrimaryKeyModel, override val to: PrimaryKeyModel)
     extends DiffType(from, to)
 
-case class UniqueKeyDiff[A <: SqlObjectType](override val from: A, override val to:A)
-    extends DiffType(from: A, to: A)
+case class UniqueKeyDiff(override val from: IndexModel, override val to: IndexModel)
+    extends DiffType(from, to)
 
-case class IndexKeyDiff[A <: SqlObjectType](override val from: A, override val to:A)
-    extends DiffType(from: A, to: A)
+case class IndexKeyDiff(override val from: IndexModel, override val to: IndexModel)
+    extends DiffType(from, to)
 
-case class KeyDiff[A <: SqlObjectType](override val from: A, override val to:A)
-    extends DiffType(from: A, to: A)
+case class KeyDiff(override val from: IndexModel, override val to: IndexModel)
+    extends DiffType(from, to)
 
-case class ConstraintKeyDiff[A <: SqlObjectType](override val from: A, override val to:A)
-    extends DiffType(from: A, to: A)
+case class ConstraintKeyDiff(override val from: IndexModel, override val to: IndexModel)
+    extends DiffType(from, to)
 
-case class FulltextKeyDiff[A <: SqlObjectType](override val from: A, override val to:A)
-    extends DiffType(from: A, to: A)
+case class FulltextKeyDiff(override val from: IndexModel, override val to: IndexModel)
+    extends DiffType(from, to)
 //end keys diff
 
 
