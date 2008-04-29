@@ -54,7 +54,7 @@
             <classpath refid="build.classpath"/>
             <classpath>
                 <pathelement location="${build.dir}"/>
-                <pathelement location="${build.tests.dir}"/>
+                <pathelement location="${scala-library.jar}"/>
             </classpath>
         </java>
     </target>
@@ -70,11 +70,16 @@
         <mkdir dir="${dist.dir}/dist"/>
         <echo message="${dist.dir}/${ant.project.name}-${version}.jar"/>
         <copy file="${dist.dir}/${ant.project.name}-${version}.jar" todir="${dist.dir}/dist"/>
+        <copy file="${scala-library.jar}" todir="${dist.dir}/dist"/>
+        <copy todir="${dist.dir}/dist">
+            <fileset dir="./lib">
+                <include name="*.jar"/>
+            </fileset>
+        </copy>
     </target>
 
     <target name="clean">
         <delete dir="${build.dir}"/>
-        <delete dir="${build.tests.dir}"/>
         <delete dir="${tmp.dir}"/>
     </target>
 </project>
