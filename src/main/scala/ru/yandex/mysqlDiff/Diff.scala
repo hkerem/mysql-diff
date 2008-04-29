@@ -32,7 +32,7 @@ object Diff {
 
         if (fromArgs.toLowerCase.startsWith("jdbc:")) {
             val fromUrl = fromArgs.trim
-            fromdb = SimpleJdbcHarvester.parse(fromUrl)
+            fromdb = JdbcHarvester.parse(fromUrl)
         } else {
             val from = new File(args(0))
             if (!from.isFile) {
@@ -41,12 +41,12 @@ object Diff {
             }
             var fromStr = ""
             Source.fromFile(from).getLines.foreach(x => {fromStr = fromStr + x})
-            fromdb = SimpleTextParser.parse(fromStr);
+            fromdb = TextParser.parse(fromStr);
         }
 
         if (toArgs.toLowerCase.startsWith("jdbc:")) {
             val toUrl = toArgs.trim
-            todb = SimpleJdbcHarvester.parse(toUrl)
+            todb = JdbcHarvester.parse(toUrl)
         } else {
             val to = new File(args(1))
             if (!to.isFile) {
@@ -55,13 +55,13 @@ object Diff {
             }
             var toStr = ""
             Source.fromFile(to).getLines.foreach(x => {toStr = toStr + x})
-            todb = SimpleTextParser.parse(toStr);
+            todb = TextParser.parse(toStr);
         }
 
         Console.println("-- start diff script from " + fromArgs  + " to " + toArgs + "\n");
         val dbDiffMaker = new DatabaseDiffMaker(fromdb, todb);
         dbDiffMaker.doDiff(x => {
-            val outputScript = SimpleScriptBuilder.getString(x);
+            val outputScript = ScriptBuilder.getString(x);
             Console.println(outputScript)
             true
         })

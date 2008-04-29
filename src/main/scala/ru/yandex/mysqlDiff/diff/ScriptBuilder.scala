@@ -2,7 +2,7 @@ package ru.yandex.mysqlDiff.diff;
 
 import ru.yandex.mysqlDiff.model._
 
-object SimpleScriptBuilder {
+object ScriptBuilder {
    private def makeDiffForColumn(a: SqlObjectType, b: SqlObjectType): String = {
        val A = a.asInstanceOf[ColumnModel]
        val B = b.asInstanceOf[ColumnModel]
@@ -134,7 +134,7 @@ object SimpleScriptBuilder {
            diffList.foreach(x => x match {
                case ToIsNull(a, b) =>  {
                    val sq = toNullList ++ List(x.asInstanceOf[ToIsNull[ColumnModel]])
-                   toNullList = List(sq: _*)
+                   toNullList = sq.toList
                }
           
                case FromIsNull(a, b) => {
@@ -157,12 +157,12 @@ object SimpleScriptBuilder {
                            if (e.to.dataType.name.equals(a.asInstanceOf[ColumnModel].dataType.name)) {
                                val diff = new DataTypeDiff(a, e.to)
                                forPrint = forPrint ++ Set[DiffType[SqlObjectType]](e.asInstanceOf[DiffType[SqlObjectType]])
-                               alternative  = alternative  + "-- " + SimpleScriptBuilder.getString(diff) + "\n"
+                               alternative  = alternative  + "-- " + ScriptBuilder.getString(diff) + "\n"
                            }
                        })
 
-                       forPrint.foreach(e => result = result + SimpleScriptBuilder.getString(e.asInstanceOf[DiffType[SqlObjectType]]) + "\n")
-                       result = result + SimpleScriptBuilder.getString(x) + "\n"
+                       forPrint.foreach(e => result = result + ScriptBuilder.getString(e.asInstanceOf[DiffType[SqlObjectType]]) + "\n")
+                       result = result + ScriptBuilder.getString(x) + "\n"
             
                        if (!alternative.trim.equals(""))
                             result = result + "--alternative actions for column \"" + a.asInstanceOf[ColumnModel].parent.name + "." + a.name + "\" from source\n" + alternative
@@ -174,7 +174,7 @@ object SimpleScriptBuilder {
                }
            })
       
-           diffList.foreach(x => if (!blockedObjects.contains(x)) result = result + SimpleScriptBuilder.getString(x) + "\n")
+           diffList.foreach(x => if (!blockedObjects.contains(x)) result = result + ScriptBuilder.getString(x) + "\n")
       
       
            return result

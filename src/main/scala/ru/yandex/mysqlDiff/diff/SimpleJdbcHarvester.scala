@@ -5,7 +5,7 @@ import java.sql._
 import ru.yandex.mysqlDiff.model._
 
 
-object SimpleJdbcHarvester {
+object JdbcHarvester {
 
 
    def parseTable(tables: ResultSet, data: DatabaseMetaData): TableModel = {

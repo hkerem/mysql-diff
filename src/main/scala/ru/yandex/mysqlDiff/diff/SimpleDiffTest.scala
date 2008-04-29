@@ -4,7 +4,7 @@ import scalax.testing._
 import ru.yandex.mysqlDiff.model._
 
 
-object SimpleDiffTest extends TestSuite("Simple Diff") {
+object DiffTest extends TestSuite("Simple Diff") {
   
     "Name Diff" is {
     

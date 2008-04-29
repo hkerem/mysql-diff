@@ -9,7 +9,7 @@ object ContentType extends Enumeration {
 }
 
 
-object SimpleTextParser {
+object TextParser {
   
     private def inQuote(data: String, startCheckPos: int, pos: int): boolean =
     {

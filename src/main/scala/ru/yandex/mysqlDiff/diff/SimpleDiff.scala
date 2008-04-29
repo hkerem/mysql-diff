@@ -3,7 +3,7 @@ package ru.yandex.mysqlDiff.diff;
 
 import ru.yandex.mysqlDiff.model._
 
-object SimpleDiffMaker
+object AbstractDiffMaker
 
 abstract class AbstractDiffMaker(val from: SqlObjectType, val to: SqlObjectType) {
     type S = SqlObjectType
