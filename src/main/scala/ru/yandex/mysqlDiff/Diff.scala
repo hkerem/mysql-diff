@@ -33,7 +33,7 @@ object Diff {
         var todb: DatabaseModel = null
           
           
-        if (fromArgs.toUpperCase.startsWith("JDBC:")) {
+        if (fromArgs.toLowerCase.startsWith("jdbc:")) {
           val fromUrl = fromArgs.trim
           fromdb = SimpleJdbcHarvester.parse(fromUrl)
         } 
