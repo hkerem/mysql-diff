@@ -71,15 +71,16 @@ object SimpleTextHarvester {
          if (quoteType == 0 && data.charAt(i) == '(') countOfBrakets = countOfBrakets + 1;
          if (quoteType == 0 && countOfBrakets == 0 && data.charAt(i) == ',') 
          {
-                val uncommedText = data.substring(lastCommaPos + 1, i)
+                var uncommedText = data.substring(lastCommaPos, i).trim
+                if (uncommedText.startsWith(",")) uncommedText = uncommedText.substring(1)
                 val sq: Seq[String] = result ++ List(uncommedText)
-                result = List(sq: _*)
+                result = sq.toList
                 lastCommaPos = i;
          }
          i = i + 1;
        }
     val uncommedText = data.substring(lastCommaPos + 1) 
-    List(result ++ List(uncommedText): _*)
+    (result ++ List(uncommedText)).toList
   }
   
   
@@ -187,7 +188,29 @@ object SimpleTextHarvester {
 	  stopSearch = true
 	}
       }
-
+      
+      
+      val uniquePattern = Pattern.compile("UNIQUE", Pattern.CASE_INSENSITIVE)
+      val uniqueMatcher = uniquePattern.matcher(x)
+      stopSearch = false
+      while (uniqueMatcher.find && !stopSearch) {
+        if (!inQuote(x, uniqueMatcher.start)) {
+          result.isUnique = true
+          stopSearch = true
+        }
+      }
+      
+      if (!result.primaryKey && !result.isUnique) {
+          val indexPattern = Pattern.compile("KEY", Pattern.CASE_INSENSITIVE)
+          val indexMatcher = indexPattern.matcher(x)
+          stopSearch = false;
+          while (indexMatcher.find && !stopSearch) {
+            if (!inQuote(x, indexMatcher.start)) {
+              result.isIndex = true
+              stopSearch = true
+            }
+          }
+      }
     }
     result
   }
@@ -216,7 +239,7 @@ object SimpleTextHarvester {
   }
   
   private def parseUniqueKeyDefinition(x: String): IndexModel = {
-    val indexPattern = Pattern.compile("UNIQUE[\\s\\n]+((INDEX)|(KEY))?[\\s\\n]+([\\w\\-\\_]+)?[\\s\\n]+(USING[\\s\\n]+[\\w\\-\\_])?[\\n\\s]+\\((\\w\\-\\_\\s\\n,)+\\)", Pattern.CASE_INSENSITIVE)
+    val indexPattern = Pattern.compile("UNIQUE[\\s\\n]+((INDEX)|(KEY))?[\\s\\n]+([\\w\\-\\_]+)?[\\s\\n]+(USING[\\s\\n]+[\\w\\-\\_][\\n\\s]+)?[\\n\\s]*\\(([\\w\\-\\_\\s\\n,\\'\\`]+)\\)", Pattern.CASE_INSENSITIVE)
     val matcher = indexPattern.matcher(x)
     if (matcher.find) {
       var name = ""
@@ -233,7 +256,7 @@ object SimpleTextHarvester {
   }
   
   private def parseKeyDefinition(tp:String, x: String): IndexModel = {
-    val indexPattern = Pattern.compile(tp + "[\\s\\n]+([\\w\\-\\_]+)?[\\s\\n]+(USING[\\s\\n]+[\\w\\-\\_])?[\\n\\s]+\\((\\w\\-\\_\\s\\n,)+\\)", Pattern.CASE_INSENSITIVE)
+    val indexPattern = Pattern.compile(tp + "[\\s\\n]+([\\w\\-\\_]+)?[\\s\\n]+(USING[\\s\\n]+[\\w\\-\\_]+[\\n\\s]+)?[\\n\\s]*\\(([\\w\\-\\_\\s\\n,\\'\\`]+)\\)", Pattern.CASE_INSENSITIVE)
     val matcher = indexPattern.matcher(x)
     if (matcher.find) {
       var name = ""
@@ -273,9 +296,8 @@ object SimpleTextHarvester {
               val stopBraketsPos = findStopBraketsPos(createTableData, startBracketsPos);
 	      
 	      if (startBracketsPos != -1 && stopBraketsPos != -1) {
-                var tableStringDiff = createTableData.substring(startBracketsPos, stopBraketsPos)
+                var tableStringDiff = createTableData.substring(startBracketsPos, stopBraketsPos).trim
                 if (tableStringDiff.startsWith("(")) tableStringDiff = tableStringDiff.substring(1)
-
                 val definitions = splitByComma(tableStringDiff);
 
 		if (definitions.size > 0) {
@@ -284,10 +306,19 @@ object SimpleTextHarvester {
                   var indexes =  List[IndexModel]();
                   
                   definitions.foreach(x => {
+                    
 		    val defType = getDefinitionType(x);
                     if (defType == ContentType.COLUMN) {
                       var cModel = parseColumnDefinition(x)
-                      if (cModel != null) columns = (columns ++ List(cModel)).toList
+                      if (cModel != null) {
+                        columns = (columns ++ List(cModel)).toList
+                        if (cModel.isUnique) {
+                          indexes = (indexes ++ List(new IndexModel(cModel.name, List(cModel.name), true))).toList
+                        }
+                        if (cModel.isIndex) {
+                          indexes = (indexes ++ List(new IndexModel(cModel.name, List(cModel.name), false))).toList
+                        }
+                      }
                     }
                     
                     if (defType == ContentType.PRIMARY_KEY) {
@@ -324,8 +355,10 @@ object SimpleTextHarvester {
                     }
                   }
                   columns.foreach(x => x.parent = tableModel)
-
-                  result = List((result ++ List(tableModel)): _*)
+                  indexes.foreach(x => x.parent = tableModel)
+                  
+                  tableModel.keys = indexes
+                  result = (result ++ List(tableModel)).toList
                 }
               }
             }

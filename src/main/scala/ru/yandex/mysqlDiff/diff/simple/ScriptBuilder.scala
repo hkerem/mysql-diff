@@ -82,20 +82,49 @@ object SimpleScriptBuilder {
       "ALTER TABLE " + pk.parent.name +" DROP PRIMARY KEY, ADD PRIMARY KEY (" + pkList + ");"
     }
     
+    case  UniqueKeyDiff(a, b) => {
+      val idx = b.asInstanceOf[IndexModel] 
+      var idxList = ""
+      idx.columns.foreach(x => idxList = idxList + ", " + x)
+      idxList = idxList.substring(2)
+      var isUnique = ""
+      if (idx.isUnique) isUnique = "UNIQUE "
+      "ALTER TABLE " + idx.parent.name +" DROP INDEX " + a.name + ", ADD " + isUnique + "INDEX " + b.name + " (" + idxList + ");"
+    } 
+    
     case IndexKeyDiff(a, b) => {
       val idx = b.asInstanceOf[IndexModel] 
       var idxList = ""
       idx.columns.foreach(x => idxList = idxList + ", " + x)
       idxList = idxList.substring(2)
       var isUnique = ""
-      if (idx.isUnique) isUnique = "UNIQUE"
-      "ALTER TABLE " + idx.parent.name +" DROP INDEX " + a.name + ", ADD " + isUnique + " INDEX " + b.name + " (" + idxList + ");"
+      if (idx.isUnique) isUnique = "UNIQUE "
+      "ALTER TABLE " + idx.parent.name +" DROP INDEX " + a.name + ", ADD " + isUnique + "INDEX " + b.name + " (" + idxList + ");"
     }
     
     case FromIsNull(a, b) => b match {
         case TableModel(name, columns) =>  b.asInstanceOf[TableModel].toCreateStatement
         case ColumnModel(name, dataType) => "ALTER TABLE " + b.asInstanceOf[ColumnModel].parent.name + " ADD COLUMN " + b.toCreateStatement + ";"
-        case _ => ""
+        case _ => {
+          if (b.isInstanceOf[PrimaryKeyModel]) {
+            val pk = b.asInstanceOf[PrimaryKeyModel] 
+            var pkList = ""
+            pk.columns.foreach(x => pkList = pkList + ", " + x)
+            pkList = pkList.substring(2)
+            "ALTER TABLE " + b.asInstanceOf[IndexModel].parent.name + " ADD PRIMARY KEY (" + pkList + ")";
+          } else
+            if (b.isInstanceOf[IndexModel]) {
+              val index = b.asInstanceOf[IndexModel] 
+              var cList = ""
+              index.columns.foreach(x => cList = cList + ", " + x)
+              cList = cList.substring(2)
+              var isUnique: String = ""
+              if (index.isUnique) isUnique = "UNIQUE "
+              "ALTER TABLE " + b.asInstanceOf[IndexModel].parent.name + " ADD " + isUnique +"INDEX " + b.name + " (" + cList +");"
+            } else {
+              ""
+            }
+        }
     }
     
     case TableDiff(a, b, diffList) => {
