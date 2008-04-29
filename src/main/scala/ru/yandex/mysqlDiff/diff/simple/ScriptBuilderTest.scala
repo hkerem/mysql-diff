@@ -25,9 +25,9 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
        assert("Alter value is: " + res, "ALTER TABLE table_test ADD COLUMN name varchar(1000);".equals(res))
        true
    })
- }
+}
  
- "Column change type" is {
+"Column change type" is {
    val c1_1 = new ColumnModel("id", new DataType("int", None))
    val c1List = List(c1_1)
    val table1 = new TableModel("table_test", c1List)
@@ -42,7 +42,7 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
        assert("Alter value is: " + res, "ALTER TABLE table_test MODIFY COLUMN id varchar(100);".equals(res))
        true
    })
- }
+}
  
  
 "Column droped" is {
