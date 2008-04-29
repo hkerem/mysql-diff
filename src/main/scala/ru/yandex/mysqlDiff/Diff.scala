@@ -41,7 +41,7 @@ object Diff {
 	        }
             var fromStr = ""
             Source.fromFile(from).getLines.foreach(x => {fromStr = fromStr + x})
-            fromdb = SimpleTextHarvester.parse(fromStr);
+            fromdb = SimpleTextParser.parse(fromStr);
         }
 
         if (toArgs.toLowerCase.startsWith("jdbc:")) {
@@ -55,7 +55,7 @@ object Diff {
             }
             var toStr = ""
             Source.fromFile(to).getLines.foreach(x => {toStr = toStr + x})
-            todb = SimpleTextHarvester.parse(toStr);
+            todb = SimpleTextParser.parse(toStr);
         }
 
         Console.println("-- start diff script from " + fromArgs  + " to " + toArgs + "\n");

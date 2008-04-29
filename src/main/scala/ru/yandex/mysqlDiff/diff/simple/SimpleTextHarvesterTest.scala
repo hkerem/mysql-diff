@@ -18,7 +18,7 @@ object SimpleTextHarvesterTest extends TestSuite("Simple SQL script harvester") 
         "    message VARCHAR(8192) DEFAULT '',\n" +
         "    PRIMARY KEY (id, user_id, file_id, moderator_login)\n" +
         ")";
-    var db1 = SimpleTextHarvester.parse(dataBase1);
+    var db1 = SimpleTextParser.parse(dataBase1);
     assert(db1.name.equals("database"))
     assert(db1.declarations.size == 1)
     val table = db1.declarations(0)
@@ -120,7 +120,7 @@ object SimpleTextHarvesterTest extends TestSuite("Simple SQL script harvester") 
     val db1Text = "create table bla_bla ( " +
         "id integet primary key" + 
         ")"
-    val db1 = SimpleTextHarvester.parse(db1Text);
+    val db1 = SimpleTextParser.parse(db1Text);
     val table = db1.declarations(0)
     assert(table.name.equals("bla_bla"))
     assert(table.columns.size == 1)
@@ -141,7 +141,7 @@ object SimpleTextHarvesterTest extends TestSuite("Simple SQL script harvester") 
      "name varchar(300));"
 
 
-     val db = SimpleTextHarvester.parse(dbText);
+     val db = SimpleTextParser.parse(dbText);
      val tables = db.declarations;
 
      assert(tables.size == 2)

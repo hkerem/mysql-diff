@@ -9,7 +9,7 @@ object ContentType extends Enumeration {
 }
 
 
-object SimpleTextHarvester {
+object SimpleTextParser {
   
   private def inQuote(data: String, startCheckPos: int, pos: int): boolean = {
     var i: int = startCheckPos + 1;

@@ -180,8 +180,8 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
  "Primary keys diff" is {
    val db1Text = "CREATE TABLE table1 (id INT(11) PRIMARY KEY, nameId INT(12))"
    val db2Text = "CREATE TABLE table1 (id INT(11), nameId INT(12) PRIMARY KEY)"
-   val db1 = SimpleTextHarvester.parse(db1Text)
-   val db2 = SimpleTextHarvester.parse(db2Text)
+   val db1 = SimpleTextParser.parse(db1Text)
+   val db2 = SimpleTextParser.parse(db2Text)
    
    //ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);
    val dbDiffMaker = new DatabaseDiffMaker(db1, db2);
@@ -197,8 +197,8 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
  "Primary Index removed" is {
      val db1Text = "CREATE TABLE table1 (id INT(11) PRIMARY KEY, nameId INT(12))"
      val db2Text = "CREATE TABLE table1 (id INT(11), nameId INT(12))"
-     val db1 = SimpleTextHarvester.parse(db1Text)
-     val db2 = SimpleTextHarvester.parse(db2Text)
+     val db1 = SimpleTextParser.parse(db1Text)
+     val db2 = SimpleTextParser.parse(db2Text)
      
      //ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);
      val dbDiffMaker = new DatabaseDiffMaker(db1, db2);
@@ -213,8 +213,8 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
  "Columns unique index diff" is {
      val db1Text = "CREATE TABLE table1 (id INT(11) UNIQUE, nameId INT(12))"
      val db2Text = "CREATE TABLE table1 (id INT(11), nameId INT(12))"
-     val db1 = SimpleTextHarvester.parse(db1Text)
-     val db2 = SimpleTextHarvester.parse(db2Text)
+     val db1 = SimpleTextParser.parse(db1Text)
+     val db2 = SimpleTextParser.parse(db2Text)
      
      //ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);
      val dbDiffMaker = new DatabaseDiffMaker(db1, db2);
@@ -229,8 +229,8 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
  "Add index" is {
      val db1Text = "CREATE TABLE table1 (id INT(11), nameId INT(12))"
      val db2Text = "CREATE TABLE table1 (id INT(11), nameId INT(12), INDEX testName (id, nameId))"
-     val db1 = SimpleTextHarvester.parse(db1Text)
-     val db2 = SimpleTextHarvester.parse(db2Text)
+     val db1 = SimpleTextParser.parse(db1Text)
+     val db2 = SimpleTextParser.parse(db2Text)
      
      //ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);
      val dbDiffMaker = new DatabaseDiffMaker(db1, db2);
@@ -245,8 +245,8 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
  "Columns add index" is {
    val db1Text = "CREATE TABLE table1 (id INT(11), nameId INT(12), INDEX testName (id))"
    val db2Text = "CREATE TABLE table1 (id INT(11), nameId INT(12), INDEX testName (id, nameId))"
-   val db1 = SimpleTextHarvester.parse(db1Text)
-   val db2 = SimpleTextHarvester.parse(db2Text)
+   val db1 = SimpleTextParser.parse(db1Text)
+   val db2 = SimpleTextParser.parse(db2Text)
    
    //ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);
    val dbDiffMaker = new DatabaseDiffMaker(db1, db2);
@@ -261,8 +261,8 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
  "Add default index" is {
      val db1Text = "CREATE TABLE table1 (id INT(11), nameId INT(12))"
      val db2Text = "CREATE TABLE table1 (id INT(11), nameId INT(12) KEY)"
-     val db1 = SimpleTextHarvester.parse(db1Text)
-     val db2 = SimpleTextHarvester.parse(db2Text)
+     val db1 = SimpleTextParser.parse(db1Text)
+     val db2 = SimpleTextParser.parse(db2Text)
      
      //ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);
      val dbDiffMaker = new DatabaseDiffMaker(db1, db2);
@@ -277,8 +277,8 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
  "Index diff" is {
      val db1Text = "CREATE TABLE table1 (id INT(11), nameId INT(12) KEY)"
      val db2Text = "CREATE TABLE table1 (id INT(11), nameId INT(12) UNIQUE KEY)"
-     val db1 = SimpleTextHarvester.parse(db1Text)
-     val db2 = SimpleTextHarvester.parse(db2Text)
+     val db1 = SimpleTextParser.parse(db1Text)
+     val db2 = SimpleTextParser.parse(db2Text)
      
      //ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);
      val dbDiffMaker = new DatabaseDiffMaker(db1, db2);
