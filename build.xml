@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<project name="mysqlDiff" default="jar">
+<project name="mysqlDiff" default="dist">
 	<!-- local properties, scala.home for example -->
 	<property file="build.properties"/>
 	
