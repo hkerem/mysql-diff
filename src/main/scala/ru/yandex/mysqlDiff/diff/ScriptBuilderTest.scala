@@ -7,7 +7,7 @@ import ru.yandex.mysqlDiff.diff._
 object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
 
 
-
+/*
     "Column add to table" is {
         val c1_1 = new ColumnModel("id", new DataType("int", None))
         val c1List = List(c1_1)
@@ -289,5 +289,5 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
         }
         DatabaseDiffMaker.doDiff(db1, db2, m);
     }
- 
+  */
 }

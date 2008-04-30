@@ -1,5 +1,5 @@
 package ru.yandex.mysqlDiff.model
-
+/*
 abstract class DiffType(val from: SqlObjectType, val to: SqlObjectType)
 
 
@@ -66,3 +66,4 @@ case class FromIsNull[A <: SqlObjectType](override val from: A, override val to:
 case class DatabaseDiff[A <: SqlObjectType]
     (override val from: A, override val to:A, override val diffList: Seq[DiffType])
     extends DiffContainter(from: A, to: A, diffList)
+    */

@@ -344,18 +344,13 @@ object TextParser {
                             var tableModel = new TableModel(tableName, columns);
                   
                             if (primaryKey != null) {
-                                primaryKey.parent = tableModel
-                                tableModel.primaryKey = primaryKey
+                                tableModel.primaryKey = Some(primaryKey)
                             } else {
                                 val primaryKeyColumns = columns.filter(x => x.primaryKey)
                                 if (primaryKeyColumns.size > 0) {
-                                    tableModel.primaryKey = new PrimaryKeyModel("", primaryKeyColumns.map(x => x.name))
-                                    tableModel.primaryKey.parent = tableModel
+                                    tableModel.primaryKey = Some(new PrimaryKeyModel("", primaryKeyColumns.map(x => x.name)))
                                 }
                             }
-                            columns.foreach(x => x.parent = tableModel)
-                            indexes.foreach(x => x.parent = tableModel)
-
                             tableModel.keys = indexes
                             result = (result ++ List(tableModel)).toList
                         }

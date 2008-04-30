@@ -32,9 +32,7 @@ object JdbcHarvester {
 
            columnsList = (columnsList ++ List(cm)).toList
        }
-       val tm  = new TableModel(tableName, columnsList)
-       columnsList.foreach(x => x.parent = tm)
-       tm
+       new TableModel(tableName, columnsList)
     }
 
 
@@ -54,8 +52,7 @@ object JdbcHarvester {
 
         if (pkColumns.size > 0) {
             var pk = new PrimaryKeyModel(pkName, pkColumns);
-            pk.parent = table;
-            table.primaryKey = pk;
+            table.primaryKey = Some(pk);
             pk
         } else null
     }
@@ -68,8 +65,8 @@ object JdbcHarvester {
         while (indexes.next) {
             val colName = indexes.getString("COLUMN_NAME");
             val indexName = indexes.getString("INDEX_NAME");
-            if (!checkPrimaryKey || table.primaryKey == null ||
-                table.primaryKey.name == null || !table.primaryKey.name.equals(indexName))
+            if (!checkPrimaryKey || !table.primaryKey.isDefined ||
+                table.primaryKey.get.name == null || !table.primaryKey.get.name.equals(indexName))
 
             if (indexesMap.contains(indexName))
                 indexesMap(indexName) = (indexesMap(indexName) ++ List(colName)).toList
@@ -77,7 +74,7 @@ object JdbcHarvester {
                 indexesMap(indexName) = List(colName)
         }
 
-        val resultList = indexesMap.map(x => new IndexModel(x._1, x._2, false)).filter(x => {x.parent = table; true})
+        val resultList = indexesMap.map(x => new IndexModel(x._1, x._2, false))
         if (table.keys == null)
             table.keys = resultList.toList
         else

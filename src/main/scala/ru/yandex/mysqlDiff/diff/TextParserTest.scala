@@ -6,6 +6,7 @@ import ru.yandex.mysqlDiff.diff._
 
 
 object TextParserTest extends TestSuite("Simple SQL script harvester") {
+/*
     "Simple table" is {
         val dataBase1 = "CREATE TABLE IF NOT EXISTS file_moderation_history_ (\n" +
             "    id INT UNSIGNED NOT NULL AUTO_INCREMENT,\n" +
@@ -148,5 +149,5 @@ object TextParserTest extends TestSuite("Simple SQL script harvester") {
         assert(tables(0).columns.size == 2)
         assert(tables(1).columns.size == 2)
     }
-
+*/
 }

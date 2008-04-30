@@ -3,199 +3,108 @@ package ru.yandex.mysqlDiff.diff
 
 import ru.yandex.mysqlDiff.model._
 
-trait AbstractDiffMaker {
-    type AddDiffFunction = (DiffType) => Boolean;
-}
-
-
-trait NameDiffMaker extends AbstractDiffMaker {
-    def doNameDiff(from: SqlObjectType, to: SqlObjectType, x: AddDiffFunction): Boolean  = {
-        if (fromIsNull(from, to)) {
-            x(FromIsNull(from, to))
-            return false
-        }
-
-        if (toIsNull(from, to)) {
-            x(ToIsNull(from, to))
-            return false
-        }
-
-        if (bothIsNull(from, to)) return false
-        if (isNameDiff(from, to)) x(NameDiff(from, to))
-        return true;
-    }
-
-    def bothIsNull(from: SqlObjectType, to: SqlObjectType) = from == null && to == null
-    def fromIsNull(from: SqlObjectType, to: SqlObjectType) = from == null && to != null
-    def toIsNull(from: SqlObjectType, to: SqlObjectType) = to == null && from != null
-    def isNameDiff(from: SqlObjectType, to: SqlObjectType) =  (from.name != null && !from.name.equals(to.name)) || (from.name == null && to.name != null)
-}
-
-
 trait ListDiffMaker {
-    def doListDiff[A <: SqlObjectType](from: Seq[A], to: Seq[A], x: (Option[A], Option[A]) => unit) = {
+    def doListDiff[A <: SqlObjectType](from: Seq[A], to: Seq[A]): Tuple3[Seq[A], Seq[A], Seq[(A, A)]] = {
         val toMap: scala.collection.Map[String, A] = Map(to.map(o => (o.name, o)): _*)
         val fromMap: scala.collection.Map[String, A] = Map(from.map(o => (o.name, o)): _*)
         val bothObject: Seq[(A, A)] = List(to.filter(o => fromMap.contains(o.name)).map(o => (o, fromMap.get(o.name).get)): _*);
 
-        val fromNull = toMap.filterKeys(o => !fromMap.keySet.contains(o)).values //todo Map.excl use insted
-        val toNull = fromMap.filterKeys(o => !toMap.keySet.contains(o)).values //todo Map.excl use insted
-           for ((a, b) <- bothObject) x(Some(b),Some(a))
-        for (a <- fromNull) x(None, Some(a))
-        for (a <- toNull) x(Some(a), None)
-        true
+        val fromNull: Seq[A] = toMap.filterKeys(o => !fromMap.keySet.contains(o)).values.toList //todo Map.excl use insted
+        val toNull: Seq[A] = fromMap.filterKeys(o => !toMap.keySet.contains(o)).values.toList //todo Map.excl use insted
+        Tuple3(toNull, fromNull, bothObject)
+    }
+}
+
+object ColumnDiffBuilder extends ListDiffMaker {
+    def compareColumns(from: ColumnModel, to: ColumnModel): Option[AbstractAlterColumn] = {
+        var diff: Seq[ColumnPropertyDiff] = List[ColumnPropertyDiff]()
+        if (!(from.comment == to.comment)) diff = diff ++ List(new ColumnPropertyDiff(CommentValue, from.comment, to.comment))
+        if (from.isNotNull != to.isNotNull) diff = diff ++ List(new ColumnPropertyDiff(CommentValue, from.isNotNull, to.isNotNull))
+        if (from.isAutoIncrement != to.isAutoIncrement) diff = diff ++ List(new ColumnPropertyDiff(AutoIncrementality, from.isAutoIncrement, to.isAutoIncrement))
+        if (!(from.dataType == to.dataType)) diff = diff ++ List(new ColumnPropertyDiff(TypeValue, from.dataType, to.dataType))
+        if (!(from.defaultValue == to.defaultValue)) diff = diff ++ List(new ColumnPropertyDiff(DefaultValue, from.defaultValue, to.defaultValue))
+        if (!(from.name == to.name)) Some(new AlterColumn(from.name, Some(to.name), diff)) else
+        if (diff.size > 0) Some(new AlterColumn(from.name, None, diff)) else
+        None
+    }
+
+    def doDiff(from: Option[ColumnModel], to: Option[ColumnModel]): Option[AbstractAlterColumn] = {
+        if (from.isDefined && !to.isDefined) Some(new DropColumn(from.get.name)) else
+        if (!from.isDefined && to.isDefined) Some(new CreateColumn(to.get)) else
+        if (from.isDefined && to.isDefined) {
+            compareColumns(from.get, to.get)
+        } else throw new RuntimeException("Both source and destination columns are null")
+    }
+}        
+
+
+object IndexDiffBuilder {
+    def doDiff(from: Option[IndexModel], to: Option[IndexModel]): Option[AbstractIndexDiff] = {
+        if (from.isDefined && !to.isDefined) Some(new DropIndex(from.get.name))
+        else if (!from.isDefined && to.isDefined) Some(new CreateIndex(to.get))
+        else if (from.isDefined && to.isDefined) { 
+            if (!from.get.equals(to.get)) Some(new AlterIndex(from.get.name, to.get))
+                else None
+        } else throw new RuntimeException("Both source and destination columns are null")
+    }
+}        
+
+object PrimaryKeyDiffBuilder {
+    def doDiff(from: Option[PrimaryKeyModel], to: Option[PrimaryKeyModel]): Option[AbstractIndexDiff] = {
+        if (from.isDefined && !to.isDefined) Some(new DropPrimaryKey())
+        else if (!from.isDefined && to.isDefined) Some(new CreatePrimaryKey(to.get.columns))
+        else if (from.isDefined && to.isDefined) {
+            if (!from.equals(to)) Some(new AlterPrimaryKey(to.get.columns))
+                else None
+        } else throw new RuntimeException("Both source and destination columns are null")
     }
 }
 
 
-trait StringListDiffMaker {
-    def doStringListDiff(from: Seq[String], to: Seq[String], x: (Option[String], Option[String]) => Boolean) = {
-        val fromSet: Set[String] = Set(from: _*)
-        val toSet: Set[String] = Set(to: _*)
+object TableDiffBuilder extends ListDiffMaker {
 
-        var fullSet = fromSet ++ toSet
+    def compareTables(from: TableModel, to: TableModel): Option[AbstractTableDiff] = {
 
-        var resume = true
+        val (toColumnIsEmpty, fromColumnIsEmpty, columnsForCompare) = doListDiff[ColumnModel](from.columns, to.columns)
 
-        if (!(fromSet.size == toSet.size && fromSet.subsetOf(toSet) && toSet.subsetOf(fromSet))) {
-            fullSet.foreach(e => if (resume) {
-                var oFrom: Option[String] = None
-                if (fromSet.contains(e)) oFrom = Some(e)
-                    var oTo: Option[String] = None
-                if (toSet.contains(e)) oTo = Some(e)
-                resume = x(oFrom, oTo)
-            })
-        }
+        val dropColumnDiff = toColumnIsEmpty.flatMap(t => ColumnDiffBuilder.doDiff(Some(t), None))
+        val createColumnDiff = fromColumnIsEmpty.flatMap(t => ColumnDiffBuilder.doDiff(None, Some(t)))
+        val alterOnlyColumnDiff = columnsForCompare.flatMap(t => ColumnDiffBuilder.doDiff(Some(t._1), Some(t._2)))
+
+        var alterColumnDiff = dropColumnDiff ++ createColumnDiff ++ alterOnlyColumnDiff
+
+        val primaryKeyDiff: Seq[AbstractIndexDiff] = PrimaryKeyDiffBuilder.doDiff(from.primaryKey, to.primaryKey).toList
+
+        val (toIndexIsEmpty, fromIndexIsEmpty, indexesForCompare) = doListDiff[IndexModel](from.keys, to.keys)
+
+        val dropIndexesDiff = toIndexIsEmpty.flatMap(t => IndexDiffBuilder.doDiff(Some(t), None))
+        val createIndexesDiff = fromIndexIsEmpty.flatMap(t => IndexDiffBuilder.doDiff(None, Some(t)))
+        val alterIndexesDiff = indexesForCompare.flatMap(t => IndexDiffBuilder.doDiff(Some(t._1), Some(t._2)))
+
+        val alterIndexDiff = primaryKeyDiff ++ createIndexesDiff ++ dropIndexesDiff ++ alterIndexesDiff
+
+        if (from.name != to.name) Some(new TableDiffModel(from.name, Some(to.name), alterColumnDiff, alterIndexDiff))
+        else if (alterColumnDiff.size > 0 || alterIndexDiff.size > 0) Some(new TableDiffModel(from.name, None, alterColumnDiff, alterIndexDiff))
+        else None
+    }
+        
+    def doDiff(from: Option[TableModel], to: Option[TableModel]): Option[AbstractTableDiff] = {
+        if (from.isDefined && !to.isDefined) Some(new DropTable(from.get.name))
+        else if (!from.isDefined && to.isDefined) Some(new CreateTable(to.get))
+        else if (from.isDefined && to.isDefined) compareTables(from.get, to.get)
+        else throw new RuntimeException("Both source and destination columns are null")
     }
 }
 
-
-object PrimaryKeyDiffMaker extends NameDiffMaker with StringListDiffMaker 
-{
-    def doDiff(from: PrimaryKeyModel, to: PrimaryKeyModel, x: AddDiffFunction) = {
-        if (super.doNameDiff(from, to, x)) {
-            doStringListDiff(from.columns, to.columns, (a, b) => {if (!a.isDefined || !b.isDefined) {x(PrimaryKeyDiff(from, to)); false} else true})
-            true
-        } else
-            false
-    }
-}
-
-
-object IndexDiffMaker extends NameDiffMaker with StringListDiffMaker
-{
-    def doDiff(from:IndexModel, to:IndexModel, x: AddDiffFunction) = {
-        if (super.doNameDiff(from, to, x)) {
-            doStringListDiff(from.columns, to.columns, (a, b) => {if (!a.isDefined || !b.isDefined) {x(IndexKeyDiff(from, to)); false} else true})
-            if (from.isUnique != to.isUnique) x(UniqueKeyDiff(from, to))
-            true
-        } else
-            false
-    }
-}
-
-
-object ColumnDiffMaker extends NameDiffMaker with ListDiffMaker
-{
-
-    def doColumnDiff(from: ColumnModel, to: ColumnModel, x: AddDiffFunction): Boolean = {
-        if (!super.doNameDiff(from, to, x)) false
-           else
-        {
-            if (isTypeDiff(from, to)) x(DataTypeDiff(from, to))
-            if (isNullDiff(from, to)) x(NotNullDiff(from, to))
-            if (isAutoIncrementDiff(from, to)) x(AutoIncrementDiff(from, to))
-            if (isDefaultDiff(from, to)) x(DefaultValueDiff(from, to))        
-            true
-       }
-    }
-
-    def doDiff(from: ColumnModel, to: ColumnModel, x: AddDiffFunction) = {
-        if (!doColumnDiff(from, to, x)) false
-//todo con diff
-        true
-    }
-
-    def isAutoIncrementDiff(from: ColumnModel, to: ColumnModel): Boolean  = from.isAutoIncrement != to.isAutoIncrement
-
-    def isTypeDiff(from: ColumnModel, to: ColumnModel):Boolean = {
-        if (from.dataType == to.dataType) return false
-        if ((from.dataType == null || to.dataType == null) && from.dataType != to.dataType) return true
-        if (from.dataType.name == to.dataType.name && from.dataType.name == null) return false
-        if ((from.dataType.name == null || to.dataType.name == null) && from.dataType.name != to.dataType.name) return true
-        if (!from.dataType.name.equalsIgnoreCase(to.dataType.name)) return true
-        if (from.dataType.isZerofill != to.dataType.isZerofill) return true
-        if (from.dataType.isUnsigned != to.dataType.isUnsigned) return true
-        !(from.dataType.length.getOrElse(-1) == to.dataType.length.getOrElse(-1))
-    }
-    def isNullDiff(from: ColumnModel, to: ColumnModel) = !(from.isNotNull == to.isNotNull)
-
-    def isDefaultDiff(from: ColumnModel, to: ColumnModel) = !(from.defaultValue == to.defaultValue)
-
-}
-
-object TableDiffMaker extends NameDiffMaker with ListDiffMaker {
-    def doTableDiff(x: AddDiffFunction):Boolean  = true
-
-    def doDiff(from:TableModel, to: TableModel, x: AddDiffFunction): Boolean = {
-        var internalDiff = List[DiffType]();
-
-        def tmpX: AddDiffFunction = o => {
-            internalDiff = (internalDiff ++ List(o)).toList 
-            true
-        }
-
-        if (doTableDiff(tmpX)) {
-            doListDiff[ColumnModel](from.columns, to.columns, (from, to) => {
-                if (!from.isDefined && to.isDefined) tmpX(new FromIsNull(null, to.get))
-                    else
-                    if (!to.isDefined && from.isDefined) tmpX(new ToIsNull(from.get, null))
-                        else
-                        if (to.isDefined && from.isDefined) {
-                            ColumnDiffMaker.doDiff(from.get, to.get, tmpX)
-                        }
-                })
-
-        PrimaryKeyDiffMaker.doDiff(from.primaryKey, to.primaryKey, tmpX)
-
-        doListDiff[IndexModel](from.keys, to.keys, (from, to) => {
-            if (!from.isDefined && to.isDefined) tmpX(new FromIsNull(null, to.get))
-                else
-                  if (!to.isDefined && from.isDefined) {
-                    tmpX(new ToIsNull(from.get, null))
-                  } else
-                        if (to.isDefined && from.isDefined) {
-                            IndexDiffMaker.doDiff(from.get, to.get, tmpX)
-                        }
-            })
-        }
-        x(TableDiff(from, to, internalDiff))
-    }
-}
-
-
-object DatabaseDiffMaker extends NameDiffMaker with ListDiffMaker {
-    def doDiff(from: DatabaseModel, to: DatabaseModel, x: AddDiffFunction): Boolean = {
-        var internalDiff = List[DiffType]();
-
-        def tmpX: AddDiffFunction = o => {
-            val sq = internalDiff ++ List(o)
-            internalDiff = List(sq: _*)
-            true
-        }
-
-        doListDiff[TableModel](from.declarations, to.declarations, (from, to) => {
-            if (!from.isDefined && to.isDefined) {
-                tmpX(new FromIsNull(null, to.get));
-            } else
-                if (!to.isDefined && from.isDefined) {
-                    tmpX(new ToIsNull(from.get, null));
-                } else
-                    if (to.isDefined && from.isDefined) {
-                        TableDiffMaker.doDiff(from.get, to.get, tmpX)
-                    }
-            })
-        x(DatabaseDiff(from, to, internalDiff))
+object DatabaseDiffMaker extends ListDiffMaker {
+    def doDiff(from: DatabaseModel, to: DatabaseModel): DatabaseDiff  = {
+        //var tablesDiff = Seq[AbstractTableDiff]()
+        //val tablesX = (a: TableModel, b: TableModel) => {
+//            val m = TableDiffBuilder.doDiff(a, b)
+//            if (m.isDefined) tablesDiff = tableDiff ++ List(m)
+//        }
+        val diffList = doListDiff[TableModel](from.declarations, to.declarations)
+        null
     }
 }
 

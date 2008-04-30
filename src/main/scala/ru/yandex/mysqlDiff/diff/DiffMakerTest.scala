@@ -25,7 +25,7 @@ object DiffTest extends TestSuite("Simple Diff") {
            true
         })
     }
-*/  
+
   
     "Column Diff" is {
     
@@ -202,4 +202,6 @@ object DiffTest extends TestSuite("Simple Diff") {
         }
         TableDiffMaker.doDiff(table1, table2, m)
     }
+
+*/    
 }
