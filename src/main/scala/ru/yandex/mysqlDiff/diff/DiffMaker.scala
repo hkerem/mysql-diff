@@ -33,7 +33,7 @@ object ColumnDiffBuilder extends ListDiffMaker {
         if (!from.isDefined && to.isDefined) Some(new CreateColumn(to.get)) else
         if (from.isDefined && to.isDefined) {
             compareColumns(from.get, to.get)
-        } else throw new RuntimeException("Both source and destination columns are null")
+        } else None
     }
 }        
 
@@ -45,7 +45,7 @@ object IndexDiffBuilder {
         else if (from.isDefined && to.isDefined) { 
             if (!from.get.equals(to.get)) Some(new AlterIndex(from.get.name, to.get))
                 else None
-        } else throw new RuntimeException("Both source and destination columns are null")
+        } else None
     }
 }        
 
@@ -56,7 +56,7 @@ object PrimaryKeyDiffBuilder {
         else if (from.isDefined && to.isDefined) {
             if (!from.equals(to)) Some(new AlterPrimaryKey(to.get.columns))
                 else None
-        } else throw new RuntimeException("Both source and destination columns are null")
+        } else None
     }
 }
 
@@ -92,19 +92,17 @@ object TableDiffBuilder extends ListDiffMaker {
         if (from.isDefined && !to.isDefined) Some(new DropTable(from.get.name))
         else if (!from.isDefined && to.isDefined) Some(new CreateTable(to.get))
         else if (from.isDefined && to.isDefined) compareTables(from.get, to.get)
-        else throw new RuntimeException("Both source and destination columns are null")
+        else None
     }
 }
 
 object DatabaseDiffMaker extends ListDiffMaker {
     def doDiff(from: DatabaseModel, to: DatabaseModel): DatabaseDiff  = {
-        //var tablesDiff = Seq[AbstractTableDiff]()
-        //val tablesX = (a: TableModel, b: TableModel) => {
-//            val m = TableDiffBuilder.doDiff(a, b)
-//            if (m.isDefined) tablesDiff = tableDiff ++ List(m)
-//        }
-        val diffList = doListDiff[TableModel](from.declarations, to.declarations)
-        null
+        val (fromIsEmpty, toIsEmpty, tablesForCompare) = doListDiff[TableModel](from.declarations, to.declarations)
+        val dropTables = toIsEmpty.map(t => new DropTable(t.name)) 
+        val createTables = fromIsEmpty.map(t => new CreateTable(t))
+        val alterTable = tablesForCompare.map(t => TableDiffBuilder.doDiff(Some(t._1), Some(t._2)))
+        new DatabaseDiff(dropTables ++ createTables ++ alterTable.flatMap(t => t.toList))
     }
 }
 

@@ -6,16 +6,16 @@ import ru.yandex.mysqlDiff.model._
 object DataTypeScriptBuilder {
     def getCreateScript(model: DataType): String = {
         var charset = ""
-        if (model.characterSet != "") charset = "CHARACTER SET " + model.characterSet + " "
+        if (model.characterSet != "" && model.characterSet != null) charset = "CHARACTER SET " + model.characterSet + " "
         var collate = ""
-        if (model.collate != "") collate = "COLLATE " + model.collate + " "
+        if (model.collate != "" && model.collate != null) collate = "COLLATE " + model.collate + " "
         var unsigned = ""
         if (model.isUnsigned) unsigned = "UNSIGNED "
         var zerofill = ""
         if (model.isZerofill) zerofill = "ZEROFILL "
         var size = ""
-        if (model.length.isDefined) size = "(" + model.length + ") "
-        val result = model.name + size + charset + collate + unsigned + zerofill
+        if (model.length.isDefined) size = "(" + model.length.get + ") "
+        val result = model.name+ " " + size + charset + collate + unsigned + zerofill
         result.trim
     }
 }
@@ -27,9 +27,9 @@ object ColumnScriptBuilder {
         var autoincrement = ""
         if (model.isAutoIncrement) autoincrement = "AUTOINCREMENT "
         var comment = ""
-        if (model.comment != "") comment = "COMMENT " + model.comment + " "
+        if (model.comment != "" && model.comment != null) comment = "COMMENT " + model.comment + " "
         var default = ""
-        if (model.defaultValue != "") default = "DEFAULT " + model.defaultValue + " "
+        if (model.defaultValue != "" && model.defaultValue != null) default = "DEFAULT " + model.defaultValue + " "
         val dataType = DataTypeScriptBuilder.getCreateScript(model.dataType)
         val result = " " + model.name + " " + dataType + " " + nullable + default + autoincrement + comment
         result.trim
@@ -114,9 +114,17 @@ object TableScriptBuilder {
         val indexAlter: Seq[AlterIndex] =  indexKeyDiff.filter(t => t.isInstanceOf[AlterIndex]).map(t => t.asInstanceOf[AlterIndex])
 
         val dropIndex: Seq[String] = primaryKeyDrop.map(t => "ALTER TABLE " + model.name + " DROP PRIMARY KEY") ++ indexDrop.map(t => "ALTER TABLE " + model.name + " DROP INDEX " + t.name + ";")
-        val dropColumn: Seq[String] = dropColumns.map(t => "DROP COLUMN " + t.name  + " ;")
+        val dropColumn: Seq[String] = dropColumns.map(t => "ALTER TABLE " + model.name + " DROP COLUMN " + t.name  + " ;")
         val createColumn: Seq[String] = createColumns.map(t => "ALTER TABLE " + model.name + " ADD COLUMN " + ColumnScriptBuilder.getCreateScript(t.column) + ";")
-        val alterColumn: Seq[String] = alterColumns.map(t => "ALTER TABLE " + model.name + " " + ColumnScriptBuilder + ";")
+
+
+        val columnMap = Map(model.columns.map(t => (t.name, t)): _*)
+        val alterColumn: Seq[String] = alterColumns.map(t => {
+            if (t.renameTo.isDefined)
+                "ALTER TABLE " + model.name + " CHANGE COLUMN " + t.name + " " + ColumnScriptBuilder.getCreateScript(columnMap(t.renameTo.get)) + ";"
+            else
+                "ALTER TABLE " + model.name + " MODIFY COLUMN " + ColumnScriptBuilder.getCreateScript(columnMap(t.name)) + ";"
+        })
 
         val alterIndex: Seq[String] =
             primaryKeyAlter.map(t => "ALTER TABLE " + model.name + " DROP PRIMARY KEY, ADD PRIMARY KEY (" + PrimaryKeyScriptBuilder.getColumnsList(t.columns) + ");") ++
@@ -126,20 +134,20 @@ object TableScriptBuilder {
                 primaryKeyCreate.map(t => "ALTER TABLE " + model.name + " ADD PRIMARY KEY (" + PrimaryKeyScriptBuilder.getColumnsList(t.columns) + ");") ++ 
                 indexCreate.map(t => "ALTER TABLE " + model.name + " ADD " + IndexScriptBuilder.getCreateScript(t.index))
 
-        List("\n\n\n--Modify Table " + oldModel.name) ++
-        List("\n\n\n--Drop Index").filter(o => dropIndex.size > 0) ++
+        List("\n--Modify Table \"" + oldModel.name + "\"") ++
+        List("\n--Drop Index").filter(o => dropIndex.size > 0) ++
         dropIndex ++
-        List("\n\n\n--Drop Columns").filter(o => dropColumn.size > 0) ++
+        List("--Drop Columns").filter(o => dropColumn.size > 0) ++
         dropColumn ++
-        List("\n\n\n--Create Columns").filter(o => createColumn.size > 0) ++
+        List("--Create Columns").filter(o => createColumn.size > 0) ++
         createColumn ++
-        List("\n\n\n--Alter Columns").filter(o => alterColumn.size > 0) ++
+        List("--Alter Columns").filter(o => alterColumn.size > 0) ++
         alterColumn ++
-        List("\n\n\n--Alter Indexes").filter(o => alterIndex.size > 0) ++
+        List("--Alter Indexes").filter(o => alterIndex.size > 0) ++
         alterIndex ++
-        List("\n\n\n--Create Indexes").filter(o =>createIndex.size > 0) ++
+        List("--Create Indexes").filter(o =>createIndex.size > 0) ++
         createIndex ++
-        List("\n\n\n--End modify Table " + oldModel.name)
+        List("--End modify Table \"" + oldModel.name + "\"")
     }
 }
 

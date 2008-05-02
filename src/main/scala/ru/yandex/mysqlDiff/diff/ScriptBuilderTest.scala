@@ -7,69 +7,65 @@ import ru.yandex.mysqlDiff.diff._
 object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
 
 
-/*
+
     "Column add to table" is {
         val c1_1 = new ColumnModel("id", new DataType("int", None))
         val c1List = List(c1_1)
         val table1 = new TableModel("table_test", c1List)
-        c1_1.parent = table1
-   
+
    
         val c2_1 = new ColumnModel("id", new DataType("int", None))
         val c2_2 = new ColumnModel("name", new DataType("varchar", Some(1000)))
         val table2 = new TableModel("table_test", List(c2_1, c2_2))
-        c2_1.parent = table2
-        c2_2.parent = table2
 
 
-        val m: TableDiffMaker.AddDiffFunction = x => {
-            val res = ScriptBuilder.getString(x).replaceAll("[\\n]+", "")
-            assert("Alter value is: " + res, "ALTER TABLE table_test ADD COLUMN name varchar(1000);".equals(res))
-            true
-        }
-        TableDiffMaker.doDiff(table1, table2, m)
+        val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
+        val script = TableScriptBuilder.getAlterScript(table1, table2, diff.get.asInstanceOf[TableDiffModel])
+        /*
+--Modify Table "table_test"
+--Create Columns
+ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
+--End modify Table "table_test"
+        */
+        assert(script.size == 4)
+        assert("ALTER TABLE table_test ADD COLUMN name varchar (1000);".equals(script(2).trim))
     }
- 
+
     "Column change type" is {
         val c1_1 = new ColumnModel("id", new DataType("int", None))
         val c1List = List(c1_1)
         val table1 = new TableModel("table_test", c1List)
-        c1_1.parent = table1
    
         val c2_1 = new ColumnModel("id", new DataType("varchar", Some(100)))
         val table2 = new TableModel("table_test", List(c2_1))
-        c2_1.parent = table2
 
-        val m: TableDiffMaker.AddDiffFunction = x => {
-            val res = ScriptBuilder.getString(x).replaceAll("[\\n]+", "")
-            assert("Alter value is: " + res, "ALTER TABLE table_test MODIFY COLUMN id varchar(100);".equals(res))
-            true
-        }
-        TableDiffMaker.doDiff(table1, table2, m)
+        val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
+        val script = TableScriptBuilder.getAlterScript(table1, table2, diff.get.asInstanceOf[TableDiffModel])
+
+        //ALTER TABLE table_test MODIFY COLUMN id varchar(100);
+
+        assert(script.size == 4)
+        assert("ALTER TABLE table_test MODIFY COLUMN id varchar (100);".equals(script(2).trim))
     }
- 
  
     "Column droped" is {
         val c1_1 = new ColumnModel("id", new DataType("int", None))
-        val c1List = List(c1_1)
-        val table1 = new TableModel("table_test", c1List)
-        c1_1.parent = table1
-   
-   
+        val c1_2 = new ColumnModel("name", new DataType("varchar", Some(1000)))
+        val table1 = new TableModel("table_test", List(c1_1, c1_2))
+
+
         val c2_1 = new ColumnModel("id", new DataType("int", None))
-        val c2_2 = new ColumnModel("name", new DataType("varchar", Some(1000)))
-        val table2 = new TableModel("table_test", List(c2_1, c2_2))
-        c2_1.parent = table2
-        c2_2.parent = table2
+        val table2 = new TableModel("table_test", List(c2_1))
    
-        val m: TableDiffMaker.AddDiffFunction = x => {
-            val res = ScriptBuilder.getString(x).replaceAll("[\\n]+", "")
-            assert("Alter value is:" + res, "ALTER TABLE table_test DROP COLUMN name;".equals(res))
-            true
-        }
-        TableDiffMaker.doDiff(table2, table1, m)
+
+        val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
+        val script = TableScriptBuilder.getAlterScript(table1, table2, diff.get.asInstanceOf[TableDiffModel])
+
+
+        assert(script.size == 4)
+        assert("ALTER TABLE table_test DROP COLUMN name ;".equals(script(2).trim))
     }
-   
+/*
     "Double test" is {
         val c1_1 = new ColumnModel("id", new DataType("int", None))
         val c1List = List(c1_1)
@@ -289,5 +285,5 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
         }
         DatabaseDiffMaker.doDiff(db1, db2, m);
     }
-  */
+    */
 }

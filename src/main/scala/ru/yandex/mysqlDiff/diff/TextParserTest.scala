@@ -6,7 +6,7 @@ import ru.yandex.mysqlDiff.diff._
 
 
 object TextParserTest extends TestSuite("Simple SQL script harvester") {
-/*
+
     "Simple table" is {
         val dataBase1 = "CREATE TABLE IF NOT EXISTS file_moderation_history_ (\n" +
             "    id INT UNSIGNED NOT NULL AUTO_INCREMENT,\n" +
@@ -25,9 +25,9 @@ object TextParserTest extends TestSuite("Simple SQL script harvester") {
         val table = db1.declarations(0)
         assert(table.name.equals("file_moderation_history_"))
     
-        assert(table.primaryKey != null)
-        assert(table.primaryKey.columns.size == 4)
-        val pCols = table.primaryKey.columns
+        assert(table.primaryKey.isDefined)
+        assert(table.primaryKey.get.columns.size == 4)
+        val pCols = table.primaryKey.get.columns
         //id, user_id, file_id, moderator_login
         assert(pCols(0).equals("id"))
         assert(pCols(1).equals("user_id"))
@@ -125,9 +125,9 @@ object TextParserTest extends TestSuite("Simple SQL script harvester") {
         val table = db1.declarations(0)
         assert(table.name.equals("bla_bla"))
         assert(table.columns.size == 1)
-        assert(table.primaryKey != null)
-        assert(table.primaryKey.columns.size == 1)
-        assert(table.primaryKey.columns(0).equals("id"))
+        assert(table.primaryKey.isDefined)
+        assert(table.primaryKey.get.columns.size == 1)
+        assert(table.primaryKey.get.columns(0).equals("id"))
     }
 
 
@@ -149,5 +149,5 @@ object TextParserTest extends TestSuite("Simple SQL script harvester") {
         assert(tables(0).columns.size == 2)
         assert(tables(1).columns.size == 2)
     }
-*/
+
 }

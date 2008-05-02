@@ -59,14 +59,12 @@ object Diff {
         }
 
         Console.println("-- start diff script from " + fromArgs  + " to " + toArgs + "\n");
-/*
-        val tmpX: DatabaseDiffMaker.AddDiffFunction = x => {
-            val outputScript = ScriptBuilder.getString(x);
-            Console.println(outputScript)
-            true
-        }
-        DatabaseDiffMaker.doDiff(fromdb, todb, tmpX)
-*/
+
+        val dbDiff = DatabaseDiffMaker.doDiff(fromdb, todb)
+        val script = ScriptBuilder.getScript(fromdb, todb, dbDiff)
+
+        for (x <- script) Console.println(x)
+
         Console.println("-- end of diff script from " + fromArgs  + " to " + toArgs + "\n");
     }
 }
