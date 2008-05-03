@@ -170,7 +170,7 @@ object DiffTest extends TestSuite("Simple Diff") {
         val c2 = new ColumnModel("name", new DataType("varchar", Some(100)))
         val cList = List(c1, c2)
         val table = new TableModel("test_table", cList)
-        table.primaryKey = new PrimaryKeyModel("", List(c1.name, c2.name))
+        table.primaryKey = new PrimaryKey("", List(c1.name, c2.name))
         val createStatement = table.toCreateStatement.trim.replaceAll("\\s[\\n\\s]*", " ")
         assert("Now create statement is: " + createStatement, "CREATE TABLE test_table (id int(11), name varchar(100), PRIMARY KEY (id, name));".equals(createStatement))
     }
@@ -181,14 +181,14 @@ object DiffTest extends TestSuite("Simple Diff") {
         val c1_2 = new ColumnModel("name", new DataType("varchar", Some(100)))
         val cList_1 = List(c1_1, c1_2)
         val table1 = new TableModel("test_table", cList_1)
-        table1.primaryKey = new PrimaryKeyModel("PRIMARY", List(c1_1.name, c1_2.name))
+        table1.primaryKey = new PrimaryKey("PRIMARY", List(c1_1.name, c1_2.name))
 
     
         val c2_1 = new ColumnModel("id", new DataType("int", Some(11)))
         val c2_2 = new ColumnModel("name", new DataType("varchar", Some(100)))
         val cList2 = List(c2_1, c2_2)
         val table2 = new TableModel("test_table", cList2)
-        table2.primaryKey = new PrimaryKeyModel("PRIMARY", List(c2_1.name))
+        table2.primaryKey = new PrimaryKey("PRIMARY", List(c2_1.name))
 
         val m: TableDiffMaker.AddDiffFunction = x => {
             assert(x.isInstanceOf[TableDiff])

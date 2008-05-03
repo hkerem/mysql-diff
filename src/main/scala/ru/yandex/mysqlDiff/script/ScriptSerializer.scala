@@ -34,6 +34,9 @@ object ScriptSerializer {
         model.name + " " + serializeDataType(model.dataType) +
                 (if (attributes.isEmpty) "" else " " + attributes.mkString(" "))
     }
+    
+    def serializePrimaryKey(pk: PrimaryKey) =
+        "PRIMARY KEY (" + pk.columns.mkString(", ") + ")"
 }
 
 // vim: set ts=4 sw=4 et:

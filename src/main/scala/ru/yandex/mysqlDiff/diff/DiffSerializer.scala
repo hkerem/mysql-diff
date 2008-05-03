@@ -20,15 +20,6 @@ trait ColumnsListBuilder {
     }
 }
 
-object PrimaryKeyScriptBuilder extends ColumnsListBuilder {
-    def getCreateScript(model: PrimaryKeyModel): String = {
-        if (model.columns.size > 0) {
-            "PRIMARY KEY (" + getColumnsList(model.columns) + ")"
-        } else ""
-    }
-}
-
-
 object IndexScriptBuilder extends ColumnsListBuilder {
     def getCreateScript(model: IndexModel): String = {
         if (model.columns.size > 0) {
@@ -44,7 +35,7 @@ object TableScriptBuilder {
     def getCreateScript(model: TableModel): Seq[String] = {
         val tableHeader = List("CREATE TABLE " + model.name + " (")
         val columsDefinition  = model.columns.map(t => ScriptSerializer.serializeColumn(t) + ",")
-        val primaryKeyDefinition = model.primaryKey.toList.map(t => PrimaryKeyScriptBuilder.getCreateScript(t) + ",")
+        val primaryKeyDefinition = model.primaryKey.toList.map(t => ScriptSerializer.serializePrimaryKey(t) + ",")
         val indexDefinitions = model.keys.map(t => IndexScriptBuilder.getCreateScript(t) + ",")
 
         val dirtyTableBody = columsDefinition ++ primaryKeyDefinition ++ indexDefinitions
@@ -95,11 +86,11 @@ object TableScriptBuilder {
         })
 
         val alterIndex: Seq[String] =
-            primaryKeyAlter.map(t => "ALTER TABLE " + model.name + " DROP PRIMARY KEY, ADD PRIMARY KEY (" + PrimaryKeyScriptBuilder.getColumnsList(t.columns) + ");") ++
+            primaryKeyAlter.map(t => "ALTER TABLE " + model.name + " DROP PRIMARY KEY, ADD " + ScriptSerializer.serializePrimaryKey(t.newPk) + ";") ++
             indexAlter.map(t => "ALTER TABLE " + model.name + " DROP INDEX " + t.name + ", ADD " + IndexScriptBuilder.getCreateScript(t.index))
 
         val createIndex: Seq[String] =
-                primaryKeyCreate.map(t => "ALTER TABLE " + model.name + " ADD PRIMARY KEY (" + PrimaryKeyScriptBuilder.getColumnsList(t.columns) + ");") ++ 
+                primaryKeyCreate.map(t => "ALTER TABLE " + model.name + " ADD " + ScriptSerializer.serializePrimaryKey(t.pk) + ";") ++ 
                 indexCreate.map(t => "ALTER TABLE " + model.name + " ADD " + IndexScriptBuilder.getCreateScript(t.index))
 
         List("\n--Modify Table \"" + oldModel.name + "\"") ++

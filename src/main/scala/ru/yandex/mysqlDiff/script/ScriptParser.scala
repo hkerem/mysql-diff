@@ -220,14 +220,14 @@ object ScriptParser {
   
   
   
-    private def parsePrimaryKeyDefinition(x: String): PrimaryKeyModel = {
+    private def parsePrimaryKeyDefinition(x: String): PrimaryKey = {
         val bStart = x.indexOf('(') + 1
         val bEnd = x.indexOf(')')
         val data = x.substring(bStart, bEnd).trim();
         var columns = Set[String]()
         for (colName <- data.split(",")) columns = columns + (colName.trim())
 
-        new PrimaryKeyModel("", List(columns.toArray: _*))
+        new PrimaryKey("", List(columns.toArray: _*))
     }
   
     private def parseKeyKeyDefinition(x: String): IndexModel = {
@@ -302,7 +302,7 @@ object ScriptParser {
 
                         if (definitions.size > 0) {
                             var columns = List[ColumnModel]();
-                            var primaryKey: PrimaryKeyModel = null;
+                            var primaryKey: PrimaryKey = null;
                             var indexes =  List[IndexModel]();
 
                             definitions.foreach(x => {
@@ -348,7 +348,7 @@ object ScriptParser {
                             } else {
                                 val primaryKeyColumns = columns.filter(x => x.primaryKey)
                                 if (primaryKeyColumns.size > 0) {
-                                    tableModel.primaryKey = Some(new PrimaryKeyModel("", primaryKeyColumns.map(x => x.name)))
+                                    tableModel.primaryKey = Some(new PrimaryKey("", primaryKeyColumns.map(x => x.name)))
                                 }
                             }
                             tableModel.keys = indexes

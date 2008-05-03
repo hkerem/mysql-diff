@@ -40,9 +40,9 @@ case class AlterIndex(name: String, index: IndexModel) extends AbstractIndexDiff
 
 abstract class AbstractPrimaryKeyDiff extends AbstractIndexDiff
 
-case class CreatePrimaryKey(columns: Seq[String]) extends AbstractPrimaryKeyDiff
+case class CreatePrimaryKey(pk: PrimaryKey) extends AbstractPrimaryKeyDiff
 case class DropPrimaryKey extends AbstractPrimaryKeyDiff
-case class AlterPrimaryKey(columns: Seq[String]) extends AbstractPrimaryKeyDiff
+case class AlterPrimaryKey(oldPk: PrimaryKey, newPk: PrimaryKey) extends AbstractPrimaryKeyDiff
 
 
 case class DatabaseDiff(tableDiff: Seq[AbstractTableDiff])

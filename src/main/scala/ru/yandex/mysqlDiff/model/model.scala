@@ -65,6 +65,8 @@ case class ConstraintModel(override val name: String, val columns: Seq[String])
 case class IndexModel(override val name: String, override val columns: Seq[String], isUnique: Boolean)
     extends ConstraintModel(name, columns)
 {
+    require(columns.length > 0)
+
     override def equals(otherO: Any): Boolean = {
         if (otherO == null || !otherO.isInstanceOf[IndexModel]) false else {
             val other = otherO.asInstanceOf[IndexModel]    
@@ -80,7 +82,7 @@ case class IndexModel(override val name: String, override val columns: Seq[Strin
     }
 }
 
-case class PrimaryKeyModel(override val name: String, override val columns: Seq[String])
+case class PrimaryKey(override val name: String, override val columns: Seq[String])
     extends IndexModel(name, columns, true)
 
 case class ForeighKey(override val name: String,
@@ -96,7 +98,7 @@ case class TableModel(override val name: String, val columns: Seq[ColumnModel])
     extends DatabaseDeclaration(name: String)
 {
     var columnsMap: Map[String, ColumnModel] = new HashMap()
-    var primaryKey: Option[PrimaryKeyModel] = None;
+    var primaryKey: Option[PrimaryKey] = None;
     var constraints: List[ConstraintModel] = null;
     var keys =  List[IndexModel]()
 }

@@ -50,12 +50,12 @@ object IndexDiffBuilder {
 
 object PrimaryKeyDiffBuilder {
     import ListDiffMaker._
-    def doDiff(from: Option[PrimaryKeyModel], to: Option[PrimaryKeyModel]): Option[AbstractIndexDiff] = {
+    def doDiff(from: Option[PrimaryKey], to: Option[PrimaryKey]): Option[AbstractIndexDiff] = {
         if (from.isDefined && !to.isDefined) Some(new DropPrimaryKey())
-        else if (!from.isDefined && to.isDefined) Some(new CreatePrimaryKey(to.get.columns))
+        else if (!from.isDefined && to.isDefined) Some(new CreatePrimaryKey(to.get))
         else if (from.isDefined && to.isDefined) {
-            if (!from.equals(to)) Some(new AlterPrimaryKey(to.get.columns))
-                else None
+            if (!from.equals(to)) Some(new AlterPrimaryKey(from.get, to.get))
+            else None
         } else None
     }
 }

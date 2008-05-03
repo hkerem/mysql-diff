@@ -36,7 +36,7 @@ object JdbcModelExtractor {
     }
 
 
-    def parsePrimaryKeys(table: TableModel, data: DatabaseMetaData): PrimaryKeyModel = {
+    def parsePrimaryKeys(table: TableModel, data: DatabaseMetaData): PrimaryKey = {
 
         var pkColumns = List[String]()
 
@@ -51,7 +51,7 @@ object JdbcModelExtractor {
         }
 
         if (pkColumns.size > 0) {
-            var pk = new PrimaryKeyModel(pkName, pkColumns);
+            var pk = new PrimaryKey(pkName, pkColumns);
             table.primaryKey = Some(pk);
             pk
         } else null
