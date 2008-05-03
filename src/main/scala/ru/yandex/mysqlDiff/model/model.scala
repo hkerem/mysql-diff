@@ -9,9 +9,7 @@ class SqlObjectType(val name: String)  {
 
 
 
-case class DataType(override val name: String, val length: Option[Int]) 
-    extends SqlObjectType(name: String)
-{
+case class DataType(val name: String, val length: Option[Int]) {
     var isUnsigned: Boolean = false
     var isZerofill: Boolean = false
     var characterSet: String = ""
@@ -138,3 +136,5 @@ case object TypeValue extends PropertyType {
     override type ValueType = DataType
     override def get(column: ColumnModel) = column.dataType
 }
+
+// vim: set ts=4 sw=4 et:
