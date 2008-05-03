@@ -30,7 +30,11 @@ case class ColumnPropertyDiff(propertyType: PropertyType, oldValue1: Any, newVal
 abstract class AbstractTableDiff
 case class CreateTable(table: TableModel) extends AbstractTableDiff
 case class DropTable(name: String) extends AbstractTableDiff
-case class TableDiffModel(name: String, renameTo: Option[String], columnDiff: Seq[AbstractAlterColumn], indexDiff: Seq[AbstractIndexDiff]) extends AbstractTableDiff
+case class AlterTable(name: String, renameTo: Option[String],
+        columnDiff: Seq[AbstractAlterColumn], indexDiff: Seq[AbstractIndexDiff]) extends AbstractTableDiff
+{
+    def newName = renameTo getOrElse name
+}
 
 abstract class AbstractIndexDiff
 
@@ -46,3 +50,5 @@ case class AlterPrimaryKey(oldPk: PrimaryKey, newPk: PrimaryKey) extends Abstrac
 
 
 case class DatabaseDiff(tableDiff: Seq[AbstractTableDiff])
+
+// vim: set ts=4 sw=4 et:

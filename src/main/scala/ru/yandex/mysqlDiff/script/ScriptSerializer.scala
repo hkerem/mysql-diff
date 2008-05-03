@@ -4,8 +4,36 @@ import scala.collection.mutable.ArrayBuffer
 
 import model._
 
+import SerializedScript._
+
 object ScriptSerializer {
-    def serializeStatement(stmt: ScriptStatement): String = throw new AssertionError
+    def serialize(stmt: ScriptElement): SerializedScript = stmt match {
+        case s: ScriptStatement => serializeStatement(s)
+        case Unparsed(q) => q
+        case CommentElement(c) => c
+    }
+    
+    def serializeStatement(stmt: ScriptStatement): SerializedScript = stmt match {
+        case CreateTableStatement(t) => serializeCreateTable(t)
+        case DropTableStatement(n) => serializeDropTable(n)
+    }
+    
+    def serializeCreateTable(createTable: CreateTableStatement): SerializedScript =
+        serializeCreateTable(createTable.table)
+    
+    def serializeCreateTable(table: TableModel): SerializedScript = {
+        val l =
+            table.columns.map(serializeColumn _) ++
+            table.primaryKey.map(serializePrimaryKey _) ++
+            table.keys.map(serializeIndex _)
+            .reverse
+        val lines = (List(l.first) ++ l.drop(1).map(_ + ",")).reverse.indent(1)
+        
+        new SerializedScript(List(ScriptLine("CREATE TABLE " + table.name + "(", 0)) ++ lines.lines ++ List(ScriptLine(")", 0)))
+    }
+    
+    def serializeDropTable(tableName: String) =
+        "DROP TABLE " + tableName
     
     def serializeDataType(dataType: DataType) = {
         // XXX: dirty
@@ -50,6 +78,9 @@ object ScriptSerializer {
     
     def serializePrimaryKey(pk: PrimaryKey) =
         "PRIMARY KEY (" + pk.columns.mkString(", ") + ")"
+    
+    def serializeIndex(index: IndexModel) =
+        (if (index.isUnique) "UNIQUE " else "") + "INDEX " + index.name + "(" + index.columns.mkString(", ") + ")"
 }
 
 // vim: set ts=4 sw=4 et:

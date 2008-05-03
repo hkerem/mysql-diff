@@ -6,15 +6,19 @@ class Script(val stmts: Seq[ScriptElement])
 
 abstract class ScriptElement
 
-case class CommentStatement(comment: String) extends ScriptElement
+case class CommentElement(comment: String) extends ScriptElement
 
 abstract class ScriptStatement extends ScriptElement
 
-case class UnparsedStatement(q: String) extends ScriptStatement
+case class Unparsed(q: String) extends ScriptElement
 
-case class CreateTableStatement(model: TableModel) extends ScriptStatement
+case class CreateTableStatement(table: TableModel) extends ScriptStatement
 
-case class AlterTableStatement(tableName: String, op: AlterTableStatement.Operation)
+case class DropTableStatement(name: String) extends ScriptStatement
+
+case class AlterTableStatement(tableName: String, op: AlterTableStatement.Operation) extends ScriptStatement
+
+case class RenameTableStatement(oldName: String, newName: String) extends ScriptStatement
 
 object AlterTableStatement {
     abstract class Operation

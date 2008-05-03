@@ -84,8 +84,8 @@ object TableDiffBuilder {
 
         val alterIndexDiff = primaryKeyDiff ++ createIndexesDiff ++ dropIndexesDiff ++ alterIndexesDiff
 
-        if (from.name != to.name) Some(new TableDiffModel(from.name, Some(to.name), alterColumnDiff, alterIndexDiff))
-        else if (alterColumnDiff.size > 0 || alterIndexDiff.size > 0) Some(new TableDiffModel(from.name, None, alterColumnDiff, alterIndexDiff))
+        if (from.name != to.name) Some(new AlterTable(from.name, Some(to.name), alterColumnDiff, alterIndexDiff))
+        else if (alterColumnDiff.size > 0 || alterIndexDiff.size > 0) Some(new AlterTable(from.name, None, alterColumnDiff, alterIndexDiff))
         else None
     }
         

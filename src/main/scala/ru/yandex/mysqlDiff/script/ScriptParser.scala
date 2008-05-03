@@ -363,7 +363,7 @@ object ScriptParser {
 
     def parseModel(scriptString: String) = {
         val script = parse(scriptString)
-        new DatabaseModel("database", script.stmts.map(_.asInstanceOf[CreateTableStatement].model))
+        new DatabaseModel("database", script.stmts.map(_.asInstanceOf[CreateTableStatement].table))
     }
     
     def parse(scriptString: String): Script = {

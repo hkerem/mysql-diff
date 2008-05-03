@@ -3,39 +3,13 @@ package ru.yandex.mysqlDiff.diff
 import model._
 import script._
 
-object IndexScriptBuilder {
-    def getCreateScript(model: IndexModel): String = {
-        if (model.columns.size > 0) {
-            val indexDef = "INDEX " + model.name + " (" + model.columns.mkString(", ") + ")"
-            if (model.isUnique) "UNIQUE " + indexDef
-                else indexDef 
-        } else ""
-    }
-}
-
 object TableScriptBuilder {
     
-    def getCreateScript(model: TableModel): Seq[String] = {
-        val tableHeader = List("CREATE TABLE " + model.name + " (")
-        val columsDefinition  = model.columns.map(t => ScriptSerializer.serializeColumn(t) + ",")
-        val primaryKeyDefinition = model.primaryKey.toList.map(t => ScriptSerializer.serializePrimaryKey(t) + ",")
-        val indexDefinitions = model.keys.map(t => IndexScriptBuilder.getCreateScript(t) + ",")
-
-        val dirtyTableBody = columsDefinition ++ primaryKeyDefinition ++ indexDefinitions
-        val tableBody = dirtyTableBody.take(Math.max(dirtyTableBody.size - 1, 0)) ++ dirtyTableBody.lastOption.toList.map(t => t.substring(0, Math.max(0, t.length - 1)))
-        val tableEnd = List(");")
-        tableHeader ++ tableBody ++ tableEnd
-    }
-
-    def getCreateScript(diff: CreateTable): Seq[String] = {
-        getCreateScript(diff.table)
-    }
-
     def getDropScript(diff: DropTable): Seq[String] = {
         List("DROP TABLE " + diff.name + ";")
     }
 
-    def getAlterScript(oldModel: TableModel, model: TableModel, diff: TableDiffModel): Seq[String] = {
+    def getAlterScript(diff: AlterTable, model: TableModel): Seq[String] = {
         val createColumns = diff.columnDiff.filter(t => t.isInstanceOf[CreateColumn]).map(t => t.asInstanceOf[CreateColumn])
         val dropColumns = diff.columnDiff.filter(t => t.isInstanceOf[DropColumn]).map(t => t.asInstanceOf[DropColumn])
         val alterColumns = diff.columnDiff.filter(t => t.isInstanceOf[AlterColumn]).map(t => t.asInstanceOf[AlterColumn])
@@ -70,13 +44,13 @@ object TableScriptBuilder {
 
         val alterIndex: Seq[String] =
             primaryKeyAlter.map(t => "ALTER TABLE " + model.name + " DROP PRIMARY KEY, ADD " + ScriptSerializer.serializePrimaryKey(t.newPk) + ";") ++
-            indexAlter.map(t => "ALTER TABLE " + model.name + " DROP INDEX " + t.name + ", ADD " + IndexScriptBuilder.getCreateScript(t.index))
+            indexAlter.map(t => "ALTER TABLE " + model.name + " DROP INDEX " + t.name + ", ADD " + ScriptSerializer.serializeIndex(t.index))
 
         val createIndex: Seq[String] =
                 primaryKeyCreate.map(t => "ALTER TABLE " + model.name + " ADD " + ScriptSerializer.serializePrimaryKey(t.pk) + ";") ++ 
-                indexCreate.map(t => "ALTER TABLE " + model.name + " ADD " + IndexScriptBuilder.getCreateScript(t.index))
+                indexCreate.map(t => "ALTER TABLE " + model.name + " ADD " + ScriptSerializer.serializeIndex(t.index))
 
-        List("\n--Modify Table \"" + oldModel.name + "\"") ++
+        List("\n--Modify Table \"" + model.name + "\"") ++
         List("\n--Drop Index").filter(o => dropIndex.size > 0) ++
         dropIndex ++
         List("--Drop Columns").filter(o => dropColumn.size > 0) ++
@@ -89,22 +63,28 @@ object TableScriptBuilder {
         alterIndex ++
         List("--Create Indexes").filter(o =>createIndex.size > 0) ++
         createIndex ++
-        List("--End modify Table \"" + oldModel.name + "\"")
+        List("--End modify Table \"" + model.name + "\"")
     }
 }
 
 object DiffSerializer {
-    def getScript(oldModel: DatabaseModel, newModel: DatabaseModel, diff: DatabaseDiff): Seq[String] = {
-        val newTablesMap: scala.collection.Map[String, TableModel]  = Map(newModel.declarations.map(o => (o.name, o)): _*)
-        val oldTablesMap: scala.collection.Map[String, TableModel]  = Map(oldModel.declarations.map(o => (o.name, o)): _*)
+    def serializeToScript(diff: DatabaseDiff, oldModel: DatabaseModel, newModel: DatabaseModel)
+            : Seq[ScriptElement] =
+    {
+        val newTablesMap: Map[String, TableModel] = Map(newModel.declarations.map(o => (o.name, o)): _*)
+        val oldTablesMap: Map[String, TableModel] = Map(oldModel.declarations.map(o => (o.name, o)): _*)
         diff.tableDiff.flatMap(t => t match {
-            case a: CreateTable => TableScriptBuilder.getCreateScript(a)
-            case a: DropTable => TableScriptBuilder.getDropScript(a)
-            case a: TableDiffModel => {
-                    if (a.renameTo.isDefined) TableScriptBuilder.getAlterScript(oldTablesMap(a.name), newTablesMap(a.renameTo.get), a)
-                        else TableScriptBuilder.getAlterScript(oldTablesMap(a.name), oldTablesMap(a.name), a) 
-            }
+            case CreateTable(t) => CreateTableStatement(t) :: Nil
+            case DropTable(name) => DropTableStatement(name) :: Nil
+            case diff @ AlterTable(name, renameTo, columnDiff, indexDiff) =>
+                    renameTo.map(RenameTableStatement(name, _)) ++
+                            TableScriptBuilder.getAlterScript(diff, newTablesMap(diff.newName))
+                                    .map(Unparsed(_))
         })
+    }
+    
+    def getScript(oldModel: DatabaseModel, newModel: DatabaseModel, diff: DatabaseDiff): Seq[String] = {
+        serializeToScript(diff, oldModel, newModel).map(ScriptSerializer.serialize(_).mkString(" "))
     }
 }
 

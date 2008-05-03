@@ -1,8 +1,9 @@
 package ru.yandex.mysqlDiff.diff
 
 import scalax.testing._
-import ru.yandex.mysqlDiff.model._
-import ru.yandex.mysqlDiff.diff._
+import model._
+import diff._
+import script._
 
 object DiffSerializerTest extends TestSuite("Simple Diff Script Bulder test") {
 
@@ -20,7 +21,7 @@ object DiffSerializerTest extends TestSuite("Simple Diff Script Bulder test") {
 
 
         val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
-        val script = TableScriptBuilder.getAlterScript(table1, table2, diff.get.asInstanceOf[TableDiffModel])
+        val script = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
         /*
 --Modify Table "table_test"
 --Create Columns
@@ -41,7 +42,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         val table2 = new TableModel("table_test", List(c2_1))
 
         val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
-        val script = TableScriptBuilder.getAlterScript(table1, table2, diff.get.asInstanceOf[TableDiffModel])
+        val script = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
 
         //ALTER TABLE table_test MODIFY COLUMN id varchar(100);
 
@@ -60,7 +61,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         val table2 = new TableModel("table_test", List(c2_1))
    
         val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
-        val script = TableScriptBuilder.getAlterScript(table1, table2, diff.get.asInstanceOf[TableDiffModel])
+        val script = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
 
         val resultScript = script.filter(t => !t.matches("[\\s\\n]*\\-\\-[\\w\\W]*"))
         assert(resultScript.size == 1)
@@ -81,7 +82,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
 //ALTER TABLE table_test MODIFY COLUMN id int(12);
 //ALTER TABLE table_test ADD COLUMN name varchar(1000);
         val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
-        val script = TableScriptBuilder.getAlterScript(table1, table2, diff.get.asInstanceOf[TableDiffModel])
+        val script = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
 
         val resultScript = script.filter(t => !t.matches("[\\s\\n]*\\-\\-[\\w\\W]*"))
         assert(resultScript.size == 2)
@@ -103,13 +104,23 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         val d2 = new DatabaseModel("base", List(table2))
    
         val diff = DatabaseDiffMaker.doDiff(d1, d2)
-        val script = DiffSerializer.getScript(d1, d2, diff)
-        val resultScript = script.filter(t => !t.matches("[\\s\\n]*--[\\w\\W]*"))
-
-        var str = ""
-        resultScript.foreach(t => str = str + t)
-
-        assert("DROP TABLE table_test1;CREATE TABLE table_test (id int NULL,name varchar(1000) NULL);".equals(str))
+        
+        val script = DiffSerializer.serializeToScript(diff, d1, d2)
+        
+        assert(2 == script.length)
+        
+        script(0) match {
+        	case DropTableStatement("table_test1") =>
+        	case s => fail("first statement expected to be DROP TABLE table_test1, got " + s)
+        }
+        
+        script(1) match {
+        	case CreateTableStatement(tableFromScript @ TableModel("table_test", _)) =>
+				// XXX: check created columns
+        	case s => fail("second statement expected to be CREATE TABLE table_test(...), got " + s)
+        }
+        
+        //assert("DROP TABLE table_test1;CREATE TABLE table_test (id int NULL,name varchar(1000) NULL);" == str)
     }
  
 /* 
