@@ -29,7 +29,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         */
         val resultScript = script.filter(t => !t.matches("[\\s\\n]*\\-\\-[\\w\\W]*"))
         assert(resultScript.size == 1)
-        assert("ALTER TABLE table_test ADD COLUMN name varchar(1000);".equals(resultScript(0).trim))
+        assert("ALTER TABLE table_test ADD COLUMN name varchar(1000) NULL;".equals(resultScript(0).trim))
     }
 
     "Column change type" is {
@@ -48,7 +48,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         val resultScript = script.filter(t => !t.matches("[\\s\\n]*\\-\\-[\\w\\W]*"))
         assert(resultScript.size == 1)
 
-        assert("ALTER TABLE table_test MODIFY COLUMN id varchar(100);".equals(resultScript(0).trim))
+        assert("ALTER TABLE table_test MODIFY COLUMN id varchar(100) NULL;".equals(resultScript(0).trim))
     }
  
     "Column droped" is {
@@ -86,7 +86,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         val resultScript = script.filter(t => !t.matches("[\\s\\n]*\\-\\-[\\w\\W]*"))
         assert(resultScript.size == 2)
         val scriptSet = Set(resultScript: _*)
-        val assertSet = Set("ALTER TABLE table_test MODIFY COLUMN id int(12);", "ALTER TABLE table_test ADD COLUMN name varchar(1000);")
+        val assertSet = Set("ALTER TABLE table_test MODIFY COLUMN id int(12) NULL;", "ALTER TABLE table_test ADD COLUMN name varchar(1000) NULL;")
         assert(scriptSet == assertSet)
     }
 
@@ -109,7 +109,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         var str = ""
         resultScript.foreach(t => str = str + t)
 
-        assert("DROP TABLE table_test1;CREATE TABLE table_test (id int,name varchar(1000));".equals(str))
+        assert("DROP TABLE table_test1;CREATE TABLE table_test (id int NULL,name varchar(1000) NULL);".equals(str))
     }
  
 /* 

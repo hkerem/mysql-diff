@@ -1,43 +1,12 @@
 package ru.yandex.mysqlDiff.diff
 
-import ru.yandex.mysqlDiff.model._
-
-
-object DataTypeScriptBuilder {
-    def getCreateScript(model: DataType): String = {
-        var charset = ""
-        if (model.characterSet != "" && model.characterSet != null) charset = " CHARACTER SET " + model.characterSet
-        var collate = ""
-        if (model.collate != "" && model.collate != null) collate = " COLLATE " + model.collate
-        var unsigned = ""
-        if (model.isUnsigned) unsigned = " UNSIGNED"
-        var zerofill = ""
-        if (model.isZerofill) zerofill = " ZEROFILL"
-        var size = ""
-        if (model.length.isDefined) size = "(" + model.length.get + ")"
-        val result = model.name + size + charset + collate + unsigned + zerofill
-        result.trim
-    }
-}
+import model._
+import script._
 
 object ColumnScriptBuilder {
-    def getCreateScript(model: ColumnModel) : String = {
-        var nullable = ""
-        if (model.isNotNull) nullable = "NOT NULL "
-        var autoincrement = ""
-        if (model.isAutoIncrement) autoincrement = "AUTOINCREMENT "
-        var comment = ""
-        if (model.comment != "" && model.comment != null) comment = "COMMENT " + model.comment + " "
-        var default = ""
-        if (model.defaultValue != "" && model.defaultValue != null) default = "DEFAULT " + model.defaultValue + " "
-        val dataType = DataTypeScriptBuilder.getCreateScript(model.dataType)
-        val result = " " + model.name + " " + dataType + " " + nullable + default + autoincrement + comment
-        result.trim
-    }
-
     def getAlterScript(diff: AlterColumn, newModel: ColumnModel): String = {
-        if (diff.renameTo.isDefined) "CHANGE " + diff.name + getCreateScript(newModel)
-            else "MODIFY " + getCreateScript(newModel) 
+        if (diff.renameTo.isDefined) "CHANGE " + diff.name + ScriptSerializer.serializeColumn(newModel)
+            else "MODIFY " + ScriptSerializer.serializeColumn(newModel) 
     }
 }
 
@@ -74,7 +43,7 @@ object TableScriptBuilder {
     
     def getCreateScript(model: TableModel): Seq[String] = {
         val tableHeader = List("CREATE TABLE " + model.name + " (")
-        val columsDefinition  = model.columns.map(t => ColumnScriptBuilder.getCreateScript(t) + ",")
+        val columsDefinition  = model.columns.map(t => ScriptSerializer.serializeColumn(t) + ",")
         val primaryKeyDefinition = model.primaryKey.toList.map(t => PrimaryKeyScriptBuilder.getCreateScript(t) + ",")
         val indexDefinitions = model.keys.map(t => IndexScriptBuilder.getCreateScript(t) + ",")
 
@@ -114,15 +83,15 @@ object TableScriptBuilder {
 
         val dropIndex: Seq[String] = primaryKeyDrop.map(t => "ALTER TABLE " + model.name + " DROP PRIMARY KEY") ++ indexDrop.map(t => "ALTER TABLE " + model.name + " DROP INDEX " + t.name + ";")
         val dropColumn: Seq[String] = dropColumns.map(t => "ALTER TABLE " + model.name + " DROP COLUMN " + t.name  + " ;")
-        val createColumn: Seq[String] = createColumns.map(t => "ALTER TABLE " + model.name + " ADD COLUMN " + ColumnScriptBuilder.getCreateScript(t.column) + ";")
+        val createColumn: Seq[String] = createColumns.map(t => "ALTER TABLE " + model.name + " ADD COLUMN " + ScriptSerializer.serializeColumn(t.column) + ";")
 
 
         val columnMap = Map(model.columns.map(t => (t.name, t)): _*)
         val alterColumn: Seq[String] = alterColumns.map(t => {
             if (t.renameTo.isDefined)
-                "ALTER TABLE " + model.name + " CHANGE COLUMN " + t.name + " " + ColumnScriptBuilder.getCreateScript(columnMap(t.renameTo.get)) + ";"
+                "ALTER TABLE " + model.name + " CHANGE COLUMN " + t.name + " " + ScriptSerializer.serializeColumn(columnMap(t.renameTo.get)) + ";"
             else
-                "ALTER TABLE " + model.name + " MODIFY COLUMN " + ColumnScriptBuilder.getCreateScript(columnMap(t.name)) + ";"
+                "ALTER TABLE " + model.name + " MODIFY COLUMN " + ScriptSerializer.serializeColumn(columnMap(t.name)) + ";"
         })
 
         val alterIndex: Seq[String] =
