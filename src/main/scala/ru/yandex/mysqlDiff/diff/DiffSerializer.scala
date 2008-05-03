@@ -5,10 +5,6 @@ import script._
 
 object TableScriptBuilder {
     
-    def getDropScript(diff: DropTable): Seq[String] = {
-        List("DROP TABLE " + diff.name + ";")
-    }
-
     def getAlterScript(diff: AlterTable, model: TableModel): Seq[String] = {
         val createColumns = diff.columnDiff.filter(t => t.isInstanceOf[CreateColumn]).map(t => t.asInstanceOf[CreateColumn])
         val dropColumns = diff.columnDiff.filter(t => t.isInstanceOf[DropColumn]).map(t => t.asInstanceOf[DropColumn])
