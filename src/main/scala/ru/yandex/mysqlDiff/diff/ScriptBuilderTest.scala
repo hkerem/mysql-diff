@@ -27,8 +27,9 @@ object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
 ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
 --End modify Table "table_test"
         */
-        assert(script.size == 4)
-        assert("ALTER TABLE table_test ADD COLUMN name varchar (1000);".equals(script(2).trim))
+        val resultScript = script.filter(t => !t.matches("[\\s\\n]*\\-\\-[\\w\\W]*"))
+        assert(resultScript.size == 1)
+        assert("ALTER TABLE table_test ADD COLUMN name varchar (1000);".equals(resultScript(0).trim))
     }
 
     "Column change type" is {
@@ -44,8 +45,10 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
 
         //ALTER TABLE table_test MODIFY COLUMN id varchar(100);
 
-        assert(script.size == 4)
-        assert("ALTER TABLE table_test MODIFY COLUMN id varchar (100);".equals(script(2).trim))
+        val resultScript = script.filter(t => !t.matches("[\\s\\n]*\\-\\-[\\w\\W]*"))
+        assert(resultScript.size == 1)
+
+        assert("ALTER TABLE table_test MODIFY COLUMN id varchar (100);".equals(resultScript(0).trim))
     }
  
     "Column droped" is {
@@ -53,48 +56,41 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         val c1_2 = new ColumnModel("name", new DataType("varchar", Some(1000)))
         val table1 = new TableModel("table_test", List(c1_1, c1_2))
 
-
         val c2_1 = new ColumnModel("id", new DataType("int", None))
         val table2 = new TableModel("table_test", List(c2_1))
    
-
         val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
         val script = TableScriptBuilder.getAlterScript(table1, table2, diff.get.asInstanceOf[TableDiffModel])
 
-
-        assert(script.size == 4)
-        assert("ALTER TABLE table_test DROP COLUMN name ;".equals(script(2).trim))
+        val resultScript = script.filter(t => !t.matches("[\\s\\n]*\\-\\-[\\w\\W]*"))
+        assert(resultScript.size == 1)
+        assert("ALTER TABLE table_test DROP COLUMN name ;".equals(resultScript(0).trim))
     }
-/*
+
     "Double test" is {
         val c1_1 = new ColumnModel("id", new DataType("int", None))
-        val c1List = List(c1_1)
-        val table1 = new TableModel("table_test", c1List)
-        c1_1.parent = table1
+        val table1 = new TableModel("table_test", List(c1_1))
+
      
      
         val c2_1 = new ColumnModel("id", new DataType("int", Some(12)))
         val c2_2 = new ColumnModel("name", new DataType("varchar", Some(1000)))
         val table2 = new TableModel("table_test", List(c2_1, c2_2))
-        c2_1.parent = table2
-        c2_2.parent = table2
-     
-     
-        var typeDiff = false
-        var columnAdd = false
-        val m: TableDiffMaker.AddDiffFunction = x => {
-            val res = ScriptBuilder.getString(x)
-            val strings = res.split("\n")
-            assert(strings.length == 2)
-            assert("ALTER TABLE table_test MODIFY COLUMN id int(12);".equalsIgnoreCase(strings(0)) || "ALTER TABLE table_test MODIFY COLUMN id int(12);".equalsIgnoreCase(strings(1)))
-            assert("ALTER TABLE table_test ADD COLUMN name varchar(1000);".equalsIgnoreCase(strings(0)) || "ALTER TABLE table_test ADD COLUMN name varchar(1000);".equalsIgnoreCase(strings(1)))
-            assert(!strings(0).equals(strings(1)))
-            true
-        }
-        TableDiffMaker.doDiff(table1, table2, m)
+
+
+//ALTER TABLE table_test MODIFY COLUMN id int(12);
+//ALTER TABLE table_test ADD COLUMN name varchar(1000);
+        val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
+        val script = TableScriptBuilder.getAlterScript(table1, table2, diff.get.asInstanceOf[TableDiffModel])
+
+        val resultScript = script.filter(t => !t.matches("[\\s\\n]*\\-\\-[\\w\\W]*"))
+        assert(resultScript.size == 2)
+        val scriptSet = Set(resultScript: _*)
+        val assertSet = Set("ALTER TABLE table_test MODIFY COLUMN id int (12);", "ALTER TABLE table_test ADD COLUMN name varchar (1000);")
+        assert(scriptSet == assertSet)
     }
    
-
+/*
  
     "Remove and create table" is {
         val c1_1 = new ColumnModel("id", new DataType("int", None))
