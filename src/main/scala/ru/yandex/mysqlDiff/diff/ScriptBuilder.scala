@@ -6,16 +6,16 @@ import ru.yandex.mysqlDiff.model._
 object DataTypeScriptBuilder {
     def getCreateScript(model: DataType): String = {
         var charset = ""
-        if (model.characterSet != "" && model.characterSet != null) charset = "CHARACTER SET " + model.characterSet + " "
+        if (model.characterSet != "" && model.characterSet != null) charset = " CHARACTER SET " + model.characterSet
         var collate = ""
-        if (model.collate != "" && model.collate != null) collate = "COLLATE " + model.collate + " "
+        if (model.collate != "" && model.collate != null) collate = " COLLATE " + model.collate
         var unsigned = ""
-        if (model.isUnsigned) unsigned = "UNSIGNED "
+        if (model.isUnsigned) unsigned = " UNSIGNED"
         var zerofill = ""
-        if (model.isZerofill) zerofill = "ZEROFILL "
+        if (model.isZerofill) zerofill = " ZEROFILL"
         var size = ""
-        if (model.length.isDefined) size = "(" + model.length.get + ") "
-        val result = model.name+ " " + size + charset + collate + unsigned + zerofill
+        if (model.length.isDefined) size = "(" + model.length.get + ")"
+        val result = model.name + size + charset + collate + unsigned + zerofill
         result.trim
     }
 }
