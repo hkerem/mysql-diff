@@ -150,7 +150,7 @@ object TableScriptBuilder {
     }
 }
 
-object ScriptBuilder {
+object DiffSerializer {
     def getScript(oldModel: DatabaseModel, newModel: DatabaseModel, diff: DatabaseDiff): Seq[String] = {
         val newTablesMap: scala.collection.Map[String, TableModel]  = Map(newModel.declarations.map(o => (o.name, o)): _*)
         val oldTablesMap: scala.collection.Map[String, TableModel]  = Map(oldModel.declarations.map(o => (o.name, o)): _*)

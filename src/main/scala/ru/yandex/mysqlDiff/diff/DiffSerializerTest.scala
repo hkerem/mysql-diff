@@ -4,7 +4,7 @@ import scalax.testing._
 import ru.yandex.mysqlDiff.model._
 import ru.yandex.mysqlDiff.diff._
 
-object ScriptBulderTest extends TestSuite("Simple Diff Script Bulder test") {
+object DiffSerializerTest extends TestSuite("Simple Diff Script Bulder test") {
 
 
 
@@ -103,7 +103,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         val d2 = new DatabaseModel("base", List(table2))
    
         val diff = DatabaseDiffMaker.doDiff(d1, d2)
-        val script = ScriptBuilder.getScript(d1, d2, diff)
+        val script = DiffSerializer.getScript(d1, d2, diff)
         val resultScript = script.filter(t => !t.matches("[\\s\\n]*--[\\w\\W]*"))
 
         var str = ""
@@ -146,7 +146,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
                            "-- ALTER TABLE table_test CHANGE COLUMN name name3 varchar(1000);"
    
         val m: TableDiffMaker.AddDiffFunction = x => {
-            val res = ScriptBuilder.getString(x).trim().replaceAll("[\\s]*[\\n]+[\\s]*", "")
+            val res = DiffSerializer.getString(x).trim().replaceAll("[\\s]*[\\n]+[\\s]*", "")
             assert(resultOutput.equals(res))
             true
         }
@@ -164,7 +164,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
    
    //ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);
         val m: TableDiffMaker.AddDiffFunction = x => {
-            val outputScript = ScriptBuilder.getString(x).trim
+            val outputScript = DiffSerializer.getString(x).trim
             assert(outputScript.equals("ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);"))
             true
         }
@@ -181,7 +181,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
      
      //ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);
         val m: TableDiffMaker.AddDiffFunction = x => {
-            val outputScript = ScriptBuilder.getString(x).trim
+            val outputScript = DiffSerializer.getString(x).trim
             assert(outputScript.equals("ALTER TABLE table1 DROP PRIMARY KEY;"))
             true
         }
@@ -197,7 +197,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
      
      //ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);
         val m: TableDiffMaker.AddDiffFunction = x => {
-            val outputScript = ScriptBuilder.getString(x).trim
+            val outputScript = DiffSerializer.getString(x).trim
             assert(outputScript.equals("ALTER TABLE table1 DROP INDEX id;"))
             true
         }
@@ -213,7 +213,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
      
      //ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);
         val m: TableDiffMaker.AddDiffFunction = x => {
-            val outputScript = ScriptBuilder.getString(x).trim
+            val outputScript = DiffSerializer.getString(x).trim
             assert(outputScript.equals("ALTER TABLE table1 ADD INDEX testName (id, nameId);"))
             true
         }
@@ -229,7 +229,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
    
    //ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);
         val m: TableDiffMaker.AddDiffFunction = x => {
-            val outputScript = ScriptBuilder.getString(x).trim
+            val outputScript = DiffSerializer.getString(x).trim
             assert(outputScript.equals("ALTER TABLE table1 DROP INDEX testName, ADD INDEX testName (id, nameId);"))
             true
         }
@@ -245,7 +245,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
      
      //ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);
         val m: TableDiffMaker.AddDiffFunction = x => {
-            val outputScript = ScriptBuilder.getString(x).trim
+            val outputScript = DiffSerializer.getString(x).trim
             assert(outputScript.equals("ALTER TABLE table1 ADD INDEX nameId (nameId);"))
             true
         }
@@ -261,7 +261,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
      
      //ALTER TABLE table1 DROP PRIMARY KEY, ADD PRIMARY KEY (nameId);
         val m: TableDiffMaker.AddDiffFunction = x => {
-            val outputScript = ScriptBuilder.getString(x).trim
+            val outputScript = DiffSerializer.getString(x).trim
             assert(outputScript.equals("ALTER TABLE table1 DROP INDEX nameId, ADD UNIQUE INDEX nameId (nameId);"))
             true
         }

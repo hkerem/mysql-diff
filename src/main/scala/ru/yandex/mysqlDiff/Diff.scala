@@ -4,8 +4,9 @@ package ru.yandex.mysqlDiff
 import java.io.File
 import scala.io._
 
-import ru.yandex.mysqlDiff.diff._
-import ru.yandex.mysqlDiff.model._
+import diff._
+import model._
+import script._
 
 object Diff {
     val helpBanner: String = "MySql diff maker\n" +
@@ -41,7 +42,7 @@ object Diff {
             }
             var fromStr = ""
             Source.fromFile(from).getLines.foreach(x => {fromStr = fromStr + x})
-            fromdb = TextParser.parse(fromStr);
+            fromdb = ScriptParser.parse(fromStr);
         }
 
         if (toArgs.toLowerCase.startsWith("jdbc:")) {
@@ -50,18 +51,18 @@ object Diff {
         } else {
             val to = new File(args(1))
             if (!to.isFile) {
-                Console.println("\"to\" file is not a file.")
+                Console.println("\"To\" file is not a file.")
                 return;
             }
             var toStr = ""
             Source.fromFile(to).getLines.foreach(x => {toStr = toStr + x})
-            todb = TextParser.parse(toStr);
+            todb = ScriptParser.parse(toStr);
         }
 
         Console.println("-- start diff script from " + fromArgs  + " to " + toArgs + "\n");
 
         val dbDiff = DatabaseDiffMaker.doDiff(fromdb, todb)
-        val script = ScriptBuilder.getScript(fromdb, todb, dbDiff)
+        val script = DiffSerializer.getScript(fromdb, todb, dbDiff)
 
         for (x <- script) Console.println(x)
 

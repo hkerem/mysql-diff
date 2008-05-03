@@ -1,4 +1,4 @@
-package ru.yandex.mysqlDiff.diff
+package ru.yandex.mysqlDiff.script
 
 import ru.yandex.mysqlDiff.model._
 import java.util.regex.Pattern
@@ -9,7 +9,7 @@ object ContentType extends Enumeration {
 }
 
 
-object TextParser {
+object ScriptParser {
   
     private def inQuote(data: String, startCheckPos: Int, pos: Int): Boolean =
     {

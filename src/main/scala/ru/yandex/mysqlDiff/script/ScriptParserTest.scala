@@ -1,11 +1,11 @@
-package ru.yandex.mysqlDiff.diff
+package ru.yandex.mysqlDiff.script
 
 import scalax.testing._
-import ru.yandex.mysqlDiff.model._
-import ru.yandex.mysqlDiff.diff._
+import model._
+import diff._
 
 
-object TextParserTest extends TestSuite("Simple SQL script harvester") {
+object ScriptParserTest extends TestSuite("Simple SQL script parser") {
 
     "Simple table" is {
         val dataBase1 = "CREATE TABLE IF NOT EXISTS file_moderation_history_ (\n" +
@@ -19,7 +19,7 @@ object TextParserTest extends TestSuite("Simple SQL script harvester") {
             "    message VARCHAR(8192) DEFAULT '',\n" +
             "    PRIMARY KEY (id, user_id, file_id, moderator_login)\n" +
             ")";
-        var db1 = TextParser.parse(dataBase1);
+        var db1 = ScriptParser.parse(dataBase1);
         assert(db1.name.equals("database"))
         assert(db1.declarations.size == 1)
         val table = db1.declarations(0)
@@ -121,7 +121,7 @@ object TextParserTest extends TestSuite("Simple SQL script harvester") {
         val db1Text = "create table bla_bla ( " +
             "id integet primary key" +
             ")"
-        val db1 = TextParser.parse(db1Text);
+        val db1 = ScriptParser.parse(db1Text);
         val table = db1.declarations(0)
         assert(table.name.equals("bla_bla"))
         assert(table.columns.size == 1)
@@ -142,7 +142,7 @@ object TextParserTest extends TestSuite("Simple SQL script harvester") {
             "name varchar(300));"
 
 
-        val db = TextParser.parse(dbText);
+        val db = ScriptParser.parse(dbText);
         val tables = db.declarations;
 
         assert(tables.size == 2)
