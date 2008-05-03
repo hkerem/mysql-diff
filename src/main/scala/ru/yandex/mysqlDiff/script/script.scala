@@ -6,6 +6,7 @@ class Script(val stmts: Seq[ScriptElement])
 
 abstract class ScriptElement
 
+/** Comment including comment markers */
 case class CommentElement(comment: String) extends ScriptElement
 
 abstract class ScriptStatement extends ScriptElement
