@@ -28,19 +28,16 @@ object ColumnDiffBuilder {
         if (diff.size > 0) Some(new AlterColumn(from.name, None, diff)) else
         None
     }
+    
+    def createColumn(column: ColumnModel) = new CreateColumn(column)
+    def dropColumn(columnName: String) = new DropColumn(columnName)
 
-    def doDiff(from: Option[ColumnModel], to: Option[ColumnModel]): Option[AbstractAlterColumn] = {
-        if (from.isDefined && !to.isDefined) Some(new DropColumn(from.get.name)) else
-        if (!from.isDefined && to.isDefined) Some(new CreateColumn(to.get)) else
-        if (from.isDefined && to.isDefined) {
-            compareColumns(from.get, to.get)
-        } else None
-    }
 }        
 
 
 object IndexDiffBuilder {
     import ListDiffMaker._
+    
     def doDiff(from: Option[IndexModel], to: Option[IndexModel]): Option[AbstractIndexDiff] = {
         if (from.isDefined && !to.isDefined) Some(new DropIndex(from.get.name))
         else if (!from.isDefined && to.isDefined) Some(new CreateIndex(to.get))
@@ -71,11 +68,11 @@ object TableDiffBuilder {
 
         val (toColumnIsEmpty, fromColumnIsEmpty, columnsForCompare) = doListDiff[ColumnModel](from.columns, to.columns)
 
-        val dropColumnDiff = toColumnIsEmpty.flatMap(t => ColumnDiffBuilder.doDiff(Some(t), None))
-        val createColumnDiff = fromColumnIsEmpty.flatMap(t => ColumnDiffBuilder.doDiff(None, Some(t)))
-        val alterOnlyColumnDiff = columnsForCompare.flatMap(t => ColumnDiffBuilder.doDiff(Some(t._1), Some(t._2)))
+        val dropColumnDiff = toColumnIsEmpty.map(t => ColumnDiffBuilder.dropColumn(t.name))
+        val createColumnDiff = fromColumnIsEmpty.map(t => ColumnDiffBuilder.createColumn(t))
+        val alterOnlyColumnDiff = columnsForCompare.flatMap(t => ColumnDiffBuilder.compareColumns(t._1, t._2))
 
-        var alterColumnDiff = dropColumnDiff ++ createColumnDiff ++ alterOnlyColumnDiff
+        val alterColumnDiff = dropColumnDiff ++ createColumnDiff ++ alterOnlyColumnDiff
 
         val primaryKeyDiff: Seq[AbstractIndexDiff] = PrimaryKeyDiffBuilder.doDiff(from.primaryKey, to.primaryKey).toList
 
