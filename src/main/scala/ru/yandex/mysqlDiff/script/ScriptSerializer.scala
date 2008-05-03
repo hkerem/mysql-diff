@@ -35,6 +35,19 @@ object ScriptSerializer {
                 (if (attributes.isEmpty) "" else " " + attributes.mkString(" "))
     }
     
+    def serializeAlterTable(alterTable: AlterTableStatement) =
+        "ALTER TABLE " + alterTable.tableName + " " + serializeAlterTableOperation(alterTable.op)
+        
+    def serializeAlterTableOperation(op: AlterTableStatement.Operation) = {
+        import AlterTableStatement._
+        op match {
+            case AddColumn(column) => "ADD COLUMN " + serializeColumn(column)
+            case ChangeColumn(oldName, column) => "CHANGE COLUMN " + oldName + " " + serializeColumn(column)
+            case ModifyColumn(column) => "MODIFY COLUMN " + serializeColumn(column)
+            case DropColumn(name) => "DROP COLUMN " + name
+        }
+    }
+    
     def serializePrimaryKey(pk: PrimaryKey) =
         "PRIMARY KEY (" + pk.columns.mkString(", ") + ")"
 }

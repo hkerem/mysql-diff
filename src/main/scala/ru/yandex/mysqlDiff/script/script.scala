@@ -24,6 +24,8 @@ object AlterTableStatement {
     case class ChangeColumn(oldName: String, model: ColumnModel) extends Operation
     
     case class ModifyColumn(model: ColumnModel) extends Operation
+    
+    case class DropColumn(name: String) extends Operation
 }
 
 // vim: set ts=4 sw=4 et:

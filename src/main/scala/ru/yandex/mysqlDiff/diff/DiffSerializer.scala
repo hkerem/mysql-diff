@@ -3,27 +3,10 @@ package ru.yandex.mysqlDiff.diff
 import model._
 import script._
 
-object ColumnScriptBuilder {
-    def getAlterScript(diff: AlterColumn, newModel: ColumnModel): String = {
-        if (diff.renameTo.isDefined) "CHANGE " + diff.name + ScriptSerializer.serializeColumn(newModel)
-            else "MODIFY " + ScriptSerializer.serializeColumn(newModel) 
-    }
-}
-
-
-
-trait ColumnsListBuilder {
-    def getColumnsList(columns: Seq[String]): String = {
-        var result = ""
-        columns.foreach(x => result = result + ", " + x)
-        result.substring(2)
-    }
-}
-
-object IndexScriptBuilder extends ColumnsListBuilder {
+object IndexScriptBuilder {
     def getCreateScript(model: IndexModel): String = {
         if (model.columns.size > 0) {
-            val indexDef = "INDEX " + model.name + " (" + getColumnsList(model.columns) + ")"
+            val indexDef = "INDEX " + model.name + " (" + model.columns.mkString(", ") + ")"
             if (model.isUnique) "UNIQUE " + indexDef
                 else indexDef 
         } else ""
