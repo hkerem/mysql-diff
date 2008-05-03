@@ -29,6 +29,11 @@ case class DataType(val name: String, val length: Option[Int]) {
     }
 }
 
+object DataType {
+    def varchar(length: Int) = DataType("VARCHAR", Some(length))
+    def int() = DataType("INT", None)
+}
+
 case class ColumnModel(override val name: String, val dataType: DataType) 
     extends SqlObjectType(name: String)
 {
