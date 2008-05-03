@@ -89,42 +89,30 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         val assertSet = Set("ALTER TABLE table_test MODIFY COLUMN id int(12);", "ALTER TABLE table_test ADD COLUMN name varchar(1000);")
         assert(scriptSet == assertSet)
     }
-/*   
+
+
     "Remove and create table" is {
         val c1_1 = new ColumnModel("id", new DataType("int", None))
         val c1List = List(c1_1)
         val table1 = new TableModel("table_test1", c1List)
-        c1_1.parent = table1
         val d1 = new DatabaseModel("base", List(table1))
    
         val c2_1 = new ColumnModel("id", new DataType("int", None))
         val c2_2 = new ColumnModel("name", new DataType("varchar", Some(1000)))
         val table2 = new TableModel("table_test", List(c2_1, c2_2))
-        c2_1.parent = table2
-        c2_2.parent = table2
         val d2 = new DatabaseModel("base", List(table2))
    
-        val tList1 = List(table1)
-        val tList2 = List(table2)
-        val m: TableDiffMaker.AddDiffFunction = x => {
-            val diffList = x.asInstanceOf[DatabaseDiff[SqlObjectType]].diffList;
-            val res = ScriptBuilder.getString(x)
-            assert(diffList.size == 2)
-            assert(diffList(0).isInstanceOf[FromIsNull[_]] || diffList(1).isInstanceOf[FromIsNull[_]])
-            assert(diffList(0).isInstanceOf[ToIsNull[_]] || diffList(1).isInstanceOf[ToIsNull[_]])
-            assert(diffList(0).getClass != diffList(1).getClass)
-       /*
-        CREATE TABLE table_test (id int, name varchar(1000));DROP TABLE table_test1;
-       */
-            val trimmed = res.trim().replaceAll(";[\\s\\n]*", ";").replaceAll(",[\\s\\n]*", ", ")
-       //Console.println("\n>>" + trimmed + "<<")
-            assert("CREATE TABLE table_test (id int, name varchar(1000));DROP TABLE table_test1;".equals(trimmed))
-            true
-        }
-        DatabaseDiffMaker.doDiff(d1, d2, m);
+        val diff = DatabaseDiffMaker.doDiff(d1, d2)
+        val script = ScriptBuilder.getScript(d1, d2, diff)
+        val resultScript = script.filter(t => !t.matches("[\\s\\n]*--[\\w\\W]*"))
+
+        var str = ""
+        resultScript.foreach(t => str = str + t)
+
+        assert("DROP TABLE table_test1;CREATE TABLE table_test (id int,name varchar(1000));".equals(str))
     }
  
- 
+/* 
     "Alternative for drop" is {
         val c1_1 = new ColumnModel("id", new DataType("int", None))
         val c1_2 = new ColumnModel("name2", new DataType("varchar", Some(1000)))

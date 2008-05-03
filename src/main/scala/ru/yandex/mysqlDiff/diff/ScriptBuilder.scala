@@ -79,7 +79,6 @@ object TableScriptBuilder {
         val indexDefinitions = model.keys.map(t => IndexScriptBuilder.getCreateScript(t) + ",")
 
         val dirtyTableBody = columsDefinition ++ primaryKeyDefinition ++ indexDefinitions
-
         val tableBody = dirtyTableBody.take(Math.max(dirtyTableBody.size - 1, 0)) ++ dirtyTableBody.lastOption.toList.map(t => t.substring(0, Math.max(0, t.length - 1)))
         val tableEnd = List(");")
         tableHeader ++ tableBody ++ tableEnd

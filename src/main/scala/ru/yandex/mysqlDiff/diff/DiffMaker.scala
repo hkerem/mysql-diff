@@ -98,7 +98,7 @@ object TableDiffBuilder extends ListDiffMaker {
 
 object DatabaseDiffMaker extends ListDiffMaker {
     def doDiff(from: DatabaseModel, to: DatabaseModel): DatabaseDiff  = {
-        val (fromIsEmpty, toIsEmpty, tablesForCompare) = doListDiff[TableModel](from.declarations, to.declarations)
+        val (toIsEmpty, fromIsEmpty, tablesForCompare) = doListDiff[TableModel](from.declarations, to.declarations)
         val dropTables = toIsEmpty.map(t => new DropTable(t.name)) 
         val createTables = fromIsEmpty.map(t => new CreateTable(t))
         val alterTable = tablesForCompare.map(t => TableDiffBuilder.doDiff(Some(t._1), Some(t._2)))
