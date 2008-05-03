@@ -116,7 +116,19 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         
         script(1) match {
         	case CreateTableStatement(tableFromScript @ TableModel("table_test", _)) =>
-				// XXX: check created columns
+				assert(2 == tableFromScript.columns.length)
+				tableFromScript.columns(0) match {
+					case ColumnModel("id", _) =>
+					case _ => fail()
+				}
+				
+				tableFromScript.columns(1) match {
+					case ColumnModel("name", _) =>
+					case _ => fail()
+				}
+				
+				// XXX: check types
+				
         	case s => fail("second statement expected to be CREATE TABLE table_test(...), got " + s)
         }
         
