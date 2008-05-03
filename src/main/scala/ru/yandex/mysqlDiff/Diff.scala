@@ -63,9 +63,10 @@ object Diff {
         Console.println("-- start diff script from " + fromArgs  + " to " + toArgs + "\n");
 
         val dbDiff = DatabaseDiffMaker.doDiff(fromdb, todb)
-        val script = DiffSerializer.getScript(fromdb, todb, dbDiff)
+        
+        val script = DiffSerializer.serialize(fromdb, todb, dbDiff)
 
-        for (x <- script) Console.println(x)
+		println(script)
 
         Console.println("-- end of diff script from " + fromArgs  + " to " + toArgs + "\n");
     }

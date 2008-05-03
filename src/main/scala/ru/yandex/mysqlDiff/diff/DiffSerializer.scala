@@ -5,7 +5,7 @@ import script._
 
 object TableScriptBuilder {
     
-    def getAlterScript(diff: AlterTable, model: TableModel): Seq[String] = {
+    def getAlterScript(diff: AlterTable, model: TableModel): Seq[ScriptElement] = {
         val createColumns = diff.columnDiff.filter(t => t.isInstanceOf[CreateColumn]).map(t => t.asInstanceOf[CreateColumn])
         val dropColumns = diff.columnDiff.filter(t => t.isInstanceOf[DropColumn]).map(t => t.asInstanceOf[DropColumn])
         val alterColumns = diff.columnDiff.filter(t => t.isInstanceOf[AlterColumn]).map(t => t.asInstanceOf[AlterColumn])
@@ -25,41 +25,41 @@ object TableScriptBuilder {
         val indexCreate: Seq[CreateIndex] = indexKeyDiff.filter(t => t.isInstanceOf[CreateIndex]).map(t => t.asInstanceOf[CreateIndex])
         val indexAlter: Seq[AlterIndex] =  indexKeyDiff.filter(t => t.isInstanceOf[AlterIndex]).map(t => t.asInstanceOf[AlterIndex])
 
-        val dropIndex: Seq[String] = primaryKeyDrop.map(t => "ALTER TABLE " + model.name + " DROP PRIMARY KEY") ++ indexDrop.map(t => "ALTER TABLE " + model.name + " DROP INDEX " + t.name + ";")
-        val dropColumn: Seq[String] = dropColumns.map(t => "ALTER TABLE " + model.name + " DROP COLUMN " + t.name  + " ;")
-        val createColumn: Seq[String] = createColumns.map(t => "ALTER TABLE " + model.name + " ADD COLUMN " + ScriptSerializer.serializeColumn(t.column) + ";")
+        val dropIndex: Seq[String] = primaryKeyDrop.map(t => "ALTER TABLE " + model.name + " DROP PRIMARY KEY") ++ indexDrop.map(t => "ALTER TABLE " + model.name + " DROP INDEX " + t.name)
+        val dropColumn: Seq[String] = dropColumns.map(t => "ALTER TABLE " + model.name + " DROP COLUMN " + t.name)
+        val createColumn: Seq[String] = createColumns.map(t => "ALTER TABLE " + model.name + " ADD COLUMN " + ScriptSerializer.serializeColumn(t.column))
 
 
         val columnMap = Map(model.columns.map(t => (t.name, t)): _*)
         val alterColumn: Seq[String] = alterColumns.map(t => {
             if (t.renameTo.isDefined)
-                "ALTER TABLE " + model.name + " CHANGE COLUMN " + t.name + " " + ScriptSerializer.serializeColumn(columnMap(t.renameTo.get)) + ";"
+                "ALTER TABLE " + model.name + " CHANGE COLUMN " + t.name + " " + ScriptSerializer.serializeColumn(columnMap(t.renameTo.get))
             else
-                "ALTER TABLE " + model.name + " MODIFY COLUMN " + ScriptSerializer.serializeColumn(columnMap(t.name)) + ";"
+                "ALTER TABLE " + model.name + " MODIFY COLUMN " + ScriptSerializer.serializeColumn(columnMap(t.name))
         })
 
         val alterIndex: Seq[String] =
-            primaryKeyAlter.map(t => "ALTER TABLE " + model.name + " DROP PRIMARY KEY, ADD " + ScriptSerializer.serializePrimaryKey(t.newPk) + ";") ++
+            primaryKeyAlter.map(t => "ALTER TABLE " + model.name + " DROP PRIMARY KEY, ADD " + ScriptSerializer.serializePrimaryKey(t.newPk)) ++
             indexAlter.map(t => "ALTER TABLE " + model.name + " DROP INDEX " + t.name + ", ADD " + ScriptSerializer.serializeIndex(t.index))
 
         val createIndex: Seq[String] =
-                primaryKeyCreate.map(t => "ALTER TABLE " + model.name + " ADD " + ScriptSerializer.serializePrimaryKey(t.pk) + ";") ++ 
+                primaryKeyCreate.map(t => "ALTER TABLE " + model.name + " ADD " + ScriptSerializer.serializePrimaryKey(t.pk)) ++ 
                 indexCreate.map(t => "ALTER TABLE " + model.name + " ADD " + ScriptSerializer.serializeIndex(t.index))
 
-        List("\n--Modify Table \"" + model.name + "\"") ++
-        List("\n--Drop Index").filter(o => dropIndex.size > 0) ++
-        dropIndex ++
-        List("--Drop Columns").filter(o => dropColumn.size > 0) ++
-        dropColumn ++
-        List("--Create Columns").filter(o => createColumn.size > 0) ++
-        createColumn ++
-        List("--Alter Columns").filter(o => alterColumn.size > 0) ++
-        alterColumn ++
-        List("--Alter Indexes").filter(o => alterIndex.size > 0) ++
-        alterIndex ++
-        List("--Create Indexes").filter(o =>createIndex.size > 0) ++
-        createIndex ++
-        List("--End modify Table \"" + model.name + "\"")
+        List(CommentElement("--Modify Table \"" + model.name + "\"")) ++
+        List(CommentElement("--Drop Index")).filter(o => dropIndex.size > 0) ++
+        dropIndex.map(Unparsed(_)) ++
+        List(CommentElement("--Drop Columns")).filter(o => dropColumn.size > 0) ++
+        dropColumn.map(Unparsed(_)) ++
+        List(CommentElement("--Create Columns")).filter(o => createColumn.size > 0) ++
+        createColumn.map(Unparsed(_)) ++
+        List(CommentElement("--Alter Columns")).filter(o => alterColumn.size > 0) ++
+        alterColumn.map(Unparsed(_)) ++
+        List(CommentElement("--Alter Indexes")).filter(o => alterIndex.size > 0) ++
+        alterIndex.map(Unparsed(_)) ++
+        List(CommentElement("--Create Indexes")).filter(o =>createIndex.size > 0) ++
+        createIndex.map(Unparsed(_)) ++
+        List(CommentElement("--End modify Table \"" + model.name + "\""))
     }
 }
 
@@ -75,13 +75,12 @@ object DiffSerializer {
             case diff @ AlterTable(name, renameTo, columnDiff, indexDiff) =>
                     renameTo.map(RenameTableStatement(name, _)) ++
                             TableScriptBuilder.getAlterScript(diff, newTablesMap(diff.newName))
-                                    .map(Unparsed(_))
         })
     }
     
-    def getScript(oldModel: DatabaseModel, newModel: DatabaseModel, diff: DatabaseDiff): Seq[String] = {
-        serializeToScript(diff, oldModel, newModel)
-            .map(ScriptSerializer.serialize(_, ScriptSerializer.Options.multiline))
+    def serialize(oldModel: DatabaseModel, newModel: DatabaseModel, diff: DatabaseDiff): String = {
+        val options = ScriptSerializer.Options.multiline
+        ScriptSerializer.serialize(serializeToScript(diff, oldModel, newModel), options)
     }
 }
 

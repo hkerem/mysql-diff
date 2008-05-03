@@ -20,16 +20,19 @@ object DiffSerializerTest extends TestSuite("Simple Diff Script Bulder test") {
 
 
         val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
-        val script = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
+        val resultScript = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
+        		.flatMap(e => e match {
+        			case e: CommentElement => None
+        			case Unparsed(u) => Some(u)
+        		})
         /*
 --Modify Table "table_test"
 --Create Columns
 ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
 --End modify Table "table_test"
         */
-        val resultScript = script.filter(t => !t.matches("[\\s\\n]*\\-\\-[\\w\\W]*"))
         assert(resultScript.size == 1)
-        assert("ALTER TABLE table_test ADD COLUMN name VARCHAR(1000) NULL;".equals(resultScript(0).trim))
+        assert("ALTER TABLE table_test ADD COLUMN name VARCHAR(1000) NULL".equals(resultScript(0).trim))
     }
 
     "Column change type" is {
@@ -41,14 +44,17 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         val table2 = new TableModel("table_test", List(c2_1))
 
         val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
-        val script = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
+        val resultScript = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
+        		.flatMap(e => e match {
+        			case e: CommentElement => None
+        			case Unparsed(u) => Some(u)
+        		})
 
         //ALTER TABLE table_test MODIFY COLUMN id varchar(100);
 
-        val resultScript = script.filter(t => !t.matches("[\\s\\n]*\\-\\-[\\w\\W]*"))
         assert(resultScript.size == 1)
 
-        assert("ALTER TABLE table_test MODIFY COLUMN id varchar(100) NULL;".equals(resultScript(0).trim))
+        assert("ALTER TABLE table_test MODIFY COLUMN id varchar(100) NULL".equals(resultScript(0).trim))
     }
  
     "Column droped" is {
@@ -60,11 +66,14 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         val table2 = new TableModel("table_test", List(c2_1))
    
         val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
-        val script = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
+        val resultScript = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
+        		.flatMap(e => e match {
+        			case e: CommentElement => None
+        			case Unparsed(u) => Some(u)
+        		})
 
-        val resultScript = script.filter(t => !t.matches("[\\s\\n]*\\-\\-[\\w\\W]*"))
         assert(resultScript.size == 1)
-        assert("ALTER TABLE table_test DROP COLUMN name ;".equals(resultScript(0).trim))
+        assert("ALTER TABLE table_test DROP COLUMN name".equals(resultScript(0).trim))
     }
 
     "Double test" is {
@@ -81,12 +90,15 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
 //ALTER TABLE table_test MODIFY COLUMN id int(12);
 //ALTER TABLE table_test ADD COLUMN name varchar(1000);
         val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
-        val script = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
+        val resultScript = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
+        		.flatMap(e => e match {
+        			case e: CommentElement => None
+        			case Unparsed(u) => Some(u)
+        		})
 
-        val resultScript = script.filter(t => !t.matches("[\\s\\n]*\\-\\-[\\w\\W]*"))
         assert(resultScript.size == 2)
         val scriptSet = Set(resultScript: _*)
-        val assertSet = Set("ALTER TABLE table_test MODIFY COLUMN id int(12) NULL;", "ALTER TABLE table_test ADD COLUMN name varchar(1000) NULL;")
+        val assertSet = Set("ALTER TABLE table_test MODIFY COLUMN id int(12) NULL", "ALTER TABLE table_test ADD COLUMN name varchar(1000) NULL")
         assert(scriptSet == assertSet)
     }
 

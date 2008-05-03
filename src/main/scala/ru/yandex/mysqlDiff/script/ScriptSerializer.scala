@@ -12,6 +12,31 @@ object ScriptSerializer {
         def multiline = Options("    ", "\n", "")
         def singleline = Options("", "", " ")
     }
+    
+    def serialize(stmts: Seq[ScriptElement], options: Options): String = {
+        val sb = new StringBuilder
+        var needSemi = false
+        var first = true
+        for (stmt <- stmts) {
+            if (needSemi) {
+                sb append ";"
+                sb append options.afterComma
+            }
+            
+            if (!first) {
+                // XXX: care about "--" comments
+                sb append options.nl
+            }
+            first = false
+            
+            sb append serialize(stmt, options)
+            needSemi = stmt match {
+                case c: CommentElement => false
+                case _ => true
+            }
+        }
+        sb.toString
+    }
 
     def serialize(stmt: ScriptElement, options: Options): String = stmt match {
         case s: ScriptStatement => serializeStatement(s, options)
@@ -101,6 +126,19 @@ object ScriptSerializerTest extends TestSuite("ScriptSerializerTest") {
         
         val script = serializeCreateTable(t, Options("  ", "\n", "--"))
         assert(script.matches("CREATE TABLE users\\(\n  id INT.*,--\n  name VARCHAR\\(100\\).*\n\\)"))
+    }
+    
+    "serialize semi" is {
+        val dt = DropTableStatement("users")
+        val c = CommentElement("/* h */")
+        
+        val script = List(dt, c, dt, dt, c, c, dt)
+        
+        val options = Options("", " ", "")
+        
+        val serialized = serialize(script, options)
+        
+        assert(serialized == "DROP TABLE users; /* h */ DROP TABLE users; DROP TABLE users; /* h */ /* h */ DROP TABLE users")
     }
 }
 
