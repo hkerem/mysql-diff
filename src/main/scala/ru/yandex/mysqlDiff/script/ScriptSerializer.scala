@@ -4,32 +4,38 @@ import scala.collection.mutable.ArrayBuffer
 
 import model._
 
-import SerializedScript._
-
 object ScriptSerializer {
-    def serialize(stmt: ScriptElement): SerializedScript = stmt match {
-        case s: ScriptStatement => serializeStatement(s)
+    /** Serializer options */
+    case class Options(val indent: String, nl: String, afterComma: String)
+    
+    object Options {
+        def multiline = Options("    ", "\n", "")
+        def singleline = Options("", "", " ")
+    }
+
+    def serialize(stmt: ScriptElement, options: Options): String = stmt match {
+        case s: ScriptStatement => serializeStatement(s, options)
         case Unparsed(q) => q
         case CommentElement(c) => c
     }
     
-    def serializeStatement(stmt: ScriptStatement): SerializedScript = stmt match {
-        case CreateTableStatement(t) => serializeCreateTable(t)
+    def serializeStatement(stmt: ScriptStatement, options: Options): String = stmt match {
+        case CreateTableStatement(t) => serializeCreateTable(t, options)
         case DropTableStatement(n) => serializeDropTable(n)
     }
     
-    def serializeCreateTable(createTable: CreateTableStatement): SerializedScript =
-        serializeCreateTable(createTable.table)
+    def serializeCreateTable(createTable: CreateTableStatement, options: Options): String =
+        serializeCreateTable(createTable.table, options)
     
-    def serializeCreateTable(table: TableModel): SerializedScript = {
-        val l =
-            table.columns.map(serializeColumn _) ++
-            table.primaryKey.map(serializePrimaryKey _) ++
-            table.keys.map(serializeIndex _)
-            .reverse
-        val lines = (List(l.first) ++ l.drop(1).map(_ + ",")).reverse.indent(1)
+    def serializeCreateTable(table: TableModel, options: Options): String = {
+        val l = (
+                table.columns.map(serializeColumn _) ++
+                table.primaryKey.map(serializePrimaryKey _) ++
+                table.keys.map(serializeIndex _)
+            ).reverse
+        val lines = (List(l.first) ++ l.drop(1).map(_ + "," + options.afterComma)).reverse.map(options.indent + _)
         
-        new SerializedScript(List(ScriptLine("CREATE TABLE " + table.name + "(", 0)) ++ lines.lines ++ List(ScriptLine(")", 0)))
+        (List("CREATE TABLE " + table.name + "(") ++ lines ++ List(")")).mkString(options.nl)
     }
     
     def serializeDropTable(tableName: String) =
@@ -81,6 +87,21 @@ object ScriptSerializer {
     
     def serializeIndex(index: IndexModel) =
         (if (index.isUnique) "UNIQUE " else "") + "INDEX " + index.name + "(" + index.columns.mkString(", ") + ")"
+}
+
+import scalax.testing._
+
+object ScriptSerializerTest extends TestSuite("ScriptSerializerTest") {
+    import ScriptSerializer._
+    
+    "serializeCreateTable" is {
+        val idColumn = ColumnModel("id", DataType.int())
+        val nameColumn = ColumnModel("name", DataType.varchar(100))
+        val t = TableModel("users", List(idColumn, nameColumn))
+        
+        val script = serializeCreateTable(t, Options("  ", "\n", "--"))
+        assert(script.matches("CREATE TABLE users\\(\n  id INT.*,--\n  name VARCHAR\\(100\\).*\n\\)"))
+    }
 }
 
 // vim: set ts=4 sw=4 et:

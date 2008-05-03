@@ -80,7 +80,8 @@ object DiffSerializer {
     }
     
     def getScript(oldModel: DatabaseModel, newModel: DatabaseModel, diff: DatabaseDiff): Seq[String] = {
-        serializeToScript(diff, oldModel, newModel).map(ScriptSerializer.serialize(_).mkString(" "))
+        serializeToScript(diff, oldModel, newModel)
+            .map(ScriptSerializer.serialize(_, ScriptSerializer.Options.multiline))
     }
 }
 
