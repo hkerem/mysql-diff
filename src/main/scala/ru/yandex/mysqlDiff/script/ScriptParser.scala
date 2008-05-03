@@ -361,9 +361,16 @@ object ScriptParser {
         result
     }
 
-    def parse(inputData: String): DatabaseModel = {
-       //comments remove
-        var data = inputData.replaceAll("\\-\\-[\\w\\W]*?\n", "");
-        new DatabaseModel("database", search(data))
+    def parseModel(scriptString: String) = {
+        val script = parse(scriptString)
+        new DatabaseModel("database", script.stmts.map(_.asInstanceOf[CreateTableStatement].model))
     }
+    
+    def parse(scriptString: String): Script = {
+        // remove comments
+        var data = scriptString.replaceAll("\\-\\-[\\w\\W]*?\n", "");
+        new Script(search(data).map(CreateTableStatement(_)))
+   	}
 }
+
+// vim: set ts=4 sw=4 et:

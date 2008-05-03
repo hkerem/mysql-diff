@@ -19,7 +19,7 @@ object ScriptParserTest extends TestSuite("Simple SQL script parser") {
             "    message VARCHAR(8192) DEFAULT '',\n" +
             "    PRIMARY KEY (id, user_id, file_id, moderator_login)\n" +
             ")";
-        var db1 = ScriptParser.parse(dataBase1);
+        var db1 = ScriptParser.parseModel(dataBase1);
         assert(db1.name.equals("database"))
         assert(db1.declarations.size == 1)
         val table = db1.declarations(0)
@@ -121,7 +121,7 @@ object ScriptParserTest extends TestSuite("Simple SQL script parser") {
         val db1Text = "create table bla_bla ( " +
             "id integet primary key" +
             ")"
-        val db1 = ScriptParser.parse(db1Text);
+        val db1 = ScriptParser.parseModel(db1Text);
         val table = db1.declarations(0)
         assert(table.name.equals("bla_bla"))
         assert(table.columns.size == 1)
@@ -142,7 +142,7 @@ object ScriptParserTest extends TestSuite("Simple SQL script parser") {
             "name varchar(300));"
 
 
-        val db = ScriptParser.parse(dbText);
+        val db = ScriptParser.parseModel(dbText);
         val tables = db.declarations;
 
         assert(tables.size == 2)

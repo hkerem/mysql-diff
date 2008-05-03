@@ -42,7 +42,7 @@ object Diff {
             }
             var fromStr = ""
             Source.fromFile(from).getLines.foreach(x => {fromStr = fromStr + x})
-            fromdb = ScriptParser.parse(fromStr);
+            fromdb = ScriptParser.parseModel(fromStr)
         }
 
         if (toArgs.toLowerCase.startsWith("jdbc:")) {
@@ -56,7 +56,7 @@ object Diff {
             }
             var toStr = ""
             Source.fromFile(to).getLines.foreach(x => {toStr = toStr + x})
-            todb = ScriptParser.parse(toStr);
+            todb = ScriptParser.parseModel(toStr)
         }
 
         Console.println("-- start diff script from " + fromArgs  + " to " + toArgs + "\n");
