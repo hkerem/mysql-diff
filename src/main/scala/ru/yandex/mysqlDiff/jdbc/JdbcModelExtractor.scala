@@ -1,11 +1,11 @@
-package ru.yandex.mysqlDiff.diff
+package ru.yandex.mysqlDiff.jdbc
 
 import java.sql._
 
-import ru.yandex.mysqlDiff.model._
+import model._
 
 
-object JdbcHarvester {
+object JdbcModelExtractor {
 
 
    def parseTable(tables: ResultSet, data: DatabaseMetaData): TableModel = {

@@ -7,6 +7,7 @@ import scala.io._
 import diff._
 import model._
 import script._
+import jdbc._
 
 object Diff {
     val helpBanner: String = "MySql diff maker\n" +
@@ -33,7 +34,7 @@ object Diff {
 
         if (fromArgs.toLowerCase.startsWith("jdbc:")) {
             val fromUrl = fromArgs.trim
-            fromdb = JdbcHarvester.parse(fromUrl)
+            fromdb = JdbcModelExtractor.parse(fromUrl)
         } else {
             val from = new File(args(0))
             if (!from.isFile) {
@@ -47,7 +48,7 @@ object Diff {
 
         if (toArgs.toLowerCase.startsWith("jdbc:")) {
             val toUrl = toArgs.trim
-            todb = JdbcHarvester.parse(toUrl)
+            todb = JdbcModelExtractor.parse(toUrl)
         } else {
             val to = new File(args(1))
             if (!to.isFile) {
