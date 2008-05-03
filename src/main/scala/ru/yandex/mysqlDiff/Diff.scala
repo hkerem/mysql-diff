@@ -10,7 +10,7 @@ import script._
 import jdbc._
 
 object Diff {
-    val helpBanner: String = "MySql diff maker\n" +
+    val helpBanner: String = "MySQL diff maker\n" +
         "How to use:\n" +
         "mysqlDiff.sh file_name_from|jdbc:jdbc_url_to_source  file_name_to|jdbc:jdbc_url_to_destination\n"
 
