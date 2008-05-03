@@ -11,9 +11,10 @@
     <property name="dist.dir" value="${basedir}/target"/>
     <property name="tmp.dir" value="${basedir}/target/tmp"/>
     <property name="lib.dir" value="${basedir}/lib"/>
+    
+    <property name="scala-library.jar" value="${scala.home}/lib/scala-library.jar"/>
 
     <target name="init">
-        <property name="scala-library.jar" value="${scala.home}/lib/scala-library.jar"/>
         <path id="build.classpath">
             <pathelement location="${scala-library.jar}"/>
             <fileset dir="${lib.dir}" includes="**/*.jar"/>
@@ -65,8 +66,7 @@
              jarfile="${dist.dir}/${ant.project.name}-${version}.jar" index="true"/>
     </target>
 
-
-    <target name="dist" depends="clean,jar">
+    <target name="do-dist">
         <mkdir dir="${dist.dir}/dist"/>
         <echo message="${dist.dir}/${ant.project.name}-${version}.jar"/>
         <copy file="${dist.dir}/${ant.project.name}-${version}.jar" todir="${dist.dir}/dist"/>
@@ -78,8 +78,12 @@
         </copy>
     </target>
 
+    <target name="dist" depends="clean,jar,do-dist"/>
+
     <target name="clean">
         <delete dir="${build.dir}"/>
         <delete dir="${tmp.dir}"/>
     </target>
 </project>
+
+<!-- vim: set ts=4 sw=4 et: -->
