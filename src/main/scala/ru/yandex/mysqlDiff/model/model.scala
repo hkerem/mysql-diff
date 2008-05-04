@@ -92,7 +92,7 @@ case class PrimaryKey(override val name: String, override val columns: Seq[Strin
 
 case class ForeighKey(override val name: String,
     val localColumns: Seq[String],
-    val externalTable: TableModel,
+    val externalTableName: String,
     val externalColumns: Seq[String])
     extends ConstraintModel(name: String, localColumns)
 {
