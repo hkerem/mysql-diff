@@ -66,20 +66,20 @@
     </target>
 
     <target name="do-dist">
-        <mkdir dir="${dist.dir}/dist"/>
-        <mkdir dir="${dist.dir}/dist/bin"/>
-        <mkdir dir="${dist.dir}/dist/lib"/>
-        <move file="${dist.dir}/${ant.project.name}-${version}.jar" todir="${dist.dir}/dist/lib"/>
+        <mkdir dir="${dist.dir}/dist/mysql-diff"/>
+        <mkdir dir="${dist.dir}/dist/mysql-diff/bin"/>
+        <mkdir dir="${dist.dir}/dist/mysql-diff/lib"/>
+        <copy file="${dist.dir}/${ant.project.name}-${version}.jar" todir="${dist.dir}/dist/mysql-diff/lib"/>
+        <copy file="${basedir}/src/main/bin/mysql-diff" todir="${dist.dir}/dist/mysql-diff/bin"/>
 
-        <copy file="${basedir}/src/main/bin/mysql-diff" todir="${dist.dir}/dist/bin"/>
-        <chmod file="${dist.dir}/dist/bin/mysql-diff" perm="ugo+rx"/>
+        <chmod file="${dist.dir}/dist/mysql-diff/bin/mysql-diff" perm="ugo+rx"/>
 
         <tar destfile="${dist.dir}/mysql-diff.tar.gz" compression="gzip">
-            <tarfileset dir="${dist.dir}/dist/bin/.." mode="555">
-                <include name="bin/*"/>
+            <tarfileset dir="${dist.dir}/dist/mysql-diff/bin/../.." mode="555">
+                <include name="mysql-diff/bin/*"/>
             </tarfileset>
-            <tarfileset dir="${dist.dir}/dist/lib/.." mode="444">
-                <include name="lib/*"/>
+            <tarfileset dir="${dist.dir}/dist/mysql-diff/lib/../.." mode="444">
+                <include name="mysql-diff/lib/*"/>
             </tarfileset>
         </tar>
     </target>
