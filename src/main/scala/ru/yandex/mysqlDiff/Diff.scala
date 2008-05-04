@@ -21,7 +21,7 @@ object Diff {
         } else {
             val fromArgs = args(0)
             val toArgs = args(1)
-            if (fromArgs == null || fromArgs.trim.equals("") || toArgs == null|| toArgs.trim.equals("")) {
+            if (fromArgs == null || fromArgs.trim == "" || toArgs == null|| toArgs.trim == "") {
                 System.err.println(helpBanner)
                 System.exit(1)
             } else {
@@ -54,8 +54,7 @@ object Diff {
         else {
             val sourceF = new File(arg)
             if (!sourceF.isFile)  throw new MysqlDiffException("\"" + arg + "\" file is not a file.")
-            var str = ""
-            new FileExtras(sourceF).readLines.foreach(x => {str = str + x})
+            var str = new FileExtras(sourceF).slurp
             ScriptParser.parseModel(str)
         }
     }
