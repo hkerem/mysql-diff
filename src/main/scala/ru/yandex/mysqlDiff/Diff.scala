@@ -25,18 +25,25 @@ object Diff {
                 Console.println(helpBanner)
             } else {
 
-                var fromdb = getModelFromArgsLine(args(0))
-                var todb = getModelFromArgsLine(args(1))
+                try {
+                    var fromdb = getModelFromArgsLine(args(0))
+                    var todb = getModelFromArgsLine(args(1))
+                    Console.println("-- start diff script from " + fromArgs  + " to " + toArgs + "\n")
 
-                Console.println("-- start diff script from " + fromArgs  + " to " + toArgs + "\n")
+                    val dbDiff = DatabaseDiffMaker.doDiff(fromdb, todb)
 
-                val dbDiff = DatabaseDiffMaker.doDiff(fromdb, todb)
-        
-                val script = DiffSerializer.serialize(fromdb, todb, dbDiff)
+                    val script = DiffSerializer.serialize(fromdb, todb, dbDiff)
 
-                println(script)
+                    println(script)
 
-                Console.println("-- end of diff script from " + fromArgs  + " to " + toArgs + "\n")
+                    Console.println("-- end of diff script from " + fromArgs  + " to " + toArgs + "\n")
+
+                } catch {
+                    case e: MysqlDiffException => {
+                        System.err.println("An error while diff building")
+                        System.err.println(e.message)
+                    }
+                }
             }
         }
     }
@@ -45,7 +52,7 @@ object Diff {
         if (arg.toLowerCase.startsWith("jdbc:")) JdbcModelExtractor.parse(arg.trim)
             else {
                 val sourceF = new File(arg)
-                if (!sourceF.isFile)  throw new RuntimeException("\"" + arg + "\" file is not a file.")
+                if (!sourceF.isFile)  throw new MysqlDiffException("\"" + arg + "\" file is not a file.")
                 var str = ""
                 Source.fromFile(sourceF).getLines.foreach(x => {str = str + x})
                 ScriptParser.parseModel(str)
