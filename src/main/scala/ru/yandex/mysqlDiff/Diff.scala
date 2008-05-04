@@ -2,7 +2,7 @@ package ru.yandex.mysqlDiff
 
 
 import java.io.File
-import scala.io._
+import scalax.io._
 
 import diff._
 import model._
@@ -55,7 +55,7 @@ object Diff {
             val sourceF = new File(arg)
             if (!sourceF.isFile)  throw new MysqlDiffException("\"" + arg + "\" file is not a file.")
             var str = ""
-            Source.fromFile(sourceF).getLines.foreach(x => {str = str + x})
+            new FileExtras(sourceF).readLines.foreach(x => {str = str + x})
             ScriptParser.parseModel(str)
         }
     }
