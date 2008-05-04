@@ -4,7 +4,7 @@ import scala.collection.mutable._
 
 
 class SqlObjectType(val name: String)  {
-    var comment: String = null
+    var comment: Option[String] = None
 }
 
 
@@ -12,8 +12,8 @@ class SqlObjectType(val name: String)  {
 case class DataType(val name: String, val length: Option[Int]) {
     var isUnsigned: Boolean = false
     var isZerofill: Boolean = false
-    var characterSet: String = ""
-    var collate: String = ""
+    var characterSet: Option[String] = None
+    var collate: Option[String] = None
 
     override def equals(other: Any): Boolean = {
         if (other == null || !other.isInstanceOf[DataType]) false else {
@@ -39,7 +39,7 @@ case class ColumnModel(override val name: String, val dataType: DataType)
 {
     var isNotNull: Boolean = false
     var isAutoIncrement: Boolean = false
-    var defaultValue: String = ""
+    var defaultValue: Option[String] = None
 
     var isUnique: Boolean = false
     var isIndex: Boolean = false
@@ -130,12 +130,12 @@ case object AutoIncrementality extends PropertyType {
 }
 
 case object DefaultValue extends PropertyType {
-    override type ValueType = String
+    override type ValueType = Option[String]
     override def get(column: ColumnModel) = column.defaultValue
 }
 
 case object CommentValue extends PropertyType {
-    override type ValueType = String
+    override type ValueType = Option[String]
     override def get(column: ColumnModel) = column.comment
 }
 

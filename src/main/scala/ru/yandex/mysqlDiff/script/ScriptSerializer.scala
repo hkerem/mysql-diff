@@ -69,9 +69,9 @@ object ScriptSerializer {
     def serializeDataType(dataType: DataType) = {
         // XXX: dirty
         var charset = ""
-        if (dataType.characterSet != "" && dataType.characterSet != null) charset = " CHARACTER SET " + dataType.characterSet
+        if (dataType.characterSet.isDefined) charset = " CHARACTER SET " + dataType.characterSet
         var collate = ""
-        if (dataType.collate != "" && dataType.collate != null) collate = " COLLATE " + dataType.collate
+        if (dataType.collate.isDefined) collate = " COLLATE " + dataType.collate
         var unsigned = ""
         if (dataType.isUnsigned) unsigned = " UNSIGNED"
         var zerofill = ""
@@ -87,8 +87,8 @@ object ScriptSerializer {
         
         attributes += (if (model.isNotNull) "NOT NULL" else "NULL")
         if (model.isAutoIncrement) attributes += "AUTOINCREMENT"
-        if (model.defaultValue != "" && model.defaultValue != null) attributes += "DEFAULT " + model.defaultValue
-        if (model.comment != "" && model.comment != null) attributes += "COMMENT " + model.comment // XXX: lies
+        if (model.defaultValue.isDefined) attributes += "DEFAULT " + model.defaultValue.get
+        if (model.comment.isDefined) attributes += "COMMENT " + model.comment.get // XXX: lies
         
         model.name + " " + serializeDataType(model.dataType) +
                 (if (attributes.isEmpty) "" else " " + attributes.mkString(" "))

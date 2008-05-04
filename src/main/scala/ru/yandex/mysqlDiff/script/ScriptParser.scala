@@ -125,8 +125,8 @@ object ScriptParser {
     
         dataType.isZerofill = m.group(4) != null
         dataType.isUnsigned = m.group(3) != null
-        dataType.characterSet = m.group(6)
-        dataType.collate = m.group(8)
+        if (m.group(6) != null) dataType.characterSet = Some(m.group(6))
+        if (m.group(8) != null) dataType.collate = Some(m.group(8))
         new Tuple3(dataType, m.start, m.end)
     }
 
@@ -165,7 +165,8 @@ object ScriptParser {
             stopSearch = false;
             while (commentMatcher.find && !stopSearch) {
                 if (!inQuote(x, commentMatcher.start)) {
-                    result.comment = commentMatcher.group(1)
+                    if (commentMatcher.group(1) != null)
+                        result.comment = Some(commentMatcher.group(1))
                     stopSearch = true
                 }
             }
@@ -185,7 +186,8 @@ object ScriptParser {
             stopSearch = false
             while (defaultMatcher.find && !stopSearch) {
                 if (!inQuote(x, defaultMatcher.start)) {
-                    result.defaultValue = defaultMatcher.group(1)
+                    if (defaultMatcher.group(1) != null)
+                       result.defaultValue = Some(defaultMatcher.group(1))
                     stopSearch = true
                 }
             }
