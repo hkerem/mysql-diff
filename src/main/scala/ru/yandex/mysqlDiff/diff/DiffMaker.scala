@@ -42,7 +42,7 @@ object IndexDiffBuilder {
         if (from.isDefined && !to.isDefined) Some(new DropIndex(from.get.name))
         else if (!from.isDefined && to.isDefined) Some(new CreateIndex(to.get))
         else if (from.isDefined && to.isDefined) { 
-            if (!from.get.equals(to.get)) Some(new AlterIndex(from.get.name, to.get))
+            if (from != to) Some(new AlterIndex(from.get.name, to.get))
                 else None
         } else None
     }
@@ -54,7 +54,7 @@ object PrimaryKeyDiffBuilder {
         if (from.isDefined && !to.isDefined) Some(new DropPrimaryKey())
         else if (!from.isDefined && to.isDefined) Some(new CreatePrimaryKey(to.get))
         else if (from.isDefined && to.isDefined) {
-            if (!from.equals(to)) Some(new AlterPrimaryKey(from.get, to.get))
+            if (from != to) Some(new AlterPrimaryKey(from.get, to.get))
             else None
         } else None
     }

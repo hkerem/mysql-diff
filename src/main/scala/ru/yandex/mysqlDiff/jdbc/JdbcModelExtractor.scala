@@ -66,7 +66,7 @@ object JdbcModelExtractor {
             val colName = indexes.getString("COLUMN_NAME")
             val indexName = indexes.getString("INDEX_NAME")
             if (!checkPrimaryKey || !table.primaryKey.isDefined ||
-                table.primaryKey.get.name == null || !table.primaryKey.get.name.equals(indexName))
+                table.primaryKey.get.name == null || table.primaryKey.get.name != indexName)
 
             if (indexesMap.contains(indexName))
                 indexesMap(indexName) = (indexesMap(indexName) ++ List(colName)).toList

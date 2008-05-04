@@ -296,7 +296,7 @@ object ScriptParser {
 
                 if (tableNameMatcher.find()) tableName = tableNameMatcher.group(1).trim()
            
-                if (!tableName.equals("")) {
+                if (tableName != "") {
                     val startBracketsPos = createTableData.indexOf('(')
                     val stopBraketsPos = findStopBraketsPos(createTableData, startBracketsPos)
 
