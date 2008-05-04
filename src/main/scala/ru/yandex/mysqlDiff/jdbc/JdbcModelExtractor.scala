@@ -9,21 +9,21 @@ object JdbcModelExtractor {
 
 
    def parseTable(tables: ResultSet, data: DatabaseMetaData): TableModel = {
-       val tableName = tables.getString("TABLE_NAME");
-       val columns = data.getColumns(null, null, tableName, "%");
+       val tableName = tables.getString("TABLE_NAME")
+       val columns = data.getColumns(null, null, tableName, "%")
        var columnsList = List[ColumnModel]()
 
        while (columns.next) {
-           val colName = columns.getString("COLUMN_NAME");
-           val colType = columns.getString("TYPE_NAME");
-           var colTypeSize: Int = -1;
-           if (columns.getObject("COLUMN_SIZE") != null) colTypeSize = columns.getInt("COLUMN_SIZE");
+           val colName = columns.getString("COLUMN_NAME")
+           val colType = columns.getString("TYPE_NAME")
+           var colTypeSize: Int = -1
+           if (columns.getObject("COLUMN_SIZE") != null) colTypeSize = columns.getInt("COLUMN_SIZE")
 
-           val isNotNull = !columns.getString("IS_NULLABLE").equalsIgnoreCase("yes");
-           val isAutoinrement = columns.getString("IS_AUTOINCREMENT").equalsIgnoreCase("YES");
+           val isNotNull = !columns.getString("IS_NULLABLE").equalsIgnoreCase("yes")
+           val isAutoinrement = columns.getString("IS_AUTOINCREMENT").equalsIgnoreCase("YES")
 
 
-           var typeSizeOption: Option[Int] = None;
+           var typeSizeOption: Option[Int] = None
            if (colTypeSize  != -1) typeSizeOption = Some(colTypeSize)
 
            val cm = new ColumnModel(colName, new DataType(colType, typeSizeOption))
@@ -51,8 +51,8 @@ object JdbcModelExtractor {
         }
 
         if (pkColumns.size > 0) {
-            var pk = new PrimaryKey(pkName, pkColumns);
-            table.primaryKey = Some(pk);
+            var pk = new PrimaryKey(pkName, pkColumns)
+            table.primaryKey = Some(pk)
             pk
         } else null
     }
@@ -63,8 +63,8 @@ object JdbcModelExtractor {
         var indexesMap: Map[String, List[String]] = Map()
         val indexes = data.getIndexInfo(null, null, table.name, false, true)
         while (indexes.next) {
-            val colName = indexes.getString("COLUMN_NAME");
-            val indexName = indexes.getString("INDEX_NAME");
+            val colName = indexes.getString("COLUMN_NAME")
+            val indexName = indexes.getString("INDEX_NAME")
             if (!checkPrimaryKey || !table.primaryKey.isDefined ||
                 table.primaryKey.get.name == null || !table.primaryKey.get.name.equals(indexName))
 
@@ -95,20 +95,20 @@ object JdbcModelExtractor {
 
 
     def search(url: String): Seq[TableModel] = {
-        Class.forName("com.mysql.jdbc.Driver").newInstance;
+        Class.forName("com.mysql.jdbc.Driver").newInstance
 
-        val conn: Connection = DriverManager.getConnection(url);
-        val data: DatabaseMetaData = conn.getMetaData;
+        val conn: Connection = DriverManager.getConnection(url)
+        val data: DatabaseMetaData = conn.getMetaData
 
-        val tables: ResultSet = data.getTables(null, "%", "%", List("TABLE").toArray);
+        val tables: ResultSet = data.getTables(null, "%", "%", List("TABLE").toArray)
 
         var returnTables = List[TableModel]()
 
         while (tables.next) {
-            val tableModel = parseTable(tables, data);
+            val tableModel = parseTable(tables, data)
             val pk = parsePrimaryKeys(tableModel, data)
-            val indexes = parseIndexes(tableModel, data);
-            val unique = parseUnique(tableModel, data);
+            val indexes = parseIndexes(tableModel, data)
+            val unique = parseUnique(tableModel, data)
             returnTables = (returnTables ++ List(tableModel)).toList
         }
         returnTables

@@ -28,7 +28,7 @@ object Diff {
                 var fromdb = getModelFromArgsLine(args(0))
                 var todb = getModelFromArgsLine(args(1))
 
-                Console.println("-- start diff script from " + fromArgs  + " to " + toArgs + "\n");
+                Console.println("-- start diff script from " + fromArgs  + " to " + toArgs + "\n")
 
                 val dbDiff = DatabaseDiffMaker.doDiff(fromdb, todb)
         
@@ -36,7 +36,7 @@ object Diff {
 
                 println(script)
 
-                Console.println("-- end of diff script from " + fromArgs  + " to " + toArgs + "\n");
+                Console.println("-- end of diff script from " + fromArgs  + " to " + toArgs + "\n")
             }
         }
     }

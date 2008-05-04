@@ -21,10 +21,10 @@ object DiffSerializerTest extends TestSuite("Simple Diff Script Bulder test") {
 
         val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
         val resultScript = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
-        		.flatMap(e => e match {
-        			case e: CommentElement => None
-        			case Unparsed(u) => Some(u)
-        		})
+                .flatMap(e => e match {
+                    case e: CommentElement => None
+                    case Unparsed(u) => Some(u)
+                })
         /*
 --Modify Table "table_test"
 --Create Columns
@@ -45,10 +45,10 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
 
         val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
         val resultScript = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
-        		.flatMap(e => e match {
-        			case e: CommentElement => None
-        			case Unparsed(u) => Some(u)
-        		})
+                .flatMap(e => e match {
+                    case e: CommentElement => None
+                    case Unparsed(u) => Some(u)
+                })
 
         //ALTER TABLE table_test MODIFY COLUMN id varchar(100);
 
@@ -67,10 +67,10 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
    
         val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
         val resultScript = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
-        		.flatMap(e => e match {
-        			case e: CommentElement => None
-        			case Unparsed(u) => Some(u)
-        		})
+                .flatMap(e => e match {
+                    case e: CommentElement => None
+                    case Unparsed(u) => Some(u)
+                })
 
         assert(resultScript.size == 1)
         assert("ALTER TABLE table_test DROP COLUMN name".equals(resultScript(0).trim))
@@ -91,10 +91,10 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
 //ALTER TABLE table_test ADD COLUMN name varchar(1000);
         val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
         val resultScript = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
-        		.flatMap(e => e match {
-        			case e: CommentElement => None
-        			case Unparsed(u) => Some(u)
-        		})
+                .flatMap(e => e match {
+                    case e: CommentElement => None
+                    case Unparsed(u) => Some(u)
+                })
 
         assert(resultScript.size == 2)
         val scriptSet = Set(resultScript: _*)
@@ -121,26 +121,25 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         assert(2 == script.length)
         
         script(0) match {
-        	case DropTableStatement("table_test1") =>
-        	case s => fail("first statement expected to be DROP TABLE table_test1, got " + s)
+            case DropTableStatement("table_test1") =>
+            case s => fail("first statement expected to be DROP TABLE table_test1, got " + s)
         }
         
         script(1) match {
-        	case CreateTableStatement(tableFromScript @ TableModel("table_test", _)) =>
-				assert(2 == tableFromScript.columns.length)
-				tableFromScript.columns(0) match {
-					case ColumnModel("id", _) =>
-					case _ => fail()
-				}
-				
-				tableFromScript.columns(1) match {
-					case ColumnModel("name", _) =>
-					case _ => fail()
-				}
-				
-				// XXX: check types
-				
-        	case s => fail("second statement expected to be CREATE TABLE table_test(...), got " + s)
+            case CreateTableStatement(tableFromScript @ TableModel("table_test", _)) =>
+                assert(2 == tableFromScript.columns.length)
+                tableFromScript.columns(0) match {
+                    case ColumnModel("id", _) =>
+                    case _ => fail()
+                }
+
+                tableFromScript.columns(1) match {
+                    case ColumnModel("name", _) =>
+                    case _ => fail()
+                }
+    
+                // XXX: check types
+            case s => fail("second statement expected to be CREATE TABLE table_test(...), got " + s)
         }
         
         //assert("DROP TABLE table_test1;CREATE TABLE table_test (id int NULL,name varchar(1000) NULL);" == str)
@@ -219,7 +218,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
             assert(outputScript.equals("ALTER TABLE table1 DROP PRIMARY KEY;"))
             true
         }
-        DatabaseDiffMaker.doDiff(db1, db2, m);
+        DatabaseDiffMaker.doDiff(db1, db2, m)
     }
  
  
@@ -235,7 +234,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
             assert(outputScript.equals("ALTER TABLE table1 DROP INDEX id;"))
             true
         }
-        DatabaseDiffMaker.doDiff(db1, db2, m);
+        DatabaseDiffMaker.doDiff(db1, db2, m)
     }
  
  
@@ -251,7 +250,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
             assert(outputScript.equals("ALTER TABLE table1 ADD INDEX testName (id, nameId);"))
             true
         }
-        DatabaseDiffMaker.doDiff(db1, db2, m);
+        DatabaseDiffMaker.doDiff(db1, db2, m)
     }
 
  
@@ -267,7 +266,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
             assert(outputScript.equals("ALTER TABLE table1 DROP INDEX testName, ADD INDEX testName (id, nameId);"))
             true
         }
-        DatabaseDiffMaker.doDiff(db1, db2, m);
+        DatabaseDiffMaker.doDiff(db1, db2, m)
     }
  
  
@@ -283,7 +282,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
             assert(outputScript.equals("ALTER TABLE table1 ADD INDEX nameId (nameId);"))
             true
         }
-        DatabaseDiffMaker.doDiff(db1, db2, m);
+        DatabaseDiffMaker.doDiff(db1, db2, m)
     }
  
  
@@ -299,7 +298,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
             assert(outputScript.equals("ALTER TABLE table1 DROP INDEX nameId, ADD UNIQUE INDEX nameId (nameId);"))
             true
         }
-        DatabaseDiffMaker.doDiff(db1, db2, m);
+        DatabaseDiffMaker.doDiff(db1, db2, m)
     }
     */
 }

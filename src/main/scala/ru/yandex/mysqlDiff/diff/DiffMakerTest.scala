@@ -9,10 +9,10 @@ object DiffTest extends TestSuite("Simple Diff") {
 
     "Column Diff" is {
     
-        val c1 = new ColumnModel("c1", new DataType("int", None));
-        val c1_eq = new ColumnModel("c1", new DataType("int", None));
+        val c1 = new ColumnModel("c1", new DataType("int", None))
+        val c1_eq = new ColumnModel("c1", new DataType("int", None))
 
-        val nodiff = ColumnDiffBuilder.compareColumns(c1, c1_eq);
+        val nodiff = ColumnDiffBuilder.compareColumns(c1, c1_eq)
         assert(!nodiff.isDefined)
     
         val c2 = ColumnModel("c2", new DataType("varchar", Some(20)))
@@ -33,14 +33,14 @@ object DiffTest extends TestSuite("Simple Diff") {
   
 /*
     "List Diff" is {
-        val c1: ColumnModel = new ColumnModel("c1", new DataType("varchar", Some(11)));
-        val c1t: ColumnModel = new ColumnModel("c1", new DataType("int", Some(11)));
-        val c2: ColumnModel = new ColumnModel("c2", new DataType("varchar", Some(11)));
-        val c3: ColumnModel = new ColumnModel("c3", new DataType("int", Some(11)));
-        val c4: ColumnModel = new ColumnModel("c4", new DataType("int", Some(11)));
+        val c1: ColumnModel = new ColumnModel("c1", new DataType("varchar", Some(11)))
+        val c1t: ColumnModel = new ColumnModel("c1", new DataType("int", Some(11)))
+        val c2: ColumnModel = new ColumnModel("c2", new DataType("varchar", Some(11)))
+        val c3: ColumnModel = new ColumnModel("c3", new DataType("int", Some(11)))
+        val c4: ColumnModel = new ColumnModel("c4", new DataType("int", Some(11)))
 
-        val s1 = List[ColumnModel](c1, c2, c3);
-        val s1_eq = List[ColumnModel](c1, c2, c3);
+        val s1 = List[ColumnModel](c1, c2, c3)
+        val s1_eq = List[ColumnModel](c1, c2, c3)
 
         SimpleListDiff.doListDiff[ColumnModel](
             s1,
@@ -50,8 +50,8 @@ object DiffTest extends TestSuite("Simple Diff") {
             }
         )
     
-        val s2 = List[ColumnModel](c2, c3, c4);
-        var i = 0;
+        val s2 = List[ColumnModel](c2, c3, c4)
+        var i = 0
     
     
         SimpleListDiff.doListDiff[ColumnModel](
@@ -59,7 +59,7 @@ object DiffTest extends TestSuite("Simple Diff") {
             s2,
             (a, b) => i = i + 1
         )
-        assert("diff count invalid", i == 4);
+        assert("diff count invalid", i == 4)
     }
   
   
@@ -67,7 +67,7 @@ object DiffTest extends TestSuite("Simple Diff") {
         val c1: ColumnModel = new ColumnModel("id", new DataType("int", Some(11)))
         c1.isAutoIncrement = true
         val c2: ColumnModel = new ColumnModel("id", new DataType("int", Some(11)))
-        var i = 0;
+        var i = 0
 
         val m : ColumnDiffMaker.AddDiffFunction = x => {
             assert(x.isInstanceOf[AutoIncrementDiff])
@@ -81,26 +81,26 @@ object DiffTest extends TestSuite("Simple Diff") {
   
     "Table Diff" is {
 
-        val c1_1: ColumnModel = new ColumnModel("id", new DataType("int", Some(11)));
-        val c1_2: ColumnModel = new ColumnModel("name", new DataType("varchar", Some(100)));
-        val c1_3: ColumnModel = new ColumnModel("data", new DataType("blob", None));
+        val c1_1: ColumnModel = new ColumnModel("id", new DataType("int", Some(11)))
+        val c1_2: ColumnModel = new ColumnModel("name", new DataType("varchar", Some(100)))
+        val c1_3: ColumnModel = new ColumnModel("data", new DataType("blob", None))
 
-        val cList1 = List(c1_1, c1_2, c1_3);
-        val table1: TableModel = new TableModel("table1", cList1);
-
-    
-        val c2_1: ColumnModel = new ColumnModel("id", new DataType("int", Some(20)));
-        val c2_2: ColumnModel = new ColumnModel("user_name", new DataType("varchar", Some(100)));
-        val c2_3: ColumnModel = new ColumnModel("data", new DataType("int", None));
-
-        val cList2 = List(c2_1, c2_2, c2_3);
-        val table2: TableModel = new TableModel("table1", cList2);
-    
-    
+        val cList1 = List(c1_1, c1_2, c1_3)
+        val table1: TableModel = new TableModel("table1", cList1)
 
     
-        var tableDiffObject: DiffType = null;
-        var i = 0;
+        val c2_1: ColumnModel = new ColumnModel("id", new DataType("int", Some(20)))
+        val c2_2: ColumnModel = new ColumnModel("user_name", new DataType("varchar", Some(100)))
+        val c2_3: ColumnModel = new ColumnModel("data", new DataType("int", None))
+
+        val cList2 = List(c2_1, c2_2, c2_3)
+        val table2: TableModel = new TableModel("table1", cList2)
+    
+    
+
+    
+        var tableDiffObject: DiffType = null
+        var i = 0
 
         val m: TableDiffMaker.AddDiffFunction = o => {
                 tableDiffObject = o
@@ -129,7 +129,7 @@ object DiffTest extends TestSuite("Simple Diff") {
         val createStatement = table.toCreateStatement.trim.replaceAll("\\s[\\n\\s]*", " ")
     
     /*
-        CREATE TABLE test_table (id int(11), name varchar(100), size integer);
+        CREATE TABLE test_table (id int(11), name varchar(100), size integer)
     */
         assert("Now create Statement is: " + createStatement,"CREATE TABLE test_table (id int(11), name varchar(100), size integer);".equals(createStatement))
     }

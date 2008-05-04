@@ -103,8 +103,8 @@ case class TableModel(override val name: String, val columns: Seq[ColumnModel])
     extends DatabaseDeclaration(name: String)
 {
     var columnsMap: Map[String, ColumnModel] = new HashMap()
-    var primaryKey: Option[PrimaryKey] = None;
-    var constraints: List[ConstraintModel] = null;
+    var primaryKey: Option[PrimaryKey] = None
+    var constraints: List[ConstraintModel] = null
     var keys =  List[IndexModel]()
 }
 
