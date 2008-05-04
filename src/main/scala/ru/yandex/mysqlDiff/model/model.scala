@@ -23,7 +23,7 @@ case class DataType(val name: String, val length: Option[Int]) {
             if (isUnsigned != data.isUnsigned) false else
             if (characterSet != data.characterSet) false else
             if (collate != data.collate) false else
-            if (length.isDefined != data.length.isDefined || (length.isDefined && length.get != data.length.get)) false else
+            if (length != data.length) false else
             true
         }
     }
@@ -41,10 +41,6 @@ case class ColumnModel(override val name: String, val dataType: DataType)
     var isAutoIncrement: Boolean = false
     var defaultValue: Option[String] = None
 
-    var isUnique: Boolean = false
-    var isIndex: Boolean = false
-    var primaryKey: Boolean = false
-
     override def equals(otherO: Any): Boolean = {
         if (otherO == null || !otherO.isInstanceOf[ColumnModel]) false else {
             val other = otherO.asInstanceOf[ColumnModel]
@@ -53,9 +49,6 @@ case class ColumnModel(override val name: String, val dataType: DataType)
             if (isNotNull != other.isNotNull) false else
             if (isAutoIncrement != other.isAutoIncrement) false else
             if (!(defaultValue != other.defaultValue)) false else
-            if (isUnique != other.isUnique) false else
-            if (isIndex != other.isIndex) false else
-            if (primaryKey != other.primaryKey) false else
             true
         }
     }

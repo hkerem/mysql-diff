@@ -130,7 +130,9 @@ object ScriptParser {
         new Tuple3(dataType, m.start, m.end)
     }
 
-    private def parseColumnDefinition(data: String): ColumnModel = {
+    private case class ColumnScriptDefinition(val columnModel: ColumnModel, val isPrimaryKey: Boolean, val isUnique: Boolean, val isIndex: Boolean)
+
+    private def parseColumnDefinition(data: String): ColumnScriptDefinition = {
         var x = data.trim
         val columnPattern = Pattern.compile("[\\s\\n]*([\\w`\\-\\_]+)[\\s\\n]+([\\w\\W]*)?")
         val m = columnPattern.matcher(x)
@@ -171,12 +173,13 @@ object ScriptParser {
                 }
             }
 
+            var isColumnPrimaryKey: Boolean = false
             val primaryKeyPattern = Pattern.compile("PRIMARY[\\s\\n]+KEY", Pattern.CASE_INSENSITIVE)
             val primaryKeyMatcher = primaryKeyPattern.matcher(x)
             stopSearch = false
             while (primaryKeyMatcher.find && !stopSearch) {
                 if (!inQuote(x, primaryKeyMatcher.start)) {
-                    result.primaryKey = true
+                   isColumnPrimaryKey = true
                    stopSearch = true
                 }
             }
@@ -191,30 +194,30 @@ object ScriptParser {
                     stopSearch = true
                 }
             }
-      
+            var isColumnUnique: Boolean = false
             val uniquePattern = Pattern.compile("UNIQUE", Pattern.CASE_INSENSITIVE)
             val uniqueMatcher = uniquePattern.matcher(x)
             stopSearch = false
             while (uniqueMatcher.find && !stopSearch) {
                 if (!inQuote(x, uniqueMatcher.start)) {
-                    result.isUnique = true
+                    isColumnUnique = true
                     stopSearch = true
                 }
             }
-      
-            if (!result.primaryKey && !result.isUnique) {
+            var isColumnIndex: Boolean = false
+            if (!isColumnPrimaryKey && isColumnUnique) {
                 val indexPattern = Pattern.compile("KEY", Pattern.CASE_INSENSITIVE)
                 val indexMatcher = indexPattern.matcher(x)
                 stopSearch = false
                 while (indexMatcher.find && !stopSearch) {
                         if (!inQuote(x, indexMatcher.start)) {
-                            result.isIndex = true
+                            isColumnIndex = true
                             stopSearch = true
                         }
                 }
             }
-        }
-        result
+            new ColumnScriptDefinition(result, isColumnPrimaryKey, isColumnUnique, isColumnIndex)
+        } else null
     }
   
   
@@ -307,17 +310,21 @@ object ScriptParser {
                             var primaryKey: PrimaryKey = null
                             var indexes =  List[IndexModel]()
 
+                            var columnsDefinitions = List[ColumnScriptDefinition]() 
+
                             definitions.foreach(x => {
                                 val defType = getDefinitionType(x)
                                 if (defType == ContentType.COLUMN) {
-                                    var cModel = parseColumnDefinition(x)
-                                    if (cModel != null) {
-                                        columns = (columns ++ List(cModel)).toList
-                                        if (cModel.isUnique) {
-                                            indexes = (indexes ++ List(new IndexModel(cModel.name, List(cModel.name), true))).toList
+                                    var columnScriptDef = parseColumnDefinition(x)
+                                    if (columnScriptDef != null) {
+                                        val columnModel = columnScriptDef.columnModel
+                                        columnsDefinitions = (columnsDefinitions ++ List(columnScriptDef))
+                                        columns = (columns ++ List(columnModel)).toList
+                                        if (columnScriptDef.isUnique) {
+                                            indexes = (indexes ++ List(new IndexModel(columnModel.name, List(columnModel.name), true))).toList
                                         }
-                                        if (cModel.isIndex) {
-                                            indexes = (indexes ++ List(new IndexModel(cModel.name, List(cModel.name), false))).toList
+                                        if (columnScriptDef.isIndex) {
+                                            indexes = (indexes ++ List(new IndexModel(columnModel.name, List(columnModel.name), false))).toList
                                         }
                                     }
                                 }
@@ -348,9 +355,9 @@ object ScriptParser {
                             if (primaryKey != null) {
                                 tableModel.primaryKey = Some(primaryKey)
                             } else {
-                                val primaryKeyColumns = columns.filter(x => x.primaryKey)
+                                val primaryKeyColumns = columnsDefinitions.filter(x => x.isPrimaryKey)
                                 if (primaryKeyColumns.size > 0) {
-                                    tableModel.primaryKey = Some(new PrimaryKey("", primaryKeyColumns.map(x => x.name)))
+                                    tableModel.primaryKey = Some(new PrimaryKey("", primaryKeyColumns.map(x => x.columnModel.name)))
                                 }
                             }
                             tableModel.keys = indexes
