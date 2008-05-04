@@ -12,14 +12,18 @@ import jdbc._
 object Diff {
     val helpBanner: String = "MySQL diff maker\n" +
         "How to use:\n" +
-        "mysqlDiff.sh file_name_from|jdbc:jdbc_url_to_source  file_name_to|jdbc:jdbc_url_to_destination"
+        "mysqlDiff.sh file_name_from|jdbc:jdbc_url_to_source file_name_to|jdbc:jdbc_url_to_destination"
 
     def main(args: Array[String]) {
-        if (args.length != 2) System.err.println(helpBanner) else {
+        if (args.length != 2) {
+            System.err.println(helpBanner)
+            System.exit(1)
+        } else {
             val fromArgs = args(0)
             val toArgs = args(1)
             if (fromArgs == null || fromArgs.trim.equals("") || toArgs == null|| toArgs.trim.equals("")) {
                 System.err.println(helpBanner)
+                System.exit(1)
             } else {
                 try {
                     var fromdb = getModelFromArgsLine(args(0))
@@ -37,6 +41,7 @@ object Diff {
                     case e: MysqlDiffException => {
                         System.err.println("An error while diff building")
                         System.err.println(e.message)
+                        System.exit(2)
                     }
                 }
             }
