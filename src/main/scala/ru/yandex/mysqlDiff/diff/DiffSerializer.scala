@@ -32,7 +32,7 @@ object TableScriptBuilder {
 
         val columnMap = Map(model.columns.map(col => (col.name, col)): _*)
         val alterColumn: Seq[String] = alterColumns.map(col => {
-            if (t.renameTo.isDefined)
+            if (col.renameTo.isDefined)
                 "ALTER TABLE " + model.name + " CHANGE COLUMN " + col.name + " " + ScriptSerializer.serializeColumn(columnMap(col.renameTo.get))
             else
                 "ALTER TABLE " + model.name + " MODIFY COLUMN " + ScriptSerializer.serializeColumn(columnMap(col.name))
@@ -40,7 +40,7 @@ object TableScriptBuilder {
 
         val alterIndex: Seq[String] =
             primaryKeyAlter.map(pk => "ALTER TABLE " + model.name + " DROP PRIMARY KEY, ADD " + ScriptSerializer.serializePrimaryKey(pk.newPk)) ++
-            indexAlter.map(pk => "ALTER TABLE " + model.name + " DROP INDEX " + t.name + ", ADD " + ScriptSerializer.serializeIndex(pk.index))
+            indexAlter.map(pk => "ALTER TABLE " + model.name + " DROP INDEX " + pk.name + ", ADD " + ScriptSerializer.serializeIndex(pk.index))
 
         val createIndex: Seq[String] =
                 primaryKeyCreate.map(pk => "ALTER TABLE " + model.name + " ADD " + ScriptSerializer.serializePrimaryKey(pk.pk)) ++ 
