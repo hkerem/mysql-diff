@@ -74,7 +74,7 @@
         <copy file="${basedir}/src/main/bin/mysql-diff" todir="${dist.dir}/dist/bin"/>
         <chmod file="${dist.dir}/dist/bin/mysql-diff" perm="ugo+rx"/>
 
-        <tar destfile="${dist.dir}/distrib.tar.gz" compression="gzip">
+        <tar destfile="${dist.dir}/mysql-diff.tar.gz" compression="gzip">
             <tarfileset dir="${dist.dir}/dist/bin/.." mode="555">
                 <include name="bin/*"/>
             </tarfileset>
