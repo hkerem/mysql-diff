@@ -12,7 +12,7 @@ import jdbc._
 object Diff {
     val helpBanner: String = "MySQL diff maker\n" +
         "How to use:\n" +
-        "mysqlDiff.sh file_name_from|jdbc:jdbc_url_to_source file_name_to|jdbc:jdbc_url_to_destination"
+        "mysqlDiff.sh from_file|from_jdbc_url to_file|to_jdbc_url"
 
     def main(args: Array[String]) {
         if (args.length != 2) {
