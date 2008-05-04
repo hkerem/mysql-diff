@@ -46,20 +46,20 @@ object TableScriptBuilder {
                 primaryKeyCreate.map(t => "ALTER TABLE " + model.name + " ADD " + ScriptSerializer.serializePrimaryKey(t.pk)) ++ 
                 indexCreate.map(t => "ALTER TABLE " + model.name + " ADD " + ScriptSerializer.serializeIndex(t.index))
 
-        List(CommentElement("--Modify Table \"" + model.name + "\"")) ++
-        List(CommentElement("--Drop Index")).filter(o => dropIndex.size > 0) ++
+        List(CommentElement("-- Modify Table \"" + model.name + "\"")) ++
+        List(CommentElement("-- Drop Index")).filter(o => dropIndex.size > 0) ++
         dropIndex.map(Unparsed(_)) ++
-        List(CommentElement("--Drop Columns")).filter(o => dropColumn.size > 0) ++
+        List(CommentElement("-- Drop Columns")).filter(o => dropColumn.size > 0) ++
         dropColumn.map(Unparsed(_)) ++
-        List(CommentElement("--Create Columns")).filter(o => createColumn.size > 0) ++
+        List(CommentElement("-- Create Columns")).filter(o => createColumn.size > 0) ++
         createColumn.map(Unparsed(_)) ++
-        List(CommentElement("--Alter Columns")).filter(o => alterColumn.size > 0) ++
+        List(CommentElement("-- Alter Columns")).filter(o => alterColumn.size > 0) ++
         alterColumn.map(Unparsed(_)) ++
-        List(CommentElement("--Alter Indexes")).filter(o => alterIndex.size > 0) ++
+        List(CommentElement("-- Alter Indexes")).filter(o => alterIndex.size > 0) ++
         alterIndex.map(Unparsed(_)) ++
-        List(CommentElement("--Create Indexes")).filter(o =>createIndex.size > 0) ++
+        List(CommentElement("-- Create Indexes")).filter(o =>createIndex.size > 0) ++
         createIndex.map(Unparsed(_)) ++
-        List(CommentElement("--End modify Table \"" + model.name + "\""))
+        List(CommentElement("-- End modify Table \"" + model.name + "\""))
     }
 }
 
