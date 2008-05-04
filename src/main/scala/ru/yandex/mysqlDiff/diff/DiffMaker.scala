@@ -68,9 +68,9 @@ object TableDiffBuilder {
 
         val (toColumnIsEmpty, fromColumnIsEmpty, columnsForCompare) = doListDiff[ColumnModel](from.columns, to.columns)
 
-        val dropColumnDiff = toColumnIsEmpty.map(t => ColumnDiffBuilder.dropColumn(t.name))
-        val createColumnDiff = fromColumnIsEmpty.map(t => ColumnDiffBuilder.createColumn(t))
-        val alterOnlyColumnDiff = columnsForCompare.flatMap(t => ColumnDiffBuilder.compareColumns(t._1, t._2))
+        val dropColumnDiff = toColumnIsEmpty.map(column => ColumnDiffBuilder.dropColumn(column.name))
+        val createColumnDiff = fromColumnIsEmpty.map(column => ColumnDiffBuilder.createColumn(column))
+        val alterOnlyColumnDiff = columnsForCompare.flatMap(column => ColumnDiffBuilder.compareColumns(column._1, column._2))
 
         val alterColumnDiff = dropColumnDiff ++ createColumnDiff ++ alterOnlyColumnDiff
 
@@ -78,9 +78,9 @@ object TableDiffBuilder {
 
         val (toIndexIsEmpty, fromIndexIsEmpty, indexesForCompare) = doListDiff[IndexModel](from.keys, to.keys)
 
-        val dropIndexesDiff = toIndexIsEmpty.flatMap(t => IndexDiffBuilder.doDiff(Some(t), None))
-        val createIndexesDiff = fromIndexIsEmpty.flatMap(t => IndexDiffBuilder.doDiff(None, Some(t)))
-        val alterIndexesDiff = indexesForCompare.flatMap(t => IndexDiffBuilder.doDiff(Some(t._1), Some(t._2)))
+        val dropIndexesDiff = toIndexIsEmpty.flatMap(idx => IndexDiffBuilder.doDiff(Some(idx), None))
+        val createIndexesDiff = fromIndexIsEmpty.flatMap(idx => IndexDiffBuilder.doDiff(None, Some(idx)))
+        val alterIndexesDiff = indexesForCompare.flatMap(idx => IndexDiffBuilder.doDiff(Some(idx._1), Some(idx._2)))
 
         val alterIndexDiff = primaryKeyDiff ++ createIndexesDiff ++ dropIndexesDiff ++ alterIndexesDiff
 
@@ -102,10 +102,10 @@ object DatabaseDiffMaker {
     
     def doDiff(from: DatabaseModel, to: DatabaseModel): DatabaseDiff = {
         val (toIsEmpty, fromIsEmpty, tablesForCompare) = doListDiff[TableModel](from.declarations, to.declarations)
-        val dropTables = toIsEmpty.map(t => new DropTable(t.name)) 
-        val createTables = fromIsEmpty.map(t => new CreateTable(t))
-        val alterTable = tablesForCompare.map(t => TableDiffBuilder.doDiff(Some(t._1), Some(t._2)))
-        new DatabaseDiff(dropTables ++ createTables ++ alterTable.flatMap(t => t.toList))
+        val dropTables = toIsEmpty.map(tbl => new DropTable(tbl.name))
+        val createTables = fromIsEmpty.map(tbl => new CreateTable(tbl))
+        val alterTable = tablesForCompare.map(tbl => TableDiffBuilder.doDiff(Some(tbl._1), Some(tbl._2)))
+        new DatabaseDiff(dropTables ++ createTables ++ alterTable.flatMap(tbl => tbl.toList))
     }
 }
 
