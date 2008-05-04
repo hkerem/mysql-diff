@@ -70,7 +70,8 @@
         <mkdir dir="${dist.dir}/dist/bin"/>
         <mkdir dir="${dist.dir}/dist/lib"/>
         <move file="${dist.dir}/${ant.project.name}-${version}.jar" todir="${dist.dir}/dist/lib"/>
-        <copy file="${basedir}/src/main/bash/mysql-diff" todir="${dist.dir}/dist/bin"/>
+
+        <copy file="${basedir}/src/main/bin/mysql-diff" todir="${dist.dir}/dist/bin"/>
         <chmod file="${dist.dir}/dist/bin/mysql-diff" perm="ugo+rx"/>
 
         <tar destfile="${dist.dir}/distrib.tar.gz" compression="gzip">
