@@ -32,7 +32,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
 --End modify Table "table_test"
         */
         assert(resultScript.size == 1)
-        assert("ALTER TABLE table_test ADD COLUMN name VARCHAR(1000) NULL".equals(resultScript(0).trim))
+        assert("ALTER TABLE table_test ADD COLUMN name VARCHAR(1000) NULL" == resultScript(0).trim)
     }
 
     "Column change type" is {
@@ -54,7 +54,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
 
         assert(resultScript.size == 1)
 
-        assert("ALTER TABLE table_test MODIFY COLUMN id varchar(100) NULL".equals(resultScript(0).trim))
+        assert("ALTER TABLE table_test MODIFY COLUMN id varchar(100) NULL" == resultScript(0).trim)
     }
  
     "Column droped" is {
@@ -73,7 +73,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
                 })
 
         assert(resultScript.size == 1)
-        assert("ALTER TABLE table_test DROP COLUMN name".equals(resultScript(0).trim))
+        assert("ALTER TABLE table_test DROP COLUMN name" == resultScript(0).trim)
     }
 
     "Double test" is {

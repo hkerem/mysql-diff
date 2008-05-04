@@ -29,10 +29,10 @@ object ScriptParserTest extends TestSuite("Simple SQL script parser") {
         assert(table.primaryKey.get.columns.size == 4)
         val pCols = table.primaryKey.get.columns
         //id, user_id, file_id, moderator_login
-        assert(pCols(0).equals("id"))
-        assert(pCols(1).equals("user_id"))
-        assert(pCols(2).equals("file_id"))
-        assert(pCols(3).equals("moderator_login"))
+        assert("id" ==pCols(0))
+        assert("user_id" == pCols(1))
+        assert("file_id" == pCols(2))
+        assert("moderator_login" == pCols(3))
     
     
         assert(table.columns.size == 8)
@@ -49,14 +49,14 @@ object ScriptParserTest extends TestSuite("Simple SQL script parser") {
         assert(!cols(6).isAutoIncrement)
         assert(!cols(7).isAutoIncrement)
     
-        assert(cols(0).name.equals("id"))
-        assert(cols(1).name.equals("user_id"))
-        assert(cols(2).name.equals("file_id"))
-        assert(cols(3).name.equals("moderator_login"))
-        assert(cols(4).name.equals("moderation_time"))
-        assert(cols(5).name.equals("reason"))
-        assert(cols(6).name.equals("resolution"))
-        assert(cols(7).name.equals("message"))
+        assert("id" == cols(0).name)
+        assert("user_id" == cols(1).name)
+        assert("file_id" == cols(2).name)
+        assert("moderator_login" == cols(3).name)
+        assert("moderation_time" == cols(4).name)
+        assert("reason" == cols(5).name)
+        assert("resolution" == cols(6).name)
+        assert("message" == cols(7).name)
     
         assert(cols(0).isNotNull)
         assert(cols(1).isNotNull)
@@ -116,11 +116,11 @@ object ScriptParserTest extends TestSuite("Simple SQL script parser") {
             ")"
         val db1 = ScriptParser.parseModel(db1Text)
         val table = db1.declarations(0)
-        assert(table.name.equals("bla_bla"))
+        assert(table.name == "bla_bla")
         assert(table.columns.size == 1)
         assert(table.primaryKey.isDefined)
         assert(table.primaryKey.get.columns.size == 1)
-        assert(table.primaryKey.get.columns(0).equals("id"))
+        assert(table.primaryKey.get.columns(0) == "id")
     }
 
 
