@@ -35,20 +35,6 @@
                 classpathref="build.classpath" force="changed"/>
     </target>
 
-    <!--
-     <target name="build-tests" depends="build">
-         <mkdir dir="${build.tests.dir}"/>
-         <scalac srcdir="${src.tests.dir}" destdir="${build.tests.dir}"
-             deprecation="on" unchecked="on" encoding="UTF-8"
-             force="changed">
-             <classpath refid="build.classpath"/>
-             <classpath>
-                 <pathelement location="${build.dir}"/>
-             </classpath>
-         </scalac>
-     </target>
-     -->
-
     <target name="run-tests" depends="clean, build">
         <java classname="ru.yandex.mysqlDiff.MysqlDiffTest" failonerror="true">
             <sysproperty key="java.awt.headless" value="true"/>
@@ -65,7 +51,6 @@
                 classpath="lib/jarjar-1.0rc7.jar"/>
 
         <mkdir dir="${dist.dir}"/>
-
         <jarjar jarfile="${dist.dir}/${ant.project.name}-${version}.jar" index="true">
             <fileset dir="${build.dir}"/>
             <zipgroupfileset dir="./lib">
