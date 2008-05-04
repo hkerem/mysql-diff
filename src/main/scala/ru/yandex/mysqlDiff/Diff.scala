@@ -36,7 +36,7 @@ object Diff {
 
                     println(script)
 
-                    Console.println("-- end of diff script from " + fromArgs  + " to " + toArgs + "\n")
+                    Console.println("-- end of diff script from " + fromArgs  + " to " + toArgs)
                 } catch {
                     case e: MysqlDiffException => {
                         System.err.println("An error while diff building")
