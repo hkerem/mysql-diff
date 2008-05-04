@@ -61,21 +61,29 @@
     </target>
 
     <target name="jar" depends="build">
+        <taskdef name="jarjar" classname="com.tonicsystems.jarjar.JarJarTask"
+                classpath="lib/jarjar-1.0rc7.jar"/>
+
         <mkdir dir="${dist.dir}"/>
-        <jar basedir="${build.dir}"
-             jarfile="${dist.dir}/${ant.project.name}-${version}.jar" index="true"/>
+
+        <jarjar jarfile="${dist.dir}/${ant.project.name}-${version}.jar" index="true">
+            <fileset dir="${build.dir}"/>
+            <zipgroupfileset dir="./lib">
+                <include name="mysql*.jar"/>
+                <include name="scalax*.jar"/>
+            </zipgroupfileset>
+            <zipfileset src="${scala-library.jar}"/>
+            <rule pattern="scalax.**" result="ru.yandex.mysqlDiff.dependencies.@0"/>
+            <rule pattern="com.**" result="ru.yandex.mysqlDiff.dependencies.@0"/>
+            <rule pattern="org.**" result="ru.yandex.mysqlDiff.dependencies.@0"/>
+            <rule pattern="scala.**" result="ru.yandex.mysqlDiff.dependencies.@0"/>
+        </jarjar>
     </target>
 
     <target name="do-dist">
         <mkdir dir="${dist.dir}/dist"/>
         <echo message="${dist.dir}/${ant.project.name}-${version}.jar"/>
         <copy file="${dist.dir}/${ant.project.name}-${version}.jar" todir="${dist.dir}/dist"/>
-        <copy file="${scala-library.jar}" todir="${dist.dir}/dist"/>
-        <copy todir="${dist.dir}/dist">
-            <fileset dir="./lib">
-                <include name="*.jar"/>
-            </fileset>
-        </copy>
     </target>
 
     <target name="dist" depends="clean,jar,do-dist"/>
