@@ -1,7 +1,8 @@
 package ru.yandex.mysqlDiff.script
 
-import ru.yandex.mysqlDiff.model._
 import java.util.regex.Pattern
+
+import ru.yandex.mysqlDiff.model._
 
 
 object ContentType extends Enumeration {
@@ -35,7 +36,7 @@ object ScriptParser {
 
 
   
-     private def findStopBraketsPos(data: String, startBracketsPos: Int): Int = {
+    private def findStopBraketsPos(data: String, startBracketsPos: Int): Int = {
          var countOfBrakets = 1
 
          var i = startBracketsPos + 1
@@ -379,7 +380,7 @@ object ScriptParser {
         // remove comments
         var data = scriptString.replaceAll("\\-\\-[\\w\\W]*?\n", "")
         new Script(search(data).map(CreateTableStatement(_)))
-   	}
+    }
 }
 
 // vim: set ts=4 sw=4 et:
