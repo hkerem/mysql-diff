@@ -88,6 +88,7 @@
     <target name="clean">
         <delete dir="${build.dir}"/>
         <delete dir="${tmp.dir}"/>
+        <delete dir="${dist.dir}/dist"/>
         <delete dir="${dist.dir}/" includes="*"/>
     </target>
 </project>
