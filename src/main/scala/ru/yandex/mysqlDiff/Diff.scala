@@ -14,7 +14,7 @@ object Diff {
         "How to use:\n" +
         "mysqlDiff.sh file_name_from|jdbc:jdbc_url_to_source  file_name_to|jdbc:jdbc_url_to_destination"
 
-    def main(args: Array[String]) = {
+    def main(args: Array[String]) {
         if (args.length != 2) System.err.println(helpBanner) else {
             val fromArgs = args(0)
             val toArgs = args(1)
