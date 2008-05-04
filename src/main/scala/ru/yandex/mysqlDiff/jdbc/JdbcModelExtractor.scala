@@ -9,30 +9,30 @@ object JdbcModelExtractor {
 
 
    def parseTable(tables: ResultSet, data: DatabaseMetaData): TableModel = {
-       val tableName = tables.getString("TABLE_NAME")
-       val columns = data.getColumns(null, null, tableName, "%")
-       var columnsList = List[ColumnModel]()
+        val tableName = tables.getString("TABLE_NAME")
+        val columns = data.getColumns(null, null, tableName, "%")
+        var columnsList = List[ColumnModel]()
 
-       while (columns.next) {
-           val colName = columns.getString("COLUMN_NAME")
-           val colType = columns.getString("TYPE_NAME")
-           var colTypeSize: Int = -1
-           if (columns.getObject("COLUMN_SIZE") != null) colTypeSize = columns.getInt("COLUMN_SIZE")
+        while (columns.next) {
+            val colName = columns.getString("COLUMN_NAME")
+            val colType = columns.getString("TYPE_NAME")
+            var colTypeSize: Int = -1
+            if (columns.getObject("COLUMN_SIZE") != null) colTypeSize = columns.getInt("COLUMN_SIZE")
 
-           val isNotNull = !columns.getString("IS_NULLABLE").equalsIgnoreCase("yes")
-           val isAutoinrement = columns.getString("IS_AUTOINCREMENT").equalsIgnoreCase("YES")
+            val isNotNull = !columns.getString("IS_NULLABLE").equalsIgnoreCase("yes")
+            val isAutoinrement = columns.getString("IS_AUTOINCREMENT").equalsIgnoreCase("YES")
 
 
-           var typeSizeOption: Option[Int] = None
-           if (colTypeSize  != -1) typeSizeOption = Some(colTypeSize)
+            var typeSizeOption: Option[Int] = None
+            if (colTypeSize  != -1) typeSizeOption = Some(colTypeSize)
 
-           val cm = new ColumnModel(colName, new DataType(colType, typeSizeOption))
-           cm.isNotNull = isNotNull
-           cm.isAutoIncrement = isAutoinrement
+            val cm = new ColumnModel(colName, new DataType(colType, typeSizeOption))
+            cm.isNotNull = isNotNull
+            cm.isAutoIncrement = isAutoinrement
 
-           columnsList = (columnsList ++ List(cm)).toList
-       }
-       new TableModel(tableName, columnsList)
+            columnsList = (columnsList ++ List(cm)).toList
+        }
+        new TableModel(tableName, columnsList)
     }
 
 

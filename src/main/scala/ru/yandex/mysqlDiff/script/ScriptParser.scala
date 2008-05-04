@@ -37,24 +37,24 @@ object ScriptParser {
 
   
     private def findStopBraketsPos(data: String, startBracketsPos: Int): Int = {
-         var countOfBrakets = 1
+        var countOfBrakets = 1
 
-         var i = startBracketsPos + 1
-         var quoteType = 0
+        var i = startBracketsPos + 1
+        var quoteType = 0
     
-         if (data.charAt(0) == '\'') quoteType = -1
-         if (data.charAt(0) == '"') quoteType = 1
-         while (i < data.length()) {
-             if (data.charAt(i) == '\'' && quoteType == 0) quoteType = -1
-             if (data.charAt(i) == '\'' && quoteType == -1 && data.charAt(i - 1) != '\\') quoteType = 0
-             if (data.charAt(i) == '"' && quoteType == 0) quoteType = 1
-             if (data.charAt(i) == '"' && quoteType == 1 && data.charAt(i - 1) != '\\') quoteType = 0
-             if (quoteType == 0 && data.charAt(i) == ')') countOfBrakets = countOfBrakets - 1
-             if (quoteType == 0 && data.charAt(i) == '(') countOfBrakets = countOfBrakets + 1
-             if (countOfBrakets == 0) return i
-             i = i + 1
-         }
-         return -1
+        if (data.charAt(0) == '\'') quoteType = -1
+        if (data.charAt(0) == '"') quoteType = 1
+        while (i < data.length()) {
+            if (data.charAt(i) == '\'' && quoteType == 0) quoteType = -1
+            if (data.charAt(i) == '\'' && quoteType == -1 && data.charAt(i - 1) != '\\') quoteType = 0
+            if (data.charAt(i) == '"' && quoteType == 0) quoteType = 1
+            if (data.charAt(i) == '"' && quoteType == 1 && data.charAt(i - 1) != '\\') quoteType = 0
+            if (quoteType == 0 && data.charAt(i) == ')') countOfBrakets = countOfBrakets - 1
+            if (quoteType == 0 && data.charAt(i) == '(') countOfBrakets = countOfBrakets + 1
+            if (countOfBrakets == 0) return i
+            i = i + 1
+        }
+        return -1
     }
   
     private def splitByComma(data: String): Seq[String] = {
@@ -110,8 +110,7 @@ object ScriptParser {
         val COLLATE = "collate" + witeSpaces + "(" + nameDefinition + ")"
         val p = Pattern.compile("(" + nameDefinition + ")" + witeSpaces + "(\\([\\d\\n\\s,]*\\))?" + witeSpaces + "("
               + UNSIGNED + ")?" + witeSpaces + "(" + ZEROFILL + ")?" + witeSpaces + "(" + CHARACTER_SET + ")?"
-              + witeSpaces + "(" + COLLATE + ")?",
-              Pattern.CASE_INSENSITIVE)
+              + witeSpaces + "(" + COLLATE + ")?", Pattern.CASE_INSENSITIVE)
         val m = p.matcher(x)
         if (!m.find) return null
 
@@ -180,8 +179,8 @@ object ScriptParser {
             stopSearch = false
             while (primaryKeyMatcher.find && !stopSearch) {
                 if (!inQuote(x, primaryKeyMatcher.start)) {
-                   isColumnPrimaryKey = true
-                   stopSearch = true
+                    isColumnPrimaryKey = true
+                    stopSearch = true
                 }
             }
 
@@ -191,7 +190,7 @@ object ScriptParser {
             while (defaultMatcher.find && !stopSearch) {
                 if (!inQuote(x, defaultMatcher.start)) {
                     if (defaultMatcher.group(1) != null)
-                       result.defaultValue = Some(defaultMatcher.group(1))
+                        result.defaultValue = Some(defaultMatcher.group(1))
                     stopSearch = true
                 }
             }
@@ -241,7 +240,7 @@ object ScriptParser {
     }
   
     private def parseIndexKeyDefinition(x: String): IndexModel = {
-         parseKeyDefinition("INDEX", x)
+        parseKeyDefinition("INDEX", x)
     }
   
     private def parseUniqueKeyDefinition(x: String): IndexModel = {
