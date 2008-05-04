@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 scriptPath=`dirname ${0}`
 java -classpath $scriptPath/lib/mysqlDiff*.jar ru.yandex.mysqlDiff.Diff "$@"
 
