@@ -28,7 +28,7 @@ object Diff {
                 try {
                     var fromdb = getModelFromArgsLine(args(0))
                     var todb = getModelFromArgsLine(args(1))
-                    Console.println("-- start diff script from " + fromArgs  + " to " + toArgs + "\n")
+                    Console.println("--Start diff script from " + fromArgs  + " to " + toArgs + "\n")
 
                     val dbDiff = DatabaseDiffMaker.doDiff(fromdb, todb)
 
@@ -36,7 +36,7 @@ object Diff {
 
                     println(script)
 
-                    Console.println("-- end of diff script from " + fromArgs  + " to " + toArgs)
+                    Console.println("--End of diff script from " + fromArgs  + " to " + toArgs)
                 } catch {
                     case e: MysqlDiffException => {
                         System.err.println("An error while diff building")
@@ -49,14 +49,15 @@ object Diff {
     }
 
     def getModelFromArgsLine(arg: String): DatabaseModel = {
-        if (arg.toLowerCase.startsWith("jdbc:")) JdbcModelExtractor.parse(arg.trim)
-            else {
-                val sourceF = new File(arg)
-                if (!sourceF.isFile)  throw new MysqlDiffException("\"" + arg + "\" file is not a file.")
-                var str = ""
-                Source.fromFile(sourceF).getLines.foreach(x => {str = str + x})
-                ScriptParser.parseModel(str)
-            }
+        if (arg.toLowerCase.startsWith("jdbc:"))
+            JdbcModelExtractor.parse(arg.trim)
+        else {
+            val sourceF = new File(arg)
+            if (!sourceF.isFile)  throw new MysqlDiffException("\"" + arg + "\" file is not a file.")
+            var str = ""
+            Source.fromFile(sourceF).getLines.foreach(x => {str = str + x})
+            ScriptParser.parseModel(str)
+        }
     }
 
 }

@@ -109,8 +109,8 @@ object ScriptParser {
         val CHARACTER_SET = "character" + witeSpaces + "set" + witeSpaces + "([\\w\\'\\-\\_]+)"
         val COLLATE = "collate" + witeSpaces + "(" + nameDefinition + ")"
         val p = Pattern.compile("(" + nameDefinition + ")" + witeSpaces + "(\\([\\d\\n\\s,]*\\))?" + witeSpaces + "("
-              + UNSIGNED + ")?" + witeSpaces + "(" + ZEROFILL + ")?" + witeSpaces + "(" + CHARACTER_SET + ")?"
-              + witeSpaces + "(" + COLLATE + ")?", Pattern.CASE_INSENSITIVE)
+            + UNSIGNED + ")?" + witeSpaces + "(" + ZEROFILL + ")?" + witeSpaces + "(" + CHARACTER_SET + ")?"
+            + witeSpaces + "(" + COLLATE + ")?", Pattern.CASE_INSENSITIVE)
         val m = p.matcher(x)
         if (!m.find) return null
 

@@ -8,7 +8,7 @@ import model._
 object JdbcModelExtractor {
 
 
-   def parseTable(tables: ResultSet, data: DatabaseMetaData): TableModel = {
+    def parseTable(tables: ResultSet, data: DatabaseMetaData): TableModel = {
         val tableName = tables.getString("TABLE_NAME")
         val columns = data.getColumns(null, null, tableName, "%")
         var columnsList = List[ColumnModel]()
