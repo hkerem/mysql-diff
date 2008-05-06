@@ -47,15 +47,15 @@ object ScriptSerializer {
     def serialize(stmt: ScriptElement): String = serialize(stmt, Options.singleline)
     
     def serializeStatement(stmt: ScriptStatement, options: Options): String = stmt match {
-        case CreateTableStatement(t) => serializeCreateTableDiff(t, options)
-        case DropTableStatement(n) => serializeDropTableDiff(n)
-        case st: AlterTableStatement => serializeChangeTableDiff(st)
+        case CreateTableStatement(t) => serializeCreateTable(t, options)
+        case DropTableStatement(n) => serializeDropTable(n)
+        case st: AlterTableStatement => serializeChangeTable(st)
     }
     
-    def serializeCreateTableDiff(createTable: CreateTableStatement, options: Options): String =
-        serializeCreateTableDiff(createTable.table, options)
+    def serializeCreateTable(createTable: CreateTableStatement, options: Options): String =
+        serializeCreateTable(createTable.table, options)
     
-    def serializeCreateTableDiff(table: TableModel, options: Options): String = {
+    def serializeCreateTable(table: TableModel, options: Options): String = {
         val l = (
                 table.columns.map(serializeColumn _) ++
                 table.primaryKey.map(serializePrimaryKey _) ++
@@ -66,10 +66,10 @@ object ScriptSerializer {
         (List("CREATE TABLE " + table.name + "(") ++ lines ++ List(")")).mkString(options.nl)
     }
     
-    def serializeDropTableDiff(tableName: String) =
+    def serializeDropTable(tableName: String) =
         "DROP TABLE " + tableName
     
-    def serializeChangeTableDiff(st: AlterTableStatement) =
+    def serializeChangeTable(st: AlterTableStatement) =
         "ALTER TABLE " + st.tableName + " " +
             st.ops.map(serializeAlterTableOperation(_)).mkString(", ")
     
@@ -123,12 +123,12 @@ import scalax.testing._
 object ScriptSerializerTest extends TestSuite("ScriptSerializerTest") {
     import ScriptSerializer._
     
-    "serializeCreateTableDiff" is {
+    "serializeCreateTable" is {
         val idColumn = ColumnModel("id", DataType.int())
         val nameColumn = ColumnModel("name", DataType.varchar(100))
         val t = TableModel("users", List(idColumn, nameColumn))
         
-        val script = serializeCreateTableDiff(t, Options("  ", "\n", "--"))
+        val script = serializeCreateTable(t, Options("  ", "\n", "--"))
         assert(script.matches("CREATE TABLE users\\(\n  id INT.*,--\n  name VARCHAR\\(100\\).*\n\\)"))
     }
     
