@@ -30,7 +30,7 @@ object Diff {
                     var todb = getModelFromArgsLine(args(1))
                     Console.println("-- Start diff script from " + fromArgs  + " to " + toArgs + "\n")
 
-                    val dbDiff = DatabaseDiffMaker.doDiff(fromdb, todb)
+                    val dbDiff = DiffMaker.compareDatabases(fromdb, todb)
 
                     val script = DiffSerializer.serialize(fromdb, todb, dbDiff)
 

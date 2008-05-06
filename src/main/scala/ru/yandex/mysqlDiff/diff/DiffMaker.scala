@@ -46,17 +46,7 @@ object DiffMaker {
         else None
     }
     
-    
-    def compareIndexes(from: IndexModel, to: IndexModel): Option[AbstractIndexDiff] = {
-        if (from != to) Some(new AlterIndex(from.name, to))
-        else None
-    }
-}        
-
-object PrimaryKeyDiffBuilder {
-    import DiffMaker._
-    
-    def doDiff(from: Option[PrimaryKey], to: Option[PrimaryKey]): Option[AbstractIndexDiff] = {
+    def comparePrimaryKeys(from: Option[PrimaryKey], to: Option[PrimaryKey]): Option[AbstractIndexDiff] = {
         if (from.isDefined && !to.isDefined) Some(new DropPrimaryKey())
         else if (!from.isDefined && to.isDefined) Some(new CreatePrimaryKey(to.get))
         else if (from.isDefined && to.isDefined) {
@@ -64,12 +54,12 @@ object PrimaryKeyDiffBuilder {
             else None
         } else None
     }
-}
-
-
-object TableDiffBuilder {
-    import DiffMaker._
-
+    
+    def compareIndexes(from: IndexModel, to: IndexModel): Option[AbstractIndexDiff] = {
+        if (from != to) Some(new AlterIndex(from.name, to))
+        else None
+    }
+    
     def compareTables(from: TableModel, to: TableModel): Option[AbstractTableDiff] = {
 
         val (fromColumns, toColumns, changeColumnPairs) = compareSeqs(from.columns, to.columns, (x: ColumnModel, y: ColumnModel) => x.name == y.name)
@@ -80,7 +70,7 @@ object TableDiffBuilder {
 
         val alterColumnDiff = dropColumnDiff ++ createColumnDiff ++ alterOnlyColumnDiff
 
-        val primaryKeyDiff: Seq[AbstractIndexDiff] = PrimaryKeyDiffBuilder.doDiff(from.primaryKey, to.primaryKey).toList
+        val primaryKeyDiff: Seq[AbstractIndexDiff] = comparePrimaryKeys(from.primaryKey, to.primaryKey).toList
 
         val (fromIndexes, toIndexes, changeIndexPairs) = compareSeqs(from.keys, to.keys, (x: IndexModel, y: IndexModel) => x.name == y.name)
 
@@ -98,24 +88,13 @@ object TableDiffBuilder {
             None
     }
         
-    def doDiff(from: Option[TableModel], to: Option[TableModel]): Option[AbstractTableDiff] = {
-        if (from.isDefined && !to.isDefined) Some(new DropTable(from.get.name))
-        else if (!from.isDefined && to.isDefined) Some(new CreateTable(to.get))
-        else if (from.isDefined && to.isDefined) compareTables(from.get, to.get)
-        else None
-    }
-}
-
-object DatabaseDiffMaker {
-    import DiffMaker._
-    
-    def doDiff(from: DatabaseModel, to: DatabaseModel): DatabaseDiff = {
+    def compareDatabases(from: DatabaseModel, to: DatabaseModel): DatabaseDiff = {
         val (toIsEmpty, fromIsEmpty, tablesForCompare) = compareSeqs(from.declarations, to.declarations, (x: TableModel, y: TableModel) => x.name == y.name)
         val dropTables = toIsEmpty.map(tbl => new DropTable(tbl.name))
         val createTables = fromIsEmpty.map(tbl => new CreateTable(tbl))
-        val alterTable = tablesForCompare.map(tbl => TableDiffBuilder.doDiff(Some(tbl._1), Some(tbl._2)))
+        val alterTable = tablesForCompare.map(tbl => compareTables(tbl._1, tbl._2))
         new DatabaseDiff(dropTables ++ createTables ++ alterTable.flatMap(tbl => tbl.toList))
     }
-}
+}        
 
 // vim: set ts=4 sw=4 et:

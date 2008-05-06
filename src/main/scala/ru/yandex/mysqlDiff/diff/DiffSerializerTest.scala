@@ -19,7 +19,7 @@ object DiffSerializerTest extends TestSuite("Simple Diff Script Bulder test") {
         val table2 = new TableModel("table_test", List(c2_1, c2_2))
 
 
-        val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
+        val diff = DiffMaker.compareTables(table1, table2)
         val resultScript = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
                 .flatMap(e => e match {
                     case e: CommentElement => None
@@ -43,7 +43,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         val c2_1 = new ColumnModel("id", new DataType("varchar", Some(100), false, false, None, None))
         val table2 = new TableModel("table_test", List(c2_1))
 
-        val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
+        val diff = DiffMaker.compareTables(table1, table2)
         val resultScript = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
                 .flatMap(e => e match {
                     case e: CommentElement => None
@@ -65,7 +65,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         val c2_1 = new ColumnModel("id", new DataType("int", None, false, false, None, None))
         val table2 = new TableModel("table_test", List(c2_1))
    
-        val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
+        val diff = DiffMaker.compareTables(table1, table2)
         val resultScript = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
                 .flatMap(e => e match {
                     case e: CommentElement => None
@@ -89,7 +89,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
 
 //ALTER TABLE table_test MODIFY COLUMN id int(12);
 //ALTER TABLE table_test ADD COLUMN name varchar(1000);
-        val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
+        val diff = DiffMaker.compareTables(table1, table2)
         val resultScript = TableScriptBuilder.getAlterScript(diff.get.asInstanceOf[AlterTable], table2)
                 .flatMap(e => e match {
                     case e: CommentElement => None
@@ -114,7 +114,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         val table2 = new TableModel("table_test", List(c2_1, c2_2))
         val d2 = new DatabaseModel("base", List(table2))
    
-        val diff = DatabaseDiffMaker.doDiff(d1, d2)
+        val diff = DiffMaker.compareDatabases(d1, d2)
         
         val script = DiffSerializer.serializeToScript(diff, d1, d2)
         
