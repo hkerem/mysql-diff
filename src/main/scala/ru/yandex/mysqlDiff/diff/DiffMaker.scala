@@ -28,7 +28,7 @@ object DiffMaker {
         (onlyInA, onlyInB, inBothA)
     }
     
-    def compareColumns(from: ColumnModel, to: ColumnModel): Option[AbstractAlterColumn] = {
+    def compareColumns(from: ColumnModel, to: ColumnModel): Option[ColumnDiff] = {
         var diff = List[ColumnPropertyDiff]()
         if (from.comment != to.comment)
             diff += new ColumnPropertyDiff(CommentValue, from.comment, to.comment)
@@ -46,7 +46,7 @@ object DiffMaker {
         else None
     }
     
-    def comparePrimaryKeys(from: Option[PrimaryKey], to: Option[PrimaryKey]): Option[AbstractIndexDiff] = {
+    def comparePrimaryKeys(from: Option[PrimaryKey], to: Option[PrimaryKey]): Option[IndexDiff] = {
         if (from.isDefined && !to.isDefined) Some(DropPrimaryKey)
         else if (!from.isDefined && to.isDefined) Some(new CreatePrimaryKey(to.get))
         else if (from.isDefined && to.isDefined) {
@@ -55,12 +55,12 @@ object DiffMaker {
         } else None
     }
     
-    def compareIndexes(from: IndexModel, to: IndexModel): Option[AbstractIndexDiff] = {
+    def compareIndexes(from: IndexModel, to: IndexModel): Option[IndexDiff] = {
         if (from != to) Some(new AlterIndex(from.name, to))
         else None
     }
     
-    def compareTables(from: TableModel, to: TableModel): Option[AbstractTableDiff] = {
+    def compareTables(from: TableModel, to: TableModel): Option[TableDiff] = {
 
         val (fromColumns, toColumns, changeColumnPairs) = compareSeqs(from.columns, to.columns, (x: ColumnModel, y: ColumnModel) => x.name == y.name)
 
@@ -70,7 +70,7 @@ object DiffMaker {
 
         val alterColumnDiff = dropColumnDiff ++ createColumnDiff ++ alterOnlyColumnDiff
 
-        val primaryKeyDiff: Seq[AbstractIndexDiff] = comparePrimaryKeys(from.primaryKey, to.primaryKey).toList
+        val primaryKeyDiff: Seq[IndexDiff] = comparePrimaryKeys(from.primaryKey, to.primaryKey).toList
 
         val (fromIndexes, toIndexes, changeIndexPairs) = compareSeqs(from.keys, to.keys, (x: IndexModel, y: IndexModel) => x.name == y.name)
 

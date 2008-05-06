@@ -12,11 +12,11 @@ abstract class AbstractDiffContainer(val sourceName: String,
         val contentDiff: Seq[AbstractDiffModel]
         ) extends AbstractDiffModel
 
-abstract class AbstractAlterColumn
+abstract class ColumnDiff
 
-case class CreateColumn(column: ColumnModel) extends AbstractAlterColumn
-case class DropColumn(name: String) extends AbstractAlterColumn
-case class AlterColumn(name: String, renameTo: Option[String], diff: Seq[ColumnPropertyDiff]) extends AbstractAlterColumn
+case class CreateColumn(column: ColumnModel) extends ColumnDiff
+case class DropColumn(name: String) extends ColumnDiff
+case class AlterColumn(name: String, renameTo: Option[String], diff: Seq[ColumnPropertyDiff]) extends ColumnDiff
 
 case class ColumnPropertyDiff(propertyType: PropertyType, oldValue1: Any, newValue1: Any) {
     type T = propertyType.ValueType
@@ -27,28 +27,28 @@ case class ColumnPropertyDiff(propertyType: PropertyType, oldValue1: Any, newVal
 
 
 
-abstract class AbstractTableDiff
-case class CreateTable(table: TableModel) extends AbstractTableDiff
-case class DropTable(name: String) extends AbstractTableDiff
+abstract class TableDiff
+case class CreateTable(table: TableModel) extends TableDiff
+case class DropTable(name: String) extends TableDiff
 case class AlterTable(name: String, renameTo: Option[String],
-        columnDiff: Seq[AbstractAlterColumn], indexDiff: Seq[AbstractIndexDiff]) extends AbstractTableDiff
+        columnDiff: Seq[ColumnDiff], indexDiff: Seq[IndexDiff]) extends TableDiff
 {
     def newName = renameTo getOrElse name
 }
 
-abstract class AbstractIndexDiff
+abstract class IndexDiff
 
-case class CreateIndex(index: IndexModel) extends AbstractIndexDiff
-case class DropIndex(name: String) extends AbstractIndexDiff
-case class AlterIndex(name: String, index: IndexModel) extends AbstractIndexDiff
+case class CreateIndex(index: IndexModel) extends IndexDiff
+case class DropIndex(name: String) extends IndexDiff
+case class AlterIndex(name: String, index: IndexModel) extends IndexDiff
 
-abstract class AbstractPrimaryKeyDiff extends AbstractIndexDiff
+abstract class AbstractPrimaryKeyDiff extends IndexDiff
 
 case class CreatePrimaryKey(pk: PrimaryKey) extends AbstractPrimaryKeyDiff
 case object DropPrimaryKey extends AbstractPrimaryKeyDiff
 case class AlterPrimaryKey(oldPk: PrimaryKey, newPk: PrimaryKey) extends AbstractPrimaryKeyDiff
 
 
-case class DatabaseDiff(tableDiff: Seq[AbstractTableDiff])
+case class DatabaseDiff(tableDiff: Seq[TableDiff])
 
 // vim: set ts=4 sw=4 et:

@@ -5,7 +5,7 @@ import script._
 
 object TableScriptBuilder {
 
-    def alterColumnScript(cd: AbstractAlterColumn, table: TableModel) = {
+    def alterColumnScript(cd: ColumnDiff, table: TableModel) = {
         val op = cd match {
             case CreateColumn(c) => AlterTableStatement.AddColumn(c)
             case DropColumn(name) => AlterTableStatement.DropColumn(name)
@@ -37,7 +37,7 @@ object TableScriptBuilder {
         val primaryKeyCreate = primaryKeyDiff.filter(idx => idx.isInstanceOf[CreatePrimaryKey]).map(idx => idx.asInstanceOf[CreatePrimaryKey])
         val primaryKeyAlter = primaryKeyDiff.filter(idx => idx.isInstanceOf[AlterPrimaryKey]).map(idx => idx.asInstanceOf[AlterPrimaryKey])
 
-        val indexKeyDiff = diff.indexDiff.filter(idx => !idx.isInstanceOf[AbstractPrimaryKeyDiff] && idx.isInstanceOf[AbstractIndexDiff])
+        val indexKeyDiff = diff.indexDiff.filter(idx => !idx.isInstanceOf[AbstractPrimaryKeyDiff] && idx.isInstanceOf[IndexDiff])
         val indexDrop: Seq[DropIndex] = indexKeyDiff.filter(idx => idx.isInstanceOf[DropIndex]).map(idx => idx.asInstanceOf[DropIndex])
         val indexCreate: Seq[CreateIndex] = indexKeyDiff.filter(idx => idx.isInstanceOf[CreateIndex]).map(idx => idx.asInstanceOf[CreateIndex])
         val indexAlter: Seq[AlterIndex] =  indexKeyDiff.filter(idx => idx.isInstanceOf[AlterIndex]).map(idx => idx.asInstanceOf[AlterIndex])
