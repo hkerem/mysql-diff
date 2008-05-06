@@ -120,4 +120,12 @@ object JdbcModelExtractor {
 
 
     def parse(connectionString: String): DatabaseModel = new DatabaseModel("database", search(connectionString))
+    
+    def main(args: scala.Array[String]) {
+    	require(args.length == 1)
+    	
+    	val model = parse(args.first)
+    	
+    	println(model)
+    }
 }
