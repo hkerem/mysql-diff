@@ -25,6 +25,8 @@ case class AlterTableStatement(tableName: String, ops: Seq[AlterTableStatement.O
     require(ops.length > 0)
     
     def this(tableName: String, op: AlterTableStatement.Operation) = this(tableName, List(op))
+    
+    def flatten = ops.map(new AlterTableStatement(tableName, _))
 }
 
 object AlterTableStatement {
