@@ -3,11 +3,6 @@ package ru.yandex.mysqlDiff.model
 import scala.collection.mutable._
 
 
-class SqlObjectType(val name: String)  {
-    var comment: Option[String] = None
-}
-
-
 case class DataType(val name: String, val length: Option[Int], val isUnsigned: Boolean, val isZerofill: Boolean, val characterSet: Option[String], val collate: Option[String])
 
 object DataType {
@@ -15,12 +10,13 @@ object DataType {
     def int() = DataType("INT", None, false, false, None, None)
 }
 
-case class ColumnModel(override val name: String, val dataType: DataType) 
-    extends SqlObjectType(name: String)
+case class ColumnModel(val name: String, val dataType: DataType) 
 {
+    // XXX: make all this case class parameters
     var isNotNull: Boolean = false
     var isAutoIncrement: Boolean = false
     var defaultValue: Option[String] = None
+    var comment: Option[String] = None
 
     override def equals(otherO: Any): Boolean = {
         if (otherO == null || !otherO.isInstanceOf[ColumnModel])
@@ -37,8 +33,7 @@ case class ColumnModel(override val name: String, val dataType: DataType)
     }
 }
 
-case class ConstraintModel(override val name: String, val columns: Seq[String]) 
-    extends SqlObjectType(name: String)
+case class ConstraintModel(val name: String, val columns: Seq[String]) 
 
 case class IndexModel(override val name: String, override val columns: Seq[String], isUnique: Boolean)
     extends ConstraintModel(name, columns)
@@ -65,8 +60,7 @@ case class TableModel(override val name: String, val columns: Seq[ColumnModel])
     var keys =  List[IndexModel]()
 }
 
-abstract class DatabaseDeclaration(override val name: String) 
-    extends SqlObjectType(name: String)
+abstract class DatabaseDeclaration(val name: String) 
 
 case class DatabaseModel(override val name: String, val declarations: Seq[TableModel])
     extends DatabaseDeclaration(name)
