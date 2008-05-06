@@ -33,15 +33,21 @@ object ColumnDiffBuilder {
     import ListDiffMaker._
     
     def compareColumns(from: ColumnModel, to: ColumnModel): Option[AbstractAlterColumn] = {
-        var diff: Seq[ColumnPropertyDiff] = List[ColumnPropertyDiff]()
-        if (!(from.comment == to.comment)) diff = diff ++ List(new ColumnPropertyDiff(CommentValue, from.comment, to.comment))
-        if (from.isNotNull != to.isNotNull) diff = diff ++ List(new ColumnPropertyDiff(CommentValue, from.isNotNull, to.isNotNull))
-        if (from.isAutoIncrement != to.isAutoIncrement) diff = diff ++ List(new ColumnPropertyDiff(AutoIncrementality, from.isAutoIncrement, to.isAutoIncrement))
-        if (!(from.dataType == to.dataType)) diff = diff ++ List(new ColumnPropertyDiff(TypeValue, from.dataType, to.dataType))
-        if (!(from.defaultValue == to.defaultValue)) diff = diff ++ List(new ColumnPropertyDiff(DefaultValue, from.defaultValue, to.defaultValue))
-        if (!(from.name == to.name)) Some(new AlterColumn(from.name, Some(to.name), diff)) else
-        if (diff.size > 0) Some(new AlterColumn(from.name, None, diff)) else
-        None
+        var diff = List[ColumnPropertyDiff]()
+        if (from.comment != to.comment)
+            diff += new ColumnPropertyDiff(CommentValue, from.comment, to.comment)
+        if (from.isNotNull != to.isNotNull)
+            diff += new ColumnPropertyDiff(CommentValue, from.isNotNull, to.isNotNull)
+        if (from.isAutoIncrement != to.isAutoIncrement)
+            diff += new ColumnPropertyDiff(AutoIncrementality, from.isAutoIncrement, to.isAutoIncrement)
+        if (from.dataType != to.dataType)
+            diff += new ColumnPropertyDiff(TypeValue, from.dataType, to.dataType)
+        if (from.defaultValue != to.defaultValue)
+            diff += new ColumnPropertyDiff(DefaultValue, from.defaultValue, to.defaultValue)
+        
+        if (from.name != to.name) Some(new AlterColumn(from.name, Some(to.name), diff))
+        else if (diff.size > 0) Some(new AlterColumn(from.name, None, diff))
+        else None
     }
     
     def createColumn(column: ColumnModel) = new CreateColumn(column)
