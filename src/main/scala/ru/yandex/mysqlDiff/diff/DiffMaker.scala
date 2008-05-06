@@ -4,9 +4,32 @@ package ru.yandex.mysqlDiff.diff
 import ru.yandex.mysqlDiff.model._
 
 object ListDiffMaker {
+    def compareSeqs[A, B](a: Seq[A], b: Seq[B], comparator: (A, B) => Boolean): (Seq[A], Seq[B], Seq[(A, B)]) = {
+        var onlyInA = List[A]()
+        var onlyInB = List[B]()
+        var inBothA = List[(A, B)]()
+        var inBothB = List[(A, B)]()
+        
+        for (x <- a) {
+            b.find(comparator(x, _)) match {
+                case Some(y) => inBothA += (x, y)
+                case None => onlyInA += x
+            }
+        }
+        
+        for (y <- b) {
+            a.find(comparator(_, y)) match {
+                case Some(x) => inBothB += (x, y)
+                case None => onlyInB += y
+            }
+        }
+        
+        (onlyInA, onlyInB, inBothA)
+    }
+    
     def doListDiff[A <: SqlObjectType](from: Seq[A], to: Seq[A]): Tuple3[Seq[A], Seq[A], Seq[(A, A)]] = {
-        val toMap: scala.collection.Map[String, A] = Map(to.map(o => (o.name, o)): _*)
-        val fromMap: scala.collection.Map[String, A] = Map(from.map(o => (o.name, o)): _*)
+        val toMap: Map[String, A] = Map(to.map(o => (o.name, o)): _*)
+        val fromMap: Map[String, A] = Map(from.map(o => (o.name, o)): _*)
         val bothObject: Seq[(A, A)] = List(to.filter(o => fromMap.contains(o.name)).map(o => (o, fromMap.get(o.name).get)): _*);
 
         val fromNull: Seq[A] = toMap.filterKeys(o => !fromMap.keySet.contains(o)).values.toList //todo Map.excl use insted
