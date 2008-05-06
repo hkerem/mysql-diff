@@ -9,13 +9,13 @@ object DiffTest extends TestSuite("Simple Diff") {
 
     "Column Diff" is {
     
-        val c1 = new ColumnModel("c1", new DataType("int", None))
-        val c1_eq = new ColumnModel("c1", new DataType("int", None))
+        val c1 = new ColumnModel("c1", new DataType("int", None, false, false, None, None))
+        val c1_eq = new ColumnModel("c1", new DataType("int", None, false, false, None, None))
 
         val nodiff = ColumnDiffBuilder.compareColumns(c1, c1_eq)
         assert(!nodiff.isDefined)
     
-        val c2 = ColumnModel("c2", new DataType("varchar", Some(20)))
+        val c2 = ColumnModel("c2", new DataType("varchar", Some(20), false, false, None, None))
 
         val diff = ColumnDiffBuilder.compareColumns(c1, c2)
         assert(diff.isDefined)
@@ -24,7 +24,7 @@ object DiffTest extends TestSuite("Simple Diff") {
         assert(diff1.name == "c1")
         assert(diff1.renameTo == Some("c2"))
 
-        val c3 = ColumnModel("c1", new DataType("int", Some(11)))
+        val c3 = ColumnModel("c1", new DataType("int", Some(11), false, false, None, None))
         val diff2O = ColumnDiffBuilder.compareColumns(c1, c3)
         assert(diff2O.isDefined)
         val diff2 = diff2O.get.asInstanceOf[AlterColumn]

@@ -22,11 +22,15 @@ object JdbcModelExtractor {
             val isNotNull = !columns.getString("IS_NULLABLE").equalsIgnoreCase("yes")
             val isAutoinrement = columns.getString("IS_AUTOINCREMENT").equalsIgnoreCase("YES")
 
+            val isUnsigned = false;
+            val isZerofill = false;
+            val characterSet: Option[String] = None;
+            val collate: Option[String] = None;
 
             var typeSizeOption: Option[Int] = None
             if (colTypeSize  != -1) typeSizeOption = Some(colTypeSize)
 
-            val cm = new ColumnModel(colName, new DataType(colType, typeSizeOption))
+            val cm = new ColumnModel(colName, new DataType(colType, typeSizeOption, isUnsigned, isZerofill, characterSet, collate))
             cm.isNotNull = isNotNull
             cm.isAutoIncrement = isAutoinrement
 

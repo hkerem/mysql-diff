@@ -121,12 +121,13 @@ object ScriptParser {
             val endPos = Math.max(lengthStr.indexOf(','), lengthStr.indexOf(')'))
             length = Some(Integer.parseInt(lengthStr.substring(1, endPos)))
         }
-        val dataType = new DataType(m.group(1), length)
+
     
-        dataType.isZerofill = m.group(4) != null
-        dataType.isUnsigned = m.group(3) != null
-        if (m.group(6) != null) dataType.characterSet = Some(m.group(6))
-        if (m.group(8) != null) dataType.collate = Some(m.group(8))
+        val isZerofill = m.group(4) != null
+        val isUnsigned = m.group(3) != null
+        val characterSet = (if (m.group(6) != null) Some(m.group(6)) else None)
+        val collate = (if (m.group(8) != null) Some(m.group(8)) else None)
+        val dataType = new DataType(m.group(1), length, isUnsigned, isZerofill, characterSet, collate)
         new Tuple3(dataType, m.start, m.end)
     }
 

@@ -36,11 +36,11 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
     }
 
     "Column change type" is {
-        val c1_1 = new ColumnModel("id", new DataType("int", None))
+        val c1_1 = new ColumnModel("id", new DataType("int", None, false, false, None, None))
         val c1List = List(c1_1)
         val table1 = new TableModel("table_test", c1List)
    
-        val c2_1 = new ColumnModel("id", new DataType("varchar", Some(100)))
+        val c2_1 = new ColumnModel("id", new DataType("varchar", Some(100), false, false, None, None))
         val table2 = new TableModel("table_test", List(c2_1))
 
         val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
@@ -58,11 +58,11 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
     }
  
     "Column droped" is {
-        val c1_1 = new ColumnModel("id", new DataType("int", None))
-        val c1_2 = new ColumnModel("name", new DataType("varchar", Some(1000)))
+        val c1_1 = new ColumnModel("id", new DataType("int", None, false, false, None, None))
+        val c1_2 = new ColumnModel("name", new DataType("varchar", Some(1000), false, false, None, None))
         val table1 = new TableModel("table_test", List(c1_1, c1_2))
 
-        val c2_1 = new ColumnModel("id", new DataType("int", None))
+        val c2_1 = new ColumnModel("id", new DataType("int", None, false, false, None, None))
         val table2 = new TableModel("table_test", List(c2_1))
    
         val diff = TableDiffBuilder.doDiff(Some(table1), Some(table2))
@@ -77,13 +77,13 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
     }
 
     "Double test" is {
-        val c1_1 = new ColumnModel("id", new DataType("int", None))
+        val c1_1 = new ColumnModel("id", new DataType("int", None, false, false, None, None))
         val table1 = new TableModel("table_test", List(c1_1))
 
      
      
-        val c2_1 = new ColumnModel("id", new DataType("int", Some(12)))
-        val c2_2 = new ColumnModel("name", new DataType("varchar", Some(1000)))
+        val c2_1 = new ColumnModel("id", new DataType("int", Some(12), false, false, None, None))
+        val c2_2 = new ColumnModel("name", new DataType("varchar", Some(1000), false, false, None, None))
         val table2 = new TableModel("table_test", List(c2_1, c2_2))
 
 
@@ -104,13 +104,13 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
 
 
     "Remove and create table" is {
-        val c1_1 = new ColumnModel("id", new DataType("int", None))
+        val c1_1 = new ColumnModel("id", new DataType("int", None, false, false, None, None))
         val c1List = List(c1_1)
         val table1 = new TableModel("table_test1", c1List)
         val d1 = new DatabaseModel("base", List(table1))
    
-        val c2_1 = new ColumnModel("id", new DataType("int", None))
-        val c2_2 = new ColumnModel("name", new DataType("varchar", Some(1000)))
+        val c2_1 = new ColumnModel("id", new DataType("int", None, false, false, None, None))
+        val c2_2 = new ColumnModel("name", new DataType("varchar", Some(1000), false, false, None, None))
         val table2 = new TableModel("table_test", List(c2_1, c2_2))
         val d2 = new DatabaseModel("base", List(table2))
    

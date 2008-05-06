@@ -9,31 +9,11 @@ class SqlObjectType(val name: String)  {
 
 
 
-case class DataType(val name: String, val length: Option[Int]) {
-    var isUnsigned: Boolean = false
-    var isZerofill: Boolean = false
-    var characterSet: Option[String] = None
-    var collate: Option[String] = None
-
-    override def equals(other: Any): Boolean = {
-        if (other == null || !other.isInstanceOf[DataType])
-            false
-        else {
-            val data = other.asInstanceOf[DataType] 
-            if (data == null) false
-            else if (name != data.name) false
-            else if (isUnsigned != data.isUnsigned) false
-            else if (characterSet != data.characterSet) false
-            else if (collate != data.collate) false
-            else if (length != data.length) false
-            else true
-        }
-    }
-}
+case class DataType(val name: String, val length: Option[Int], val isUnsigned: Boolean, val isZerofill: Boolean, val characterSet: Option[String], val collate: Option[String])
 
 object DataType {
-    def varchar(length: Int) = DataType("VARCHAR", Some(length))
-    def int() = DataType("INT", None)
+    def varchar(length: Int) = DataType("VARCHAR", Some(length), false, false, None, None)
+    def int() = DataType("INT", None, false, false, None, None)
 }
 
 case class ColumnModel(override val name: String, val dataType: DataType) 
