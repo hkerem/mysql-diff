@@ -22,9 +22,9 @@ case class ChangeIndexDiff(name: String, index: IndexModel) extends IndexDiff
 
 abstract class PrimaryKeyDiff extends IndexDiff
 
-case class CreatePrimaryKey(pk: PrimaryKey) extends PrimaryKeyDiff
-case object DropPrimaryKey extends PrimaryKeyDiff
-case class AlterPrimaryKey(oldPk: PrimaryKey, newPk: PrimaryKey) extends PrimaryKeyDiff
+case class CreatePrimaryKeyDiff(pk: PrimaryKey) extends PrimaryKeyDiff
+case object DropPrimaryKeyDiff extends PrimaryKeyDiff
+case class ChangePrimaryKeyDiff(oldPk: PrimaryKey, newPk: PrimaryKey) extends PrimaryKeyDiff
 
 
 abstract class TableDiff

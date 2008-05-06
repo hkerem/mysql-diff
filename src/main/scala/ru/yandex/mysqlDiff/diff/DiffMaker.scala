@@ -47,10 +47,10 @@ object DiffMaker {
     }
     
     def comparePrimaryKeys(from: Option[PrimaryKey], to: Option[PrimaryKey]): Option[IndexDiff] = {
-        if (from.isDefined && !to.isDefined) Some(DropPrimaryKey)
-        else if (!from.isDefined && to.isDefined) Some(new CreatePrimaryKey(to.get))
+        if (from.isDefined && !to.isDefined) Some(DropPrimaryKeyDiff)
+        else if (!from.isDefined && to.isDefined) Some(new CreatePrimaryKeyDiff(to.get))
         else if (from.isDefined && to.isDefined) {
-            if (from != to) Some(new AlterPrimaryKey(from.get, to.get))
+            if (from != to) Some(new ChangePrimaryKeyDiff(from.get, to.get))
             else None
         } else None
     }

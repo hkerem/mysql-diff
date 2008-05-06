@@ -40,9 +40,9 @@ object AlterTableStatement {
     
     case class DropColumn(name: String) extends Operation
     
-    case object DropPrimaryKey extends Operation
+    case class AddPrimaryKey(pk: PrimaryKey) extends Operation
     
-    case class CreatePrimaryKey(pk: PrimaryKey) extends Operation
+    case object DropPrimaryKey extends Operation
 }
 
 // vim: set ts=4 sw=4 et:
