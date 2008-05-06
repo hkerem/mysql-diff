@@ -37,7 +37,7 @@ object DiffMaker {
         if (from.isAutoIncrement != to.isAutoIncrement)
             diff += new ColumnPropertyDiff(AutoIncrementality, from.isAutoIncrement, to.isAutoIncrement)
         if (from.dataType != to.dataType)
-            diff += new ColumnPropertyDiff(TypeValue, from.dataType, to.dataType)
+            diff += new ColumnPropertyDiff(DataTypeValue, from.dataType, to.dataType)
         if (from.defaultValue != to.defaultValue)
             diff += new ColumnPropertyDiff(DefaultValue, from.defaultValue, to.defaultValue)
         

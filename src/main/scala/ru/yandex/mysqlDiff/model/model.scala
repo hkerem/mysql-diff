@@ -8,7 +8,6 @@ class SqlObjectType(val name: String)  {
 }
 
 
-
 case class DataType(val name: String, val length: Option[Int], val isUnsigned: Boolean, val isZerofill: Boolean, val characterSet: Option[String], val collate: Option[String])
 
 object DataType {
@@ -40,30 +39,11 @@ case class ColumnModel(override val name: String, val dataType: DataType)
 
 case class ConstraintModel(override val name: String, val columns: Seq[String]) 
     extends SqlObjectType(name: String)
-{
-
-}
 
 case class IndexModel(override val name: String, override val columns: Seq[String], isUnique: Boolean)
     extends ConstraintModel(name, columns)
 {
     require(columns.length > 0)
-
-    override def equals(otherO: Any): Boolean = {
-        if (otherO == null || !otherO.isInstanceOf[IndexModel]) false else {
-            val other = otherO.asInstanceOf[IndexModel]    
-            if (name != other.name) false
-            else if (isUnique != other.isUnique)
-                false 
-            else {
-                if (columns != null && other.columns != null) {
-                    val s1 = Set[String](columns: _*)
-                    val s2 = Set[String](other.columns: _*)
-                    s1.size == s2.size && s1.subsetOf(s2) && s2.subsetOf(s1)
-                } else false
-            }
-        }
-    }
 }
 
 case class PrimaryKey(override val name: String, override val columns: Seq[String])
@@ -74,16 +54,12 @@ case class ForeighKey(override val name: String,
     val externalTableName: String,
     val externalColumns: Seq[String])
     extends ConstraintModel(name: String, localColumns)
-{
-
-}
 
 case class TableModel(override val name: String, val columns: Seq[ColumnModel]) 
     extends DatabaseDeclaration(name: String)
 {
     def column(name: String) = columns.find(_.name == name).get
     
-    var columnsMap: Map[String, ColumnModel] = new HashMap()
     var primaryKey: Option[PrimaryKey] = None
     var constraints: List[ConstraintModel] = null
     var keys =  List[IndexModel]()
@@ -94,6 +70,7 @@ abstract class DatabaseDeclaration(override val name: String)
 
 case class DatabaseModel(override val name: String, val declarations: Seq[TableModel])
     extends DatabaseDeclaration(name)
+
 
 abstract class PropertyType {
     type ValueType
@@ -120,7 +97,7 @@ case object CommentValue extends PropertyType {
     override def get(column: ColumnModel) = column.comment
 }
 
-case object TypeValue extends PropertyType {
+case object DataTypeValue extends PropertyType {
     override type ValueType = DataType
     override def get(column: ColumnModel) = column.dataType
 }
