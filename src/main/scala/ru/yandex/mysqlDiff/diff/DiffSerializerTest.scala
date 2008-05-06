@@ -20,7 +20,7 @@ object DiffSerializerTest extends TestSuite("Simple Diff Script Bulder test") {
 
 
         val diff = DiffMaker.compareTables(table1, table2)
-        val resultScript = TableScriptBuilder.alterScript(diff.get.asInstanceOf[AlterTable], table2)
+        val resultScript = TableScriptBuilder.alterScript(diff.get.asInstanceOf[ChangeTableDiff], table2)
                 .flatMap(e => e match {
                     case e: CommentElement => None
                     case Unparsed(u) => Some(u)
@@ -45,7 +45,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         val table2 = new TableModel("table_test", List(c2_1))
 
         val diff = DiffMaker.compareTables(table1, table2)
-        val resultScript = TableScriptBuilder.alterScript(diff.get.asInstanceOf[AlterTable], table2)
+        val resultScript = TableScriptBuilder.alterScript(diff.get.asInstanceOf[ChangeTableDiff], table2)
                 .flatMap(e => e match {
                     case e: CommentElement => None
                     case Unparsed(u) => Some(u)
@@ -68,7 +68,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         val table2 = new TableModel("table_test", List(c2_1))
    
         val diff = DiffMaker.compareTables(table1, table2)
-        val resultScript = TableScriptBuilder.alterScript(diff.get.asInstanceOf[AlterTable], table2)
+        val resultScript = TableScriptBuilder.alterScript(diff.get.asInstanceOf[ChangeTableDiff], table2)
                 .flatMap(e => e match {
                     case e: CommentElement => None
                     case Unparsed(u) => Some(u)
@@ -93,7 +93,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
 //ALTER TABLE table_test MODIFY COLUMN id int(12);
 //ALTER TABLE table_test ADD COLUMN name varchar(1000);
         val diff = DiffMaker.compareTables(table1, table2)
-        val resultScript = TableScriptBuilder.alterScript(diff.get.asInstanceOf[AlterTable], table2)
+        val resultScript = TableScriptBuilder.alterScript(diff.get.asInstanceOf[ChangeTableDiff], table2)
                 .flatMap(e => e match {
                     case e: CommentElement => None
                     case Unparsed(u) => Some(u)

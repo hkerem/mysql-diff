@@ -2,9 +2,9 @@ package ru.yandex.mysqlDiff.model
 
 abstract class ColumnDiff
 
-case class CreateColumn(column: ColumnModel) extends ColumnDiff
-case class DropColumn(name: String) extends ColumnDiff
-case class AlterColumn(name: String, renameTo: Option[String], diff: Seq[ColumnPropertyDiff]) extends ColumnDiff
+case class CreateColumnDiff(column: ColumnModel) extends ColumnDiff
+case class DropColumnDiff(name: String) extends ColumnDiff
+case class ChangeColumnDiff(name: String, renameTo: Option[String], diff: Seq[ColumnPropertyDiff]) extends ColumnDiff
 
 case class ColumnPropertyDiff(propertyType: PropertyType, oldValue1: Any, newValue1: Any) {
     type T = propertyType.ValueType
@@ -29,9 +29,9 @@ case class AlterPrimaryKey(oldPk: PrimaryKey, newPk: PrimaryKey) extends Primary
 
 abstract class TableDiff
 
-case class CreateTable(table: TableModel) extends TableDiff
-case class DropTable(name: String) extends TableDiff
-case class AlterTable(name: String, renameTo: Option[String],
+case class CreateTableDiff(table: TableModel) extends TableDiff
+case class DropTableDiff(name: String) extends TableDiff
+case class ChangeTableDiff(name: String, renameTo: Option[String],
         columnDiff: Seq[ColumnDiff], indexDiff: Seq[IndexDiff]) extends TableDiff
 {
     def newName = renameTo getOrElse name

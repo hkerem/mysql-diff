@@ -7,11 +7,11 @@ object TableScriptBuilder {
 
     def alterColumnScript(cd: ColumnDiff, table: TableModel) = {
         val op = cd match {
-            case CreateColumn(c) => AlterTableStatement.AddColumn(c)
-            case DropColumn(name) => AlterTableStatement.DropColumn(name)
-            case AlterColumn(name, Some(newName), diff) =>
+            case CreateColumnDiff(c) => AlterTableStatement.AddColumn(c)
+            case DropColumnDiff(name) => AlterTableStatement.DropColumn(name)
+            case ChangeColumnDiff(name, Some(newName), diff) =>
                     AlterTableStatement.ChangeColumn(name, table.column(newName))
-            case AlterColumn(name, None, diff) =>
+            case ChangeColumnDiff(name, None, diff) =>
                     AlterTableStatement.ModifyColumn(table.column(name))
         }
         AlterTableStatement(table.name, List(op))
@@ -30,7 +30,7 @@ object TableScriptBuilder {
         AlterTableStatement(table.name, ops)
     }
     
-    def alterScript(diff: AlterTable, model: TableModel): Seq[ScriptElement] = {
+    def alterScript(diff: ChangeTableDiff, model: TableModel): Seq[ScriptElement] = {
         val primaryKeyDiff = diff.indexDiff.filter(idx => idx.isInstanceOf[PrimaryKeyDiff])
 
         val primaryKeyDrop = primaryKeyDiff.filter(idx => idx.isInstanceOf[DropPrimaryKey.type]).map(idx => idx.asInstanceOf[DropPrimaryKey.type])
@@ -71,9 +71,9 @@ object DiffSerializer {
         val newTablesMap: Map[String, TableModel] = Map(newModel.declarations.map(o => (o.name, o)): _*)
         val oldTablesMap: Map[String, TableModel] = Map(oldModel.declarations.map(o => (o.name, o)): _*)
         diff.tableDiff.flatMap(tbl => tbl match {
-            case CreateTable(t) => CreateTableStatement(t) :: Nil
-            case DropTable(name) => DropTableStatement(name) :: Nil
-            case diff @ AlterTable(name, renameTo, columnDiff, indexDiff) =>
+            case CreateTableDiff(t) => CreateTableStatement(t) :: Nil
+            case DropTableDiff(name) => DropTableStatement(name) :: Nil
+            case diff @ ChangeTableDiff(name, renameTo, columnDiff, indexDiff) =>
                     renameTo.map(RenameTableStatement(name, _)) ++
                             TableScriptBuilder.alterScript(diff, newTablesMap(diff.newName))
         })

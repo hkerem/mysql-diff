@@ -41,8 +41,8 @@ object DiffMaker {
         if (from.defaultValue != to.defaultValue)
             diff += new ColumnPropertyDiff(DefaultValue, from.defaultValue, to.defaultValue)
         
-        if (from.name != to.name) Some(new AlterColumn(from.name, Some(to.name), diff))
-        else if (diff.size > 0) Some(new AlterColumn(from.name, None, diff))
+        if (from.name != to.name) Some(new ChangeColumnDiff(from.name, Some(to.name), diff))
+        else if (diff.size > 0) Some(new ChangeColumnDiff(from.name, None, diff))
         else None
     }
     
@@ -64,8 +64,8 @@ object DiffMaker {
 
         val (fromColumns, toColumns, changeColumnPairs) = compareSeqs(from.columns, to.columns, (x: ColumnModel, y: ColumnModel) => x.name == y.name)
 
-        val dropColumnDiff = fromColumns.map(c => DropColumn(c.name))
-        val createColumnDiff = toColumns.map(c => CreateColumn(c))
+        val dropColumnDiff = fromColumns.map(c => DropColumnDiff(c.name))
+        val createColumnDiff = toColumns.map(c => CreateColumnDiff(c))
         val alterOnlyColumnDiff = changeColumnPairs.flatMap(c => compareColumns(c._1, c._2))
 
         val alterColumnDiff = dropColumnDiff ++ createColumnDiff ++ alterOnlyColumnDiff
@@ -81,17 +81,17 @@ object DiffMaker {
         val alterIndexDiff = primaryKeyDiff ++ createIndexesDiff ++ dropIndexesDiff ++ alterIndexesDiff
 
         if (from.name != to.name)
-            Some(new AlterTable(from.name, Some(to.name), alterColumnDiff, alterIndexDiff))
+            Some(new ChangeTableDiff(from.name, Some(to.name), alterColumnDiff, alterIndexDiff))
         else if (alterColumnDiff.size > 0 || alterIndexDiff.size > 0)
-            Some(new AlterTable(from.name, None, alterColumnDiff, alterIndexDiff))
+            Some(new ChangeTableDiff(from.name, None, alterColumnDiff, alterIndexDiff))
         else
             None
     }
         
     def compareDatabases(from: DatabaseModel, to: DatabaseModel): DatabaseDiff = {
         val (toIsEmpty, fromIsEmpty, tablesForCompare) = compareSeqs(from.declarations, to.declarations, (x: TableModel, y: TableModel) => x.name == y.name)
-        val dropTables = toIsEmpty.map(tbl => new DropTable(tbl.name))
-        val createTables = fromIsEmpty.map(tbl => new CreateTable(tbl))
+        val dropTables = toIsEmpty.map(tbl => new DropTableDiff(tbl.name))
+        val createTables = fromIsEmpty.map(tbl => new CreateTableDiff(tbl))
         val alterTable = tablesForCompare.map(tbl => compareTables(tbl._1, tbl._2))
         new DatabaseDiff(dropTables ++ createTables ++ alterTable.flatMap(tbl => tbl.toList))
     }

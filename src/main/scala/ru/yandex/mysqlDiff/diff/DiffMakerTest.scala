@@ -19,15 +19,15 @@ object DiffTest extends TestSuite("Simple Diff") {
 
         val diff = DiffMaker.compareColumns(c1, c2)
         assert(diff.isDefined)
-        assert(diff.get.isInstanceOf[AlterColumn])
-        val diff1 = diff.get.asInstanceOf[AlterColumn]
+        assert(diff.get.isInstanceOf[ChangeColumnDiff])
+        val diff1 = diff.get.asInstanceOf[ChangeColumnDiff]
         assert(diff1.name == "c1")
         assert(diff1.renameTo == Some("c2"))
 
         val c3 = ColumnModel("c1", new DataType("int", Some(11), false, false, None, None))
         val diff2O = DiffMaker.compareColumns(c1, c3)
         assert(diff2O.isDefined)
-        val diff2 = diff2O.get.asInstanceOf[AlterColumn]
+        val diff2 = diff2O.get.asInstanceOf[ChangeColumnDiff]
         assert(!diff2.renameTo.isDefined)
     }
   
