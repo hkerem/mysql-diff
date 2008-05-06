@@ -34,12 +34,15 @@ object TableScriptBuilder {
     
     def alterRegularIndexScript(id: IndexDiff, table: TableModel) = {
         import AlterTableStatement._
-        val op = id match {
-            case DropIndexDiff(index) => DropIndex(index.name)
-            case CreateIndexDiff(index) => AddIndex(index)
-            //case ChangeIndexDiff(_, _) // XXX: model need to be revised
+        val ops = id match {
+            case DropIndexDiff(index) =>
+                List(DropIndex(index.name))
+            case CreateIndexDiff(index) =>
+                List(AddIndex(index))
+            case ChangeIndexDiff(oldIndex, newIndex) =>
+                List(DropIndex(oldIndex.name), AddIndex(newIndex))
         }
-        new AlterTableStatement(table.name, op)
+        AlterTableStatement(table.name, ops)
     }
     
     def alterIndexScript(id: IndexDiff, table: TableModel) = id match {

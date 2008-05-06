@@ -12,7 +12,7 @@ case class CreateColumnDiff(column: ColumnModel) extends ColumnDiff
 case class DropColumnDiff(name: String) extends ColumnDiff
 case class ChangeColumnDiff(override val name: String, override val renameTo: Option[String],
         diff: Seq[ColumnPropertyDiff])
-        extends ColumnDiff with ChangeSomethingDiff
+    extends ColumnDiff with ChangeSomethingDiff
 
 case class ColumnPropertyDiff(propertyType: PropertyType, oldValue1: Any, newValue1: Any) {
     type T = propertyType.ValueType
@@ -26,7 +26,8 @@ abstract class IndexDiff
 
 case class CreateIndexDiff(index: IndexModel) extends IndexDiff
 case class DropIndexDiff(index: IndexModel) extends IndexDiff
-case class ChangeIndexDiff(name: String, index: IndexModel) extends IndexDiff
+case class ChangeIndexDiff(oldIndex: IndexModel, newIndex: IndexModel)
+    extends IndexDiff
 
 abstract class PrimaryKeyDiff extends IndexDiff
 

@@ -55,7 +55,7 @@ object DiffMaker {
         }
     
     def compareIndexes(from: IndexModel, to: IndexModel): Option[IndexDiff] = {
-        if (from != to) Some(new ChangeIndexDiff(from.name, to))
+        if (from != to) Some(new ChangeIndexDiff(from, to))
         else None
     }
     
