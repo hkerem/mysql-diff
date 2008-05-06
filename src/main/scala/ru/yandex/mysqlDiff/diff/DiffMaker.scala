@@ -46,14 +46,13 @@ object DiffMaker {
         else None
     }
     
-    def comparePrimaryKeys(from: Option[PrimaryKey], to: Option[PrimaryKey]): Option[IndexDiff] = {
-        if (from.isDefined && !to.isDefined) Some(DropPrimaryKeyDiff)
-        else if (!from.isDefined && to.isDefined) Some(new CreatePrimaryKeyDiff(to.get))
-        else if (from.isDefined && to.isDefined) {
-            if (from != to) Some(new ChangePrimaryKeyDiff(from.get, to.get))
-            else None
-        } else None
-    }
+    def comparePrimaryKeys(fromO: Option[PrimaryKey], toO: Option[PrimaryKey]): Option[IndexDiff] =
+        (fromO, toO) match {
+            case (Some(from), None) => Some(DropPrimaryKeyDiff(from))
+            case (None, Some(to)) => Some(CreatePrimaryKeyDiff(to))
+            case (Some(from), Some(to)) => Some(new ChangePrimaryKeyDiff(from, to))
+            case (None, None) => None
+        }
     
     def compareIndexes(from: IndexModel, to: IndexModel): Option[IndexDiff] = {
         if (from != to) Some(new ChangeIndexDiff(from.name, to))

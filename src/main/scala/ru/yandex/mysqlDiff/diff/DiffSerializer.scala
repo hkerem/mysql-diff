@@ -22,7 +22,7 @@ object TableScriptBuilder {
     def alterPrimaryKeyScript(pd: PrimaryKeyDiff, table: TableModel) = {
         import AlterTableStatement._
         val ops = pd match {
-            case DropPrimaryKeyDiff =>
+            case DropPrimaryKeyDiff(_) =>
                 List(DropPrimaryKey)
             case CreatePrimaryKeyDiff(pk) =>
                 List(AddPrimaryKey(pk))
