@@ -15,25 +15,17 @@ object ScriptSerializer {
     
     def serialize(stmts: Seq[ScriptElement], options: Options): String = {
         val sb = new StringBuilder
-        var needSemi = false
-        var first = true
         for (stmt <- stmts) {
-            if (needSemi) {
-                sb append ";"
-                sb append options.afterComma
-            }
-            
-            if (!first) {
-                // XXX: care about "--" comments
-                sb append options.nl
-            }
-            first = false
-            
             sb append serialize(stmt, options)
-            needSemi = stmt match {
-                case c: CommentElement => false
-                case _ => true
+            
+            stmt match {
+                case c: CommentElement =>
+                case _ =>
+                    sb append ";"
+                    sb append options.afterComma
             }
+            
+            sb append options.nl
         }
         sb.toString
     }

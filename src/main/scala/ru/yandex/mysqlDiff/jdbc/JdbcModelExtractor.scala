@@ -4,9 +4,12 @@ import java.sql._
 
 import model._
 
-
+/*
+ * TBD:
+ * Extract table engine, default charset
+ * Extract keys
+ */
 object JdbcModelExtractor {
-
 
     def parseTable(tables: ResultSet, data: DatabaseMetaData): TableModel = {
         val tableName = tables.getString("TABLE_NAME")
@@ -126,6 +129,6 @@ object JdbcModelExtractor {
     	
     	val model = parse(args.first)
     	
-    	println(model)
+    	print(ModelSerializer.serializeDatabaseToText(model))
     }
 }
