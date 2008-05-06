@@ -43,6 +43,10 @@ object AlterTableStatement {
     case class AddPrimaryKey(pk: PrimaryKey) extends Operation
     
     case object DropPrimaryKey extends Operation
+    
+    case class AddIndex(id: IndexModel) extends Operation
+    
+    case class DropIndex(name: String) extends Operation
 }
 
 // vim: set ts=4 sw=4 et:

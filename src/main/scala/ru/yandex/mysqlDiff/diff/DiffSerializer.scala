@@ -32,37 +32,29 @@ object TableScriptBuilder {
         AlterTableStatement(table.name, ops)
     }
     
+    def alterRegularIndexScript(id: IndexDiff, table: TableModel) = {
+        import AlterTableStatement._
+        val op = id match {
+            case DropIndexDiff(name) => DropIndex(name)
+            case CreateIndexDiff(index) => AddIndex(index)
+            //case ChangeIndexDiff(_, _) // XXX: model need to be revised
+        }
+        new AlterTableStatement(table.name, op)
+    }
+    
+    def alterIndexScript(id: IndexDiff, table: TableModel) = id match {
+        case pd: PrimaryKeyDiff => alterPrimaryKeyScript(pd, table)
+        case _ => alterRegularIndexScript(id, table)
+    }
+    
     def alterScript(diff: ChangeTableDiff, model: TableModel): Seq[ScriptElement] = {
-        val primaryKeyDiff = diff.indexDiff.filter(idx => idx.isInstanceOf[PrimaryKeyDiff])
-
-        val primaryKeyDrop = primaryKeyDiff.filter(idx => idx.isInstanceOf[DropPrimaryKeyDiff.type]).map(idx => idx.asInstanceOf[DropPrimaryKeyDiff.type])
-        val primaryKeyCreate = primaryKeyDiff.filter(idx => idx.isInstanceOf[CreatePrimaryKeyDiff]).map(idx => idx.asInstanceOf[CreatePrimaryKeyDiff])
-        val primaryKeyAlter = primaryKeyDiff.filter(idx => idx.isInstanceOf[ChangePrimaryKeyDiff]).map(idx => idx.asInstanceOf[ChangePrimaryKeyDiff])
-
-        val indexKeyDiff = diff.indexDiff.filter(idx => !idx.isInstanceOf[PrimaryKeyDiff] && idx.isInstanceOf[IndexDiff])
-        val indexDrop: Seq[DropIndexDiff] = indexKeyDiff.filter(idx => idx.isInstanceOf[DropIndexDiff]).map(idx => idx.asInstanceOf[DropIndexDiff])
-        val indexCreate: Seq[CreateIndexDiff] = indexKeyDiff.filter(idx => idx.isInstanceOf[CreateIndexDiff]).map(idx => idx.asInstanceOf[CreateIndexDiff])
-        val indexAlter: Seq[ChangeIndexDiff] =  indexKeyDiff.filter(idx => idx.isInstanceOf[ChangeIndexDiff]).map(idx => idx.asInstanceOf[ChangeIndexDiff])
-
-        val dropIndex: Seq[String] = primaryKeyDrop.map(idx => "ALTER TABLE " + model.name + " DROP PRIMARY KEY") ++ indexDrop.map(idx => "ALTER TABLE " + model.name + " DROP INDEX " + idx.name)
-
-        val alterIndex: Seq[String] =
-            primaryKeyAlter.map(pk => "ALTER TABLE " + model.name + " DROP PRIMARY KEY, ADD " + ScriptSerializer.serializePrimaryKey(pk.newPk)) ++
-            indexAlter.map(pk => "ALTER TABLE " + model.name + " DROP INDEX " + pk.name + ", ADD " + ScriptSerializer.serializeIndex(pk.index))
-
-        val createIndex: Seq[String] =
-                primaryKeyCreate.map(pk => "ALTER TABLE " + model.name + " ADD " + ScriptSerializer.serializePrimaryKey(pk.pk)) ++ 
-                indexCreate.map(idx => "ALTER TABLE " + model.name + " ADD " + ScriptSerializer.serializeIndex(idx.index))
 
         List(CommentElement("-- Modify Table \"" + model.name + "\"")) ++
-        List(CommentElement("-- Drop Index")).filter(o => dropIndex.size > 0) ++
-        dropIndex.map(Unparsed(_)) ++
         diff.columnDiff.map(alterColumnScript(_, model)) ++
-        List(CommentElement("-- Alter Indexes")).filter(o => alterIndex.size > 0) ++
-        alterIndex.map(Unparsed(_)) ++
-        List(CommentElement("-- Create Indexes")).filter(o =>createIndex.size > 0) ++
-        createIndex.map(Unparsed(_)) ++
+        diff.indexDiff.map(alterIndexScript(_, model)) ++
         List(CommentElement("-- End modify Table \"" + model.name + "\""))
+        
+        // XXX: sort: drop, then change, then create
     }
 }
 
