@@ -2,6 +2,7 @@
 <project name="mysqlDiff" default="dist">
     <!-- local properties, scala.home for example -->
     <property file="build.properties"/>
+    <property file="${user.home}/build.local.properties"/>
 
     <property name="version" value="0.0"/>
     <property name="src.dir" value="${basedir}/src/main/scala"/>
@@ -15,6 +16,8 @@
     <property name="scala-library.jar" value="${scala.home}/lib/scala-library.jar"/>
 
     <target name="init">
+        <echo>scala.home=${scala.home}</echo>
+        
         <path id="build.classpath">
             <pathelement location="${scala-library.jar}"/>
             <fileset dir="${lib.dir}" includes="**/*.jar"/>
