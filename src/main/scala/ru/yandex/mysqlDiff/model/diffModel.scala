@@ -42,7 +42,7 @@ case class CreateTableDiff(table: TableModel) extends TableDiff
 case class DropTableDiff(name: String) extends TableDiff
 case class ChangeTableDiff(override val name: String, override val renameTo: Option[String],
         columnDiff: Seq[ColumnDiff], indexDiff: Seq[IndexDiff])
-        extends TableDiff with ChangeSomethingDiff
+    extends TableDiff with ChangeSomethingDiff
 
 
 case class DatabaseDiff(tableDiff: Seq[TableDiff])
