@@ -38,9 +38,9 @@ object TableScriptBuilder {
         val primaryKeyAlter = primaryKeyDiff.filter(idx => idx.isInstanceOf[AlterPrimaryKey]).map(idx => idx.asInstanceOf[AlterPrimaryKey])
 
         val indexKeyDiff = diff.indexDiff.filter(idx => !idx.isInstanceOf[PrimaryKeyDiff] && idx.isInstanceOf[IndexDiff])
-        val indexDrop: Seq[DropIndex] = indexKeyDiff.filter(idx => idx.isInstanceOf[DropIndex]).map(idx => idx.asInstanceOf[DropIndex])
-        val indexCreate: Seq[CreateIndex] = indexKeyDiff.filter(idx => idx.isInstanceOf[CreateIndex]).map(idx => idx.asInstanceOf[CreateIndex])
-        val indexAlter: Seq[AlterIndex] =  indexKeyDiff.filter(idx => idx.isInstanceOf[AlterIndex]).map(idx => idx.asInstanceOf[AlterIndex])
+        val indexDrop: Seq[DropIndexDiff] = indexKeyDiff.filter(idx => idx.isInstanceOf[DropIndexDiff]).map(idx => idx.asInstanceOf[DropIndexDiff])
+        val indexCreate: Seq[CreateIndexDiff] = indexKeyDiff.filter(idx => idx.isInstanceOf[CreateIndexDiff]).map(idx => idx.asInstanceOf[CreateIndexDiff])
+        val indexAlter: Seq[ChangeIndexDiff] =  indexKeyDiff.filter(idx => idx.isInstanceOf[ChangeIndexDiff]).map(idx => idx.asInstanceOf[ChangeIndexDiff])
 
         val dropIndex: Seq[String] = primaryKeyDrop.map(idx => "ALTER TABLE " + model.name + " DROP PRIMARY KEY") ++ indexDrop.map(idx => "ALTER TABLE " + model.name + " DROP INDEX " + idx.name)
 

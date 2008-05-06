@@ -56,7 +56,7 @@ object DiffMaker {
     }
     
     def compareIndexes(from: IndexModel, to: IndexModel): Option[IndexDiff] = {
-        if (from != to) Some(new AlterIndex(from.name, to))
+        if (from != to) Some(new ChangeIndexDiff(from.name, to))
         else None
     }
     
@@ -74,8 +74,8 @@ object DiffMaker {
 
         val (fromIndexes, toIndexes, changeIndexPairs) = compareSeqs(from.keys, to.keys, (x: IndexModel, y: IndexModel) => x.name == y.name)
 
-        val dropIndexesDiff = fromIndexes.map(idx => DropIndex(idx.name))
-        val createIndexesDiff = toIndexes.map(idx => CreateIndex(idx))
+        val dropIndexesDiff = fromIndexes.map(idx => DropIndexDiff(idx.name))
+        val createIndexesDiff = toIndexes.map(idx => CreateIndexDiff(idx))
         val alterIndexesDiff = changeIndexPairs.flatMap(idx => compareIndexes(idx._1, idx._2))
 
         val alterIndexDiff = primaryKeyDiff ++ createIndexesDiff ++ dropIndexesDiff ++ alterIndexesDiff

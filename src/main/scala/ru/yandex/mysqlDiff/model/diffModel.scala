@@ -16,9 +16,9 @@ case class ColumnPropertyDiff(propertyType: PropertyType, oldValue1: Any, newVal
 
 abstract class IndexDiff
 
-case class CreateIndex(index: IndexModel) extends IndexDiff
-case class DropIndex(name: String) extends IndexDiff
-case class AlterIndex(name: String, index: IndexModel) extends IndexDiff
+case class CreateIndexDiff(index: IndexModel) extends IndexDiff
+case class DropIndexDiff(name: String) extends IndexDiff
+case class ChangeIndexDiff(name: String, index: IndexModel) extends IndexDiff
 
 abstract class PrimaryKeyDiff extends IndexDiff
 
