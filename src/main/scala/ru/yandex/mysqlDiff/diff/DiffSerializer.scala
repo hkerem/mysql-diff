@@ -4,16 +4,20 @@ import model._
 import script._
 
 object TableScriptBuilder {
+
+    def alterColumnScript(cd: AbstractAlterColumn, table: TableModel) = {
+        val op = cd match {
+            case CreateColumn(c) => AlterTableStatement.AddColumn(c)
+            case DropColumn(name) => AlterTableStatement.DropColumn(name)
+            case AlterColumn(name, Some(newName), diff) =>
+                    AlterTableStatement.ChangeColumn(name, table.column(newName))
+            case AlterColumn(name, None, diff) =>
+                    AlterTableStatement.ModifyColumn(table.column(name))
+        }
+        AlterTableStatement(table.name, op)
+    }
     
-    def getAlterScript(diff: AlterTable, model: TableModel): Seq[ScriptElement] = {
-        val createColumns = diff.columnDiff.filter(column => column.isInstanceOf[CreateColumn]).map(column => column.asInstanceOf[CreateColumn])
-        val dropColumns = diff.columnDiff.filter(column => column.isInstanceOf[DropColumn]).map(column => column.asInstanceOf[DropColumn])
-        val alterColumns = diff.columnDiff.filter(column => column.isInstanceOf[AlterColumn]).map(column => column.asInstanceOf[AlterColumn])
-
-        val createColumnMap = Map(createColumns.map(column => (column.column.name, column)): _*)
-        val dropColumnMap = Map(dropColumns.map(column => (column.name, column)): _*)
-        val alterColumnMap = Map(alterColumns.map(column => (column.name, column)): _*)
-
+    def alterScript(diff: AlterTable, model: TableModel): Seq[ScriptElement] = {
         val primaryKeyDiff = diff.indexDiff.filter(idx => idx.isInstanceOf[AbstractPrimaryKeyDiff])
 
         val primaryKeyDrop = primaryKeyDiff.filter(idx => idx.isInstanceOf[DropPrimaryKey]).map(idx => idx.asInstanceOf[DropPrimaryKey])
@@ -26,17 +30,6 @@ object TableScriptBuilder {
         val indexAlter: Seq[AlterIndex] =  indexKeyDiff.filter(idx => idx.isInstanceOf[AlterIndex]).map(idx => idx.asInstanceOf[AlterIndex])
 
         val dropIndex: Seq[String] = primaryKeyDrop.map(idx => "ALTER TABLE " + model.name + " DROP PRIMARY KEY") ++ indexDrop.map(idx => "ALTER TABLE " + model.name + " DROP INDEX " + idx.name)
-        val dropColumn: Seq[String] = dropColumns.map(idx => "ALTER TABLE " + model.name + " DROP COLUMN " + idx.name)
-        val createColumn: Seq[String] = createColumns.map(idx => "ALTER TABLE " + model.name + " ADD COLUMN " + ScriptSerializer.serializeColumn(idx.column))
-
-
-        val columnMap = Map(model.columns.map(col => (col.name, col)): _*)
-        val alterColumn: Seq[String] = alterColumns.map(col => {
-            if (col.renameTo.isDefined)
-                "ALTER TABLE " + model.name + " CHANGE COLUMN " + col.name + " " + ScriptSerializer.serializeColumn(columnMap(col.renameTo.get))
-            else
-                "ALTER TABLE " + model.name + " MODIFY COLUMN " + ScriptSerializer.serializeColumn(columnMap(col.name))
-        })
 
         val alterIndex: Seq[String] =
             primaryKeyAlter.map(pk => "ALTER TABLE " + model.name + " DROP PRIMARY KEY, ADD " + ScriptSerializer.serializePrimaryKey(pk.newPk)) ++
@@ -49,12 +42,7 @@ object TableScriptBuilder {
         List(CommentElement("-- Modify Table \"" + model.name + "\"")) ++
         List(CommentElement("-- Drop Index")).filter(o => dropIndex.size > 0) ++
         dropIndex.map(Unparsed(_)) ++
-        List(CommentElement("-- Drop Columns")).filter(o => dropColumn.size > 0) ++
-        dropColumn.map(Unparsed(_)) ++
-        List(CommentElement("-- Create Columns")).filter(o => createColumn.size > 0) ++
-        createColumn.map(Unparsed(_)) ++
-        List(CommentElement("-- Alter Columns")).filter(o => alterColumn.size > 0) ++
-        alterColumn.map(Unparsed(_)) ++
+        diff.columnDiff.map(alterColumnScript(_, model)) ++
         List(CommentElement("-- Alter Indexes")).filter(o => alterIndex.size > 0) ++
         alterIndex.map(Unparsed(_)) ++
         List(CommentElement("-- Create Indexes")).filter(o =>createIndex.size > 0) ++
@@ -74,7 +62,7 @@ object DiffSerializer {
             case DropTable(name) => DropTableStatement(name) :: Nil
             case diff @ AlterTable(name, renameTo, columnDiff, indexDiff) =>
                     renameTo.map(RenameTableStatement(name, _)) ++
-                            TableScriptBuilder.getAlterScript(diff, newTablesMap(diff.newName))
+                            TableScriptBuilder.alterScript(diff, newTablesMap(diff.newName))
         })
     }
     

@@ -17,9 +17,9 @@ case class CreateTableStatement(table: TableModel) extends ScriptStatement
 
 case class DropTableStatement(name: String) extends ScriptStatement
 
-case class AlterTableStatement(tableName: String, op: AlterTableStatement.Operation) extends ScriptStatement
-
 case class RenameTableStatement(oldName: String, newName: String) extends ScriptStatement
+
+case class AlterTableStatement(tableName: String, op: AlterTableStatement.Operation) extends ScriptStatement
 
 object AlterTableStatement {
     abstract class Operation

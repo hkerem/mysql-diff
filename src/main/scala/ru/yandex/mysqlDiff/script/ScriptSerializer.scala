@@ -47,6 +47,7 @@ object ScriptSerializer {
     def serializeStatement(stmt: ScriptStatement, options: Options): String = stmt match {
         case CreateTableStatement(t) => serializeCreateTable(t, options)
         case DropTableStatement(n) => serializeDropTable(n)
+        case st: AlterTableStatement => serializeAlterTable(st)
     }
     
     def serializeCreateTable(createTable: CreateTableStatement, options: Options): String =
@@ -66,6 +67,19 @@ object ScriptSerializer {
     def serializeDropTable(tableName: String) =
         "DROP TABLE " + tableName
     
+    def serializeAlterTable(st: AlterTableStatement) =
+        "ALTER TABLE " + st.tableName + " " + serializeAlterTableOperation(st.op)
+    
+    def serializeAlterTableOperation(op: AlterTableStatement.Operation) = {
+        import AlterTableStatement._
+        op match {
+            case AddColumn(column) => "ADD COLUMN " + serializeColumn(column)
+            case ChangeColumn(oldName, column) => "CHANGE COLUMN " + oldName + " " + serializeColumn(column)
+            case ModifyColumn(column) => "MODIFY COLUMN " + serializeColumn(column)
+            case DropColumn(name) => "DROP COLUMN " + name
+        }
+    }
+   
     def serializeDataType(dataType: DataType) = {
         // XXX: dirty
         var charset = ""
@@ -92,19 +106,6 @@ object ScriptSerializer {
         
         model.name + " " + serializeDataType(model.dataType) +
                 (if (attributes.isEmpty) "" else " " + attributes.mkString(" "))
-    }
-    
-    def serializeAlterTable(alterTable: AlterTableStatement) =
-        "ALTER TABLE " + alterTable.tableName + " " + serializeAlterTableOperation(alterTable.op)
-        
-    def serializeAlterTableOperation(op: AlterTableStatement.Operation) = {
-        import AlterTableStatement._
-        op match {
-            case AddColumn(column) => "ADD COLUMN " + serializeColumn(column)
-            case ChangeColumn(oldName, column) => "CHANGE COLUMN " + oldName + " " + serializeColumn(column)
-            case ModifyColumn(column) => "MODIFY COLUMN " + serializeColumn(column)
-            case DropColumn(name) => "DROP COLUMN " + name
-        }
     }
     
     def serializePrimaryKey(pk: PrimaryKey) =

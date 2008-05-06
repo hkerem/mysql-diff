@@ -81,6 +81,8 @@ case class ForeighKey(override val name: String,
 case class TableModel(override val name: String, val columns: Seq[ColumnModel]) 
     extends DatabaseDeclaration(name: String)
 {
+    def column(name: String) = columns.find(_.name == name).get
+    
     var columnsMap: Map[String, ColumnModel] = new HashMap()
     var primaryKey: Option[PrimaryKey] = None
     var constraints: List[ConstraintModel] = null
