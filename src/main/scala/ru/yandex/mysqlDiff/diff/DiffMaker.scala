@@ -1,7 +1,7 @@
 package ru.yandex.mysqlDiff.diff
 
 
-import ru.yandex.mysqlDiff.model._
+import model._
 
 object ListDiffMaker {
     def compareSeqs[A, B](a: Seq[A], b: Seq[B], comparator: (A, B) => Boolean): (Seq[A], Seq[B], Seq[(A, B)]) = {
@@ -26,20 +26,12 @@ object ListDiffMaker {
         
         (onlyInA, onlyInB, inBothA)
     }
-    
-    def doListDiff[A <: SqlObjectType](from: Seq[A], to: Seq[A]): Tuple3[Seq[A], Seq[A], Seq[(A, A)]] = {
-        val toMap: Map[String, A] = Map(to.map(o => (o.name, o)): _*)
-        val fromMap: Map[String, A] = Map(from.map(o => (o.name, o)): _*)
-        val bothObject: Seq[(A, A)] = List(to.filter(o => fromMap.contains(o.name)).map(o => (o, fromMap.get(o.name).get)): _*);
 
-        val fromNull: Seq[A] = toMap.filterKeys(o => !fromMap.keySet.contains(o)).values.toList //todo Map.excl use insted
-        val toNull: Seq[A] = fromMap.filterKeys(o => !toMap.keySet.contains(o)).values.toList //todo Map.excl use insted
-        Tuple3(toNull, fromNull, bothObject)
-    }
 }
 
 object ColumnDiffBuilder {
     import ListDiffMaker._
+    
     def compareColumns(from: ColumnModel, to: ColumnModel): Option[AbstractAlterColumn] = {
         var diff: Seq[ColumnPropertyDiff] = List[ColumnPropertyDiff]()
         if (!(from.comment == to.comment)) diff = diff ++ List(new ColumnPropertyDiff(CommentValue, from.comment, to.comment))
@@ -73,6 +65,7 @@ object IndexDiffBuilder {
 
 object PrimaryKeyDiffBuilder {
     import ListDiffMaker._
+    
     def doDiff(from: Option[PrimaryKey], to: Option[PrimaryKey]): Option[AbstractIndexDiff] = {
         if (from.isDefined && !to.isDefined) Some(new DropPrimaryKey())
         else if (!from.isDefined && to.isDefined) Some(new CreatePrimaryKey(to.get))
@@ -89,7 +82,7 @@ object TableDiffBuilder {
 
     def compareTables(from: TableModel, to: TableModel): Option[AbstractTableDiff] = {
 
-        val (toColumnIsEmpty, fromColumnIsEmpty, columnsForCompare) = doListDiff[ColumnModel](from.columns, to.columns)
+        val (toColumnIsEmpty, fromColumnIsEmpty, columnsForCompare) = compareSeqs(from.columns, to.columns, (x: ColumnModel, y: ColumnModel) => x.name == y.name)
 
         val dropColumnDiff = toColumnIsEmpty.map(column => ColumnDiffBuilder.dropColumn(column.name))
         val createColumnDiff = fromColumnIsEmpty.map(column => ColumnDiffBuilder.createColumn(column))
@@ -99,7 +92,7 @@ object TableDiffBuilder {
 
         val primaryKeyDiff: Seq[AbstractIndexDiff] = PrimaryKeyDiffBuilder.doDiff(from.primaryKey, to.primaryKey).toList
 
-        val (toIndexIsEmpty, fromIndexIsEmpty, indexesForCompare) = doListDiff[IndexModel](from.keys, to.keys)
+        val (toIndexIsEmpty, fromIndexIsEmpty, indexesForCompare) = compareSeqs(from.keys, to.keys, (x: IndexModel, y: IndexModel) => x.name == y.name)
 
         val dropIndexesDiff = toIndexIsEmpty.flatMap(idx => IndexDiffBuilder.doDiff(Some(idx), None))
         val createIndexesDiff = fromIndexIsEmpty.flatMap(idx => IndexDiffBuilder.doDiff(None, Some(idx)))
@@ -124,7 +117,7 @@ object DatabaseDiffMaker {
     import ListDiffMaker._
     
     def doDiff(from: DatabaseModel, to: DatabaseModel): DatabaseDiff = {
-        val (toIsEmpty, fromIsEmpty, tablesForCompare) = doListDiff[TableModel](from.declarations, to.declarations)
+        val (toIsEmpty, fromIsEmpty, tablesForCompare) = compareSeqs(from.declarations, to.declarations, (x: TableModel, y: TableModel) => x.name == y.name)
         val dropTables = toIsEmpty.map(tbl => new DropTable(tbl.name))
         val createTables = fromIsEmpty.map(tbl => new CreateTable(tbl))
         val alterTable = tablesForCompare.map(tbl => TableDiffBuilder.doDiff(Some(tbl._1), Some(tbl._2)))
