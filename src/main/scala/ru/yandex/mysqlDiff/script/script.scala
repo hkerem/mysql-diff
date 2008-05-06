@@ -19,7 +19,13 @@ case class DropTableStatement(name: String) extends ScriptStatement
 
 case class RenameTableStatement(oldName: String, newName: String) extends ScriptStatement
 
-case class AlterTableStatement(tableName: String, op: AlterTableStatement.Operation) extends ScriptStatement
+case class AlterTableStatement(tableName: String, ops: Seq[AlterTableStatement.Operation])
+        extends ScriptStatement
+{
+    require(ops.length > 0)
+    
+    def this(tableName: String, op: AlterTableStatement.Operation) = this(tableName, List(op))
+}
 
 object AlterTableStatement {
     abstract class Operation

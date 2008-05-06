@@ -14,7 +14,7 @@ object TableScriptBuilder {
             case AlterColumn(name, None, diff) =>
                     AlterTableStatement.ModifyColumn(table.column(name))
         }
-        AlterTableStatement(table.name, op)
+        AlterTableStatement(table.name, List(op))
     }
     
     def alterScript(diff: AlterTable, model: TableModel): Seq[ScriptElement] = {
