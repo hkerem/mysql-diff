@@ -44,6 +44,8 @@ object ScriptSerializer {
         case CommentElement(c) => c
     }
     
+    def serialize(stmt: ScriptElement): String = serialize(stmt, Options.singleline)
+    
     def serializeStatement(stmt: ScriptStatement, options: Options): String = stmt match {
         case CreateTableStatement(t) => serializeCreateTable(t, options)
         case DropTableStatement(n) => serializeDropTable(n)

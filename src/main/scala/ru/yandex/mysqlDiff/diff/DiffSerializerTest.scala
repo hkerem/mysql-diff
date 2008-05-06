@@ -24,6 +24,7 @@ object DiffSerializerTest extends TestSuite("Simple Diff Script Bulder test") {
                 .flatMap(e => e match {
                     case e: CommentElement => None
                     case Unparsed(u) => Some(u)
+                    case s: ScriptStatement => Some(ScriptSerializer.serialize(s))
                 })
         /*
 --Modify Table "table_test"
@@ -48,6 +49,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
                 .flatMap(e => e match {
                     case e: CommentElement => None
                     case Unparsed(u) => Some(u)
+                    case s: ScriptStatement => Some(ScriptSerializer.serialize(s))
                 })
 
         //ALTER TABLE table_test MODIFY COLUMN id varchar(100);
@@ -70,6 +72,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
                 .flatMap(e => e match {
                     case e: CommentElement => None
                     case Unparsed(u) => Some(u)
+                    case s: ScriptStatement => Some(ScriptSerializer.serialize(s))
                 })
 
         assert(resultScript.size == 1)
@@ -94,6 +97,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
                 .flatMap(e => e match {
                     case e: CommentElement => None
                     case Unparsed(u) => Some(u)
+                    case s: ScriptStatement => Some(ScriptSerializer.serialize(s))
                 })
 
         assert(resultScript.size == 2)

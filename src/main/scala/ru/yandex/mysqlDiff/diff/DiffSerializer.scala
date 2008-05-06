@@ -17,10 +17,23 @@ object TableScriptBuilder {
         AlterTableStatement(table.name, List(op))
     }
     
+    // XXX: unused
+    def alterPrimaryKeyScript(pd: AbstractPrimaryKeyDiff, table: TableModel) = {
+        val ops = pd match {
+            case DropPrimaryKey =>
+                List(AlterTableStatement.DropPrimaryKey)
+            case CreatePrimaryKey(pk) =>
+                List(AlterTableStatement.CreatePrimaryKey(pk))
+            case AlterPrimaryKey(oldPk, newPk) =>
+                List(AlterTableStatement.DropPrimaryKey, AlterTableStatement.CreatePrimaryKey(newPk))
+        }
+        AlterTableStatement(table.name, ops)
+    }
+    
     def alterScript(diff: AlterTable, model: TableModel): Seq[ScriptElement] = {
         val primaryKeyDiff = diff.indexDiff.filter(idx => idx.isInstanceOf[AbstractPrimaryKeyDiff])
 
-        val primaryKeyDrop = primaryKeyDiff.filter(idx => idx.isInstanceOf[DropPrimaryKey]).map(idx => idx.asInstanceOf[DropPrimaryKey])
+        val primaryKeyDrop = primaryKeyDiff.filter(idx => idx.isInstanceOf[DropPrimaryKey.type]).map(idx => idx.asInstanceOf[DropPrimaryKey.type])
         val primaryKeyCreate = primaryKeyDiff.filter(idx => idx.isInstanceOf[CreatePrimaryKey]).map(idx => idx.asInstanceOf[CreatePrimaryKey])
         val primaryKeyAlter = primaryKeyDiff.filter(idx => idx.isInstanceOf[AlterPrimaryKey]).map(idx => idx.asInstanceOf[AlterPrimaryKey])
 

@@ -45,7 +45,7 @@ case class AlterIndex(name: String, index: IndexModel) extends AbstractIndexDiff
 abstract class AbstractPrimaryKeyDiff extends AbstractIndexDiff
 
 case class CreatePrimaryKey(pk: PrimaryKey) extends AbstractPrimaryKeyDiff
-case class DropPrimaryKey extends AbstractPrimaryKeyDiff
+case object DropPrimaryKey extends AbstractPrimaryKeyDiff
 case class AlterPrimaryKey(oldPk: PrimaryKey, newPk: PrimaryKey) extends AbstractPrimaryKeyDiff
 
 
