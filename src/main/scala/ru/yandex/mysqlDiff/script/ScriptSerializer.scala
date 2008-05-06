@@ -6,28 +6,35 @@ import model._
 
 object ScriptSerializer {
     /** Serializer options */
-    case class Options(val indent: String, nl: String, afterComma: String)
+    abstract class Options {
+        def stmtJoin: String
+        def scriptTail: String = stmtJoin
+        def indent = ""
+        def afterComma = ""
+    }
     
     object Options {
-        def multiline = Options("    ", "\n", "")
-        def singleline = Options("", "", " ")
+        object multiline extends Options {
+            override def stmtJoin = "\n"
+            override def indent = "    "
+        }
+        
+        object singleline extends Options {
+            override def stmtJoin = " "
+            override def scriptTail = ""
+            override def afterComma = " "
+        }
     }
     
     def serialize(stmts: Seq[ScriptElement], options: Options): String = {
-        val sb = new StringBuilder
-        for (stmt <- stmts) {
-            sb append serialize(stmt, options)
-            
-            stmt match {
-                case c: CommentElement =>
-                case _ =>
-                    sb append ";"
-                    sb append options.afterComma
+        def serializeInList(stmt: ScriptElement) = {
+            val tail = stmt match {
+                case _: ScriptStatement => ";"
+                case _ => ""
             }
-            
-            sb append options.nl
+            serialize(stmt, options) + tail
         }
-        sb.toString
+        stmts.map(serializeInList _).mkString(options.stmtJoin) + options.scriptTail
     }
 
     def serialize(stmt: ScriptElement, options: Options): String = stmt match {
@@ -55,7 +62,7 @@ object ScriptSerializer {
             ).reverse
         val lines = (List(l.first) ++ l.drop(1).map(_ + "," + options.afterComma)).reverse.map(options.indent + _)
         
-        (List("CREATE TABLE " + table.name + "(") ++ lines ++ List(")")).mkString(options.nl)
+        (List("CREATE TABLE " + table.name + "(") ++ lines ++ List(")")).mkString(options.stmtJoin)
     }
     
     def serializeDropTable(tableName: String) =
@@ -115,26 +122,18 @@ import scalax.testing._
 object ScriptSerializerTest extends TestSuite("ScriptSerializerTest") {
     import ScriptSerializer._
     
-    "serializeCreateTable" is {
-        val idColumn = ColumnModel("id", DataType.int())
-        val nameColumn = ColumnModel("name", DataType.varchar(100))
-        val t = TableModel("users", List(idColumn, nameColumn))
-        
-        val script = serializeCreateTable(t, Options("  ", "\n", "--"))
-        assert(script.matches("CREATE TABLE users\\(\n  id INT.*,--\n  name VARCHAR\\(100\\).*\n\\)"))
-    }
-    
-    "serialize semi" is {
+    "serialize semi singleline" is {
         val dt = DropTableStatement("users")
         val c = CommentElement("/* h */")
         
         val script = List(dt, c, dt, dt, c, c, dt)
         
-        val options = Options("", " ", "")
+        val options = Options.singleline
         
         val serialized = serialize(script, options)
         
-        assert(serialized == "DROP TABLE users; /* h */ DROP TABLE users; DROP TABLE users; /* h */ /* h */ DROP TABLE users")
+        //println("'" + serialized + "'")
+        assert(serialized == "DROP TABLE users; /* h */ DROP TABLE users; DROP TABLE users; /* h */ /* h */ DROP TABLE users;")
     }
 }
 
