@@ -1,17 +1,5 @@
 package ru.yandex.mysqlDiff.model
 
-abstract class AbstractDiffModel
-
-case class SourceIsEmpty extends AbstractDiffModel
-case class DestinationIsEmpty extends AbstractDiffModel
-
-
-abstract class AbstractDiffContainer(val sourceName: String,
-        val destinationName: String,
-        val containerDiff: Seq[AbstractDiffModel],
-        val contentDiff: Seq[AbstractDiffModel]
-        ) extends AbstractDiffModel
-
 abstract class ColumnDiff
 
 case class CreateColumn(column: ColumnModel) extends ColumnDiff
@@ -26,8 +14,21 @@ case class ColumnPropertyDiff(propertyType: PropertyType, oldValue1: Any, newVal
 }
 
 
+abstract class IndexDiff
+
+case class CreateIndex(index: IndexModel) extends IndexDiff
+case class DropIndex(name: String) extends IndexDiff
+case class AlterIndex(name: String, index: IndexModel) extends IndexDiff
+
+abstract class PrimaryKeyDiff extends IndexDiff
+
+case class CreatePrimaryKey(pk: PrimaryKey) extends PrimaryKeyDiff
+case object DropPrimaryKey extends PrimaryKeyDiff
+case class AlterPrimaryKey(oldPk: PrimaryKey, newPk: PrimaryKey) extends PrimaryKeyDiff
+
 
 abstract class TableDiff
+
 case class CreateTable(table: TableModel) extends TableDiff
 case class DropTable(name: String) extends TableDiff
 case class AlterTable(name: String, renameTo: Option[String],
@@ -35,18 +36,6 @@ case class AlterTable(name: String, renameTo: Option[String],
 {
     def newName = renameTo getOrElse name
 }
-
-abstract class IndexDiff
-
-case class CreateIndex(index: IndexModel) extends IndexDiff
-case class DropIndex(name: String) extends IndexDiff
-case class AlterIndex(name: String, index: IndexModel) extends IndexDiff
-
-abstract class AbstractPrimaryKeyDiff extends IndexDiff
-
-case class CreatePrimaryKey(pk: PrimaryKey) extends AbstractPrimaryKeyDiff
-case object DropPrimaryKey extends AbstractPrimaryKeyDiff
-case class AlterPrimaryKey(oldPk: PrimaryKey, newPk: PrimaryKey) extends AbstractPrimaryKeyDiff
 
 
 case class DatabaseDiff(tableDiff: Seq[TableDiff])

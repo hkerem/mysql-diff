@@ -18,7 +18,7 @@ object TableScriptBuilder {
     }
     
     // XXX: unused
-    def alterPrimaryKeyScript(pd: AbstractPrimaryKeyDiff, table: TableModel) = {
+    def alterPrimaryKeyScript(pd: PrimaryKeyDiff, table: TableModel) = {
         val ops = pd match {
             case DropPrimaryKey =>
                 List(AlterTableStatement.DropPrimaryKey)
@@ -31,13 +31,13 @@ object TableScriptBuilder {
     }
     
     def alterScript(diff: AlterTable, model: TableModel): Seq[ScriptElement] = {
-        val primaryKeyDiff = diff.indexDiff.filter(idx => idx.isInstanceOf[AbstractPrimaryKeyDiff])
+        val primaryKeyDiff = diff.indexDiff.filter(idx => idx.isInstanceOf[PrimaryKeyDiff])
 
         val primaryKeyDrop = primaryKeyDiff.filter(idx => idx.isInstanceOf[DropPrimaryKey.type]).map(idx => idx.asInstanceOf[DropPrimaryKey.type])
         val primaryKeyCreate = primaryKeyDiff.filter(idx => idx.isInstanceOf[CreatePrimaryKey]).map(idx => idx.asInstanceOf[CreatePrimaryKey])
         val primaryKeyAlter = primaryKeyDiff.filter(idx => idx.isInstanceOf[AlterPrimaryKey]).map(idx => idx.asInstanceOf[AlterPrimaryKey])
 
-        val indexKeyDiff = diff.indexDiff.filter(idx => !idx.isInstanceOf[AbstractPrimaryKeyDiff] && idx.isInstanceOf[IndexDiff])
+        val indexKeyDiff = diff.indexDiff.filter(idx => !idx.isInstanceOf[PrimaryKeyDiff] && idx.isInstanceOf[IndexDiff])
         val indexDrop: Seq[DropIndex] = indexKeyDiff.filter(idx => idx.isInstanceOf[DropIndex]).map(idx => idx.asInstanceOf[DropIndex])
         val indexCreate: Seq[CreateIndex] = indexKeyDiff.filter(idx => idx.isInstanceOf[CreateIndex]).map(idx => idx.asInstanceOf[CreateIndex])
         val indexAlter: Seq[AlterIndex] =  indexKeyDiff.filter(idx => idx.isInstanceOf[AlterIndex]).map(idx => idx.asInstanceOf[AlterIndex])
