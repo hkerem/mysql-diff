@@ -16,15 +16,17 @@ case class DataType(val name: String, val length: Option[Int]) {
     var collate: Option[String] = None
 
     override def equals(other: Any): Boolean = {
-        if (other == null || !other.isInstanceOf[DataType]) false else {
+        if (other == null || !other.isInstanceOf[DataType])
+            false
+        else {
             val data = other.asInstanceOf[DataType] 
-            if (data == null) false else
-            if (name != data.name) false else
-            if (isUnsigned != data.isUnsigned) false else
-            if (characterSet != data.characterSet) false else
-            if (collate != data.collate) false else
-            if (length != data.length) false else
-            true
+            if (data == null) false
+            else if (name != data.name) false
+            else if (isUnsigned != data.isUnsigned) false
+            else if (characterSet != data.characterSet) false
+            else if (collate != data.collate) false
+            else if (length != data.length) false
+            else true
         }
     }
 }
@@ -42,14 +44,16 @@ case class ColumnModel(override val name: String, val dataType: DataType)
     var defaultValue: Option[String] = None
 
     override def equals(otherO: Any): Boolean = {
-        if (otherO == null || !otherO.isInstanceOf[ColumnModel]) false else {
+        if (otherO == null || !otherO.isInstanceOf[ColumnModel])
+            false
+        else {
             val other = otherO.asInstanceOf[ColumnModel]
-            if (!(name == other.name)) false else
-            if (!(comment == other.comment)) false else
-            if (isNotNull != other.isNotNull) false else
-            if (isAutoIncrement != other.isAutoIncrement) false else
-            if (!(defaultValue != other.defaultValue)) false else
-            true
+            if (!(name == other.name)) false
+            else if (!(comment == other.comment)) false
+            else if (isNotNull != other.isNotNull) false
+            else if (isAutoIncrement != other.isAutoIncrement) false
+            else if (!(defaultValue != other.defaultValue)) false
+            else true
         }
     }
 }
@@ -68,8 +72,10 @@ case class IndexModel(override val name: String, override val columns: Seq[Strin
     override def equals(otherO: Any): Boolean = {
         if (otherO == null || !otherO.isInstanceOf[IndexModel]) false else {
             val other = otherO.asInstanceOf[IndexModel]    
-            if (name != other.name) false else
-            if (isUnique != other.isUnique) false else {
+            if (name != other.name) false
+            else if (isUnique != other.isUnique)
+                false 
+            else {
                 if (columns != null && other.columns != null) {
                     val s1 = Set[String](columns: _*)
                     val s2 = Set[String](other.columns: _*)
