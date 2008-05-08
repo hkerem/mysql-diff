@@ -84,7 +84,10 @@ object JdbcModelExtractor {
                 if (p != pkName)
                     throw new IllegalStateException("got different names for pk: " + p + ", " + pkName)
             
-            Some(new PrimaryKey(if (pkName ne null) Some(pkName) else None, r.map(_.columnName)))
+            // MySQL names primary key PRIMARY
+            val pkNameO = if (pkName != null && pkName != "PRIMARY") Some(pkName) else None
+            
+            Some(new PrimaryKey(pkNameO, r.map(_.columnName)))
         }
     }
     
