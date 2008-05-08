@@ -4,6 +4,9 @@
     <!-- local properties, scala.home for example -->
     <property file="build.properties"/>
     <property file="${user.home}/build.local.properties"/>
+    
+    <!-- better then mothing -->
+    <property name="scala.home" value="/usr/local/scala"/>
 
     <property name="scala-library.jar" value="${scala.home}/lib/scala-library.jar"/>
     
