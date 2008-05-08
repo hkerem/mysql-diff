@@ -61,7 +61,11 @@ case class TableModel(override val name: String, val columns: Seq[ColumnModel])
     // XXX: make these case columns
     var primaryKey: Option[PrimaryKey] = None
     var constraints: List[ConstraintModel] = null
-    var keys =  List[IndexModel]()
+    var keys: Seq[IndexModel] = Nil
+    
+    def indexes = keys
+    
+    def indexWithColumns(columns: String*) = indexes.find(_.columns.toList == columns.toList).get
 }
 
 abstract class DatabaseDeclaration(val name: String) 

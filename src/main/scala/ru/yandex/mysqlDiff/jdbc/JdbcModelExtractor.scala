@@ -6,6 +6,8 @@ import model._
 
 import scalax.control.ManagedResource
 
+import scala.util.Sorting._
+
 /*
  * TBD:
  * Extract table engine, default charset
@@ -42,9 +44,11 @@ object JdbcModelExtractor {
         }
         
         val pk = extractPrimaryKey(tableName, conn)
+        val indexes = extractIndexes(tableName, conn)
         
         val t = new TableModel(tableName, columnsList)
         t.primaryKey = pk
+        t.keys = indexes
         t
     }
     
@@ -73,6 +77,33 @@ object JdbcModelExtractor {
                     throw new IllegalStateException("got different names for pk: " + p + ", " + pkName)
             
             Some(new PrimaryKey(if (pkName ne null) Some(pkName) else None, r.map(_._2)))
+        }
+    }
+    
+    // regular indexes
+    def extractIndexes(tableName: String, conn: Connection): Seq[IndexModel] = {
+        val rs = conn.getMetaData.getIndexInfo(null, null, tableName, false, false)
+        
+        case class R(indexName: String, nonUnique: Boolean, ordinalPosition: Int,
+                columnName: String, ascOrDesc: String)
+        {
+            def unique = !nonUnique
+        }
+        
+        val r = read(rs) { rs =>
+            R(rs.getString("INDEX_NAME"), rs.getBoolean("NON_UNIQUE"), rs.getInt("ORDINAL_POSITION"),
+                    rs.getString("COLUMN_NAME"), rs.getString("ASC_OR_DESC"))
+        }
+        
+        val indexNames = Set(r.map(_.indexName): _*).toSeq
+        
+        indexNames.map { indexName =>
+            val rowsWithName = r.filter(_.indexName == indexName)
+            val rows = stableSort(rowsWithName, (r: R) => r.ordinalPosition)
+            
+            val unique = rows.first.unique
+            
+            IndexModel(Some(indexName), rows.map(_.columnName), unique)
         }
     }
 
@@ -183,6 +214,25 @@ object JdbcModelExtractorTests extends TestSuite("JdbcModelExtractor") {
         assert(100 == table.columns(1).dataType.length.get)
         
         assert(List("id") == table.primaryKey.get.columns)
+    }
+    
+    "Indexes" is {
+        dropTable("users")
+        execute("CREATE TABLE users (first_name VARCHAR(20), last_name VARCHAR(20), age INT, INDEX age_k(age), UNIQUE KEY(first_name, last_name), KEY(age, last_name))")
+        
+        val table = for (c <- conn) yield JdbcModelExtractor.extractTable("users", c)
+        
+        //println(table.keys)
+        
+        val ageK = table.keys.find(_.name.get == "age_k").get
+        assert(List("age") == ageK.columns.toList)
+        assert(false == ageK.isUnique)
+        
+        val firstLastK = table.indexWithColumns("first_name", "last_name")
+        assert(true == firstLastK.isUnique)
+        
+        val ageLastK = table.indexWithColumns("age", "last_name")
+        assert(false == ageLastK.isUnique)
     }
 }
 
