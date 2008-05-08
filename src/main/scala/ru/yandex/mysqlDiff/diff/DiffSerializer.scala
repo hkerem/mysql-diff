@@ -52,10 +52,12 @@ object TableScriptBuilder {
     
     def alterScript(diff: ChangeTableDiff, model: TableModel): Seq[ScriptElement] = {
 
-        List(CommentElement("-- Modify Table \"" + model.name + "\"")) ++
+        List[ScriptElement]() ++
+        //List(CommentElement("-- Modify Table \"" + model.name + "\"")) ++
         diff.columnDiff.map(alterColumnScript(_, model)) ++
         diff.indexDiff.map(alterIndexScript(_, model)) ++
-        List(CommentElement("-- End modify Table \"" + model.name + "\""))
+        //List(CommentElement("-- End modify Table \"" + model.name + "\""))
+        List[ScriptElement]()
         
         // XXX: sort: drop, then change, then create
     }
