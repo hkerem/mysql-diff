@@ -62,7 +62,7 @@ object ScriptSerializer {
             ).reverse
         val lines = (List(l.first) ++ l.drop(1).map(_ + "," + options.afterComma)).reverse.map(options.indent + _)
         
-        (List("CREATE TABLE " + table.name + "(") ++ lines ++ List(")")).mkString(options.stmtJoin)
+        (List("CREATE TABLE " + table.name + " (") ++ lines ++ List(")")).mkString(options.stmtJoin)
     }
     
     def serializeDropTable(tableName: String) =
