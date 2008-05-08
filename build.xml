@@ -25,14 +25,14 @@
         </taskdef>
     </target>
 
-    <target name="build" depends="init">
+    <target name="compile" depends="init">
         <mkdir dir="target/classes"/>
         <scalac srcdir="src/main/scala" destdir="target/classes"
                 deprecation="on" unchecked="on" encoding="UTF-8"
                 classpathref="build.classpath" force="changed"/>
     </target>
 
-    <target name="run-tests" depends="clean, build">
+    <target name="run-tests" depends="clean, compile">
         <java classname="ru.yandex.mysqlDiff.MysqlDiffTest" failonerror="true">
             <sysproperty key="java.awt.headless" value="true"/>
             <classpath refid="build.classpath"/>
@@ -44,10 +44,16 @@
     </target>
     
     <target name="do-jar">
+        <jar jarfile="target/mysql-diff${jar.suffix}.jar" index="true">
+            <fileset dir="target/classes"/>
+        </jar>
+    </target>
+    
+    <target name="do-jar-jar" depends="do-jar">
         <taskdef name="jarjar" classname="com.tonicsystems.jarjar.JarJarTask"
                 classpath="lib/jarjar-1.0rc7.jar"/>
-
-        <jarjar jarfile="target/mysql-diff${jar.suffix}.jar" index="true">
+        
+        <jarjar jarfile="target/mysql-diff-standalone${jar.suffix}.jar" index="true">
             <fileset dir="target/classes"/>
             <zipgroupfileset dir="./lib">
                 <include name="mysql*.jar"/>
@@ -61,9 +67,9 @@
         </jarjar>
     </target>
 
-    <target name="jar" depends="build, do-jar"/>
+    <target name="jar" depends="compile, do-jar"/>
 
-    <target name="do-dist" depends="do-jar">
+    <target name="do-dist" depends="do-jar, do-jar-jar">
         <mkdir dir="target/dist/mysql-diff"/>
         <mkdir dir="target/dist/mysql-diff/bin"/>
         <mkdir dir="target/dist/mysql-diff/lib"/>
@@ -83,6 +89,9 @@
     </target>
 
     <target name="dist" depends="clean,jar,do-dist"/>
+    
+    <!-- for depot-scripts -->
+    <target name="build" depends="dist"/>
 
     <target name="clean">
         <delete dir="target"/>
