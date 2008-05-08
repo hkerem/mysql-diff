@@ -79,6 +79,9 @@ object ScriptSerializer {
             case ChangeColumn(oldName, column) => "CHANGE COLUMN " + oldName + " " + serializeColumn(column)
             case ModifyColumn(column) => "MODIFY COLUMN " + serializeColumn(column)
             case DropColumn(name) => "DROP COLUMN " + name
+            case DropPrimaryKey => "DROP PRIMARY KEY"
+            // XXX: key name
+            case AddPrimaryKey(PrimaryKey(_, columns)) => "ADD PRIMARY KEY (" + columns.mkString(", ") + ")"
         }
     }
    
