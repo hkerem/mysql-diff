@@ -84,7 +84,7 @@ object ScriptSerializer {
             case AddPrimaryKey(pk) => "ADD " + serializePrimaryKey(pk)
             
             case DropIndex(name) => "DROP INDEX " + name
-            case AddIndex(index) => "ADD INDEX " + serializeIndex(index)
+            case AddIndex(index) => "ADD " + serializeIndex(index)
         }
     }
    
@@ -127,6 +127,7 @@ object ScriptSerializer {
     def serializeIndex(index: IndexModel) = {
         val words = new ArrayBuffer[String]
         if (index.isUnique) words += "UNIQUE"
+        words += "INDEX"
         words ++= index.name
         words += ("(" + index.columns.mkString(", ") + ")")
         words.mkString(" ")
