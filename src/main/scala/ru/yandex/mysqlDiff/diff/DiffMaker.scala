@@ -50,12 +50,13 @@ object DiffMaker {
         (fromO, toO) match {
             case (Some(from), None) => Some(DropPrimaryKeyDiff(from))
             case (None, Some(to)) => Some(CreatePrimaryKeyDiff(to))
-            case (Some(from), Some(to)) => Some(new ChangePrimaryKeyDiff(from, to))
-            case (None, None) => None
+            case (Some(from), Some(to)) if from.columns.toList != to.columns.toList =>
+                Some(new ChangePrimaryKeyDiff(from, to))
+            case _ => None
         }
     
     def compareIndexes(from: IndexModel, to: IndexModel): Option[IndexDiff] = {
-        if (from != to) Some(new ChangeIndexDiff(from, to))
+        if (from.columns.toList != to.columns.toList || from.isUnique != to.isUnique) Some(new ChangeIndexDiff(from, to))
         else None
     }
     
