@@ -44,7 +44,7 @@
     </target>
     
     <target name="do-jar">
-        <jar jarfile="target/mysql-diff${jar.suffix}.jar" index="true">
+        <jar jarfile="target/yandex-mysql-diff${jar.suffix}.jar" index="true">
             <fileset dir="target/classes"/>
         </jar>
     </target>
@@ -53,7 +53,7 @@
         <taskdef name="jarjar" classname="com.tonicsystems.jarjar.JarJarTask"
                 classpath="lib/jarjar-1.0rc7.jar"/>
         
-        <jarjar jarfile="target/mysql-diff-standalone${jar.suffix}.jar" index="true">
+        <jarjar jarfile="target/yandex-mysql-diff-standalone${jar.suffix}.jar" index="true">
             <fileset dir="target/classes"/>
             <zipgroupfileset dir="./lib">
                 <include name="mysql*.jar"/>
@@ -73,7 +73,7 @@
         <mkdir dir="target/dist/mysql-diff"/>
         <mkdir dir="target/dist/mysql-diff/bin"/>
         <mkdir dir="target/dist/mysql-diff/lib"/>
-        <copy file="target/mysql-diff${jar.suffix}.jar" todir="target/dist/mysql-diff/lib"/>
+        <copy file="target/yandex-mysql-diff${jar.suffix}.jar" todir="target/dist/mysql-diff/lib"/>
         <copy file="src/main/bin/mysql-diff" todir="target/dist/mysql-diff/bin"/>
 
         <chmod file="target/dist/mysql-diff/bin/mysql-diff" perm="ugo+rx"/>
