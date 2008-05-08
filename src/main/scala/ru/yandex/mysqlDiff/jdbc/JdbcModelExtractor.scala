@@ -118,10 +118,9 @@ object JdbcModelExtractor {
         while (tables.next) {
             val tableName = tables.getString("TABLE_NAME")
             val tableModel = extractTable(tableName, conn)
-            val indexes = parseIndexes(tableModel, data)
-            val unique = parseUnique(tableModel, data)
-            returnTables = (returnTables ++ List(tableModel)).toList
+            returnTables += tableModel
         }
+        
         returnTables
     }
     
