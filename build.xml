@@ -1,26 +1,20 @@
 <?xml version="1.0"?>
+
 <project name="mysqlDiff" default="dist">
     <!-- local properties, scala.home for example -->
     <property file="build.properties"/>
     <property file="${user.home}/build.local.properties"/>
 
-    <property name="version" value="0.0"/>
-    <property name="src.dir" value="${basedir}/src/main/scala"/>
-    <!--property name="src.tests.dir" value="${basedir}/src/test/scala"/-->
-    <property name="build.dir" value="${basedir}/target/build/classes"/>
-    <!--property name="build.tests.dir" value="${basedir}/target/build/tests"/-->
-    <property name="dist.dir" value="${basedir}/target"/>
-    <property name="tmp.dir" value="${basedir}/target/tmp"/>
-    <property name="lib.dir" value="${basedir}/lib"/>
-    
     <property name="scala-library.jar" value="${scala.home}/lib/scala-library.jar"/>
+    
+    <property name="jar.suffix" value=""/>
 
     <target name="init">
         <echo>scala.home=${scala.home}</echo>
         
         <path id="build.classpath">
             <pathelement location="${scala-library.jar}"/>
-            <fileset dir="${lib.dir}" includes="**/*.jar"/>
+            <fileset dir="lib" includes="**/*.jar"/>
         </path>
 
         <taskdef resource="scala/tools/ant/antlib.xml">
@@ -32,8 +26,8 @@
     </target>
 
     <target name="build" depends="init">
-        <mkdir dir="${build.dir}"/>
-        <scalac srcdir="${src.dir}" destdir="${build.dir}"
+        <mkdir dir="target/classes"/>
+        <scalac srcdir="src/main/scala" destdir="target/classes"
                 deprecation="on" unchecked="on" encoding="UTF-8"
                 classpathref="build.classpath" force="changed"/>
     </target>
@@ -43,7 +37,7 @@
             <sysproperty key="java.awt.headless" value="true"/>
             <classpath refid="build.classpath"/>
             <classpath>
-                <pathelement location="${build.dir}"/>
+                <pathelement location="target/classes"/>
                 <pathelement location="${scala-library.jar}"/>
             </classpath>
         </java>
@@ -53,37 +47,36 @@
         <taskdef name="jarjar" classname="com.tonicsystems.jarjar.JarJarTask"
                 classpath="lib/jarjar-1.0rc7.jar"/>
 
-        <mkdir dir="${dist.dir}"/>
-        <jarjar jarfile="${dist.dir}/${ant.project.name}-${version}.jar" index="true">
-            <fileset dir="${build.dir}"/>
+        <jarjar jarfile="target/mysql-diff${jar.suffix}.jar" index="true">
+            <fileset dir="target/classes"/>
             <zipgroupfileset dir="./lib">
                 <include name="mysql*.jar"/>
                 <include name="scalax*.jar"/>
             </zipgroupfileset>
             <zipfileset src="${scala-library.jar}"/>
-            <rule pattern="scalax.**" result="ru.yandex.mysqlDiff.dependencies.@0"/>
-            <rule pattern="com.**" result="ru.yandex.mysqlDiff.dependencies.@0"/>
-            <rule pattern="org.**" result="ru.yandex.mysqlDiff.dependencies.@0"/>
-            <rule pattern="scala.**" result="ru.yandex.mysqlDiff.dependencies.@0"/>
+            <rule pattern="scalax.**" result="ru.yandex.mysqlDiff.dep.@0"/>
+            <rule pattern="com.**" result="ru.yandex.mysqlDiff.dep.@0"/>
+            <rule pattern="org.**" result="ru.yandex.mysqlDiff.dep.@0"/>
+            <rule pattern="scala.**" result="ru.yandex.mysqlDiff.dep.@0"/>
         </jarjar>
     </target>
 
     <target name="jar" depends="build, do-jar"/>
 
     <target name="do-dist" depends="do-jar">
-        <mkdir dir="${dist.dir}/dist/mysql-diff"/>
-        <mkdir dir="${dist.dir}/dist/mysql-diff/bin"/>
-        <mkdir dir="${dist.dir}/dist/mysql-diff/lib"/>
-        <copy file="${dist.dir}/${ant.project.name}-${version}.jar" todir="${dist.dir}/dist/mysql-diff/lib"/>
-        <copy file="${basedir}/src/main/bin/mysql-diff" todir="${dist.dir}/dist/mysql-diff/bin"/>
+        <mkdir dir="target/dist/mysql-diff"/>
+        <mkdir dir="target/dist/mysql-diff/bin"/>
+        <mkdir dir="target/dist/mysql-diff/lib"/>
+        <copy file="target/mysql-diff${jar.suffix}.jar" todir="target/dist/mysql-diff/lib"/>
+        <copy file="src/main/bin/mysql-diff" todir="target/dist/mysql-diff/bin"/>
 
-        <chmod file="${dist.dir}/dist/mysql-diff/bin/mysql-diff" perm="ugo+rx"/>
+        <chmod file="target/dist/mysql-diff/bin/mysql-diff" perm="ugo+rx"/>
 
-        <tar destfile="${dist.dir}/mysql-diff.tar.gz" compression="gzip">
-            <tarfileset dir="${dist.dir}/dist/mysql-diff/bin/../.." mode="555">
+        <tar destfile="target/mysql-diff.tar.gz" compression="gzip">
+            <tarfileset dir="target/dist/mysql-diff/bin/../.." mode="555">
                 <include name="mysql-diff/bin/*"/>
             </tarfileset>
-            <tarfileset dir="${dist.dir}/dist/mysql-diff/lib/../.." mode="444">
+            <tarfileset dir="target/dist/mysql-diff/lib/../.." mode="444">
                 <include name="mysql-diff/lib/*"/>
             </tarfileset>
         </tar>
@@ -92,10 +85,7 @@
     <target name="dist" depends="clean,jar,do-dist"/>
 
     <target name="clean">
-        <delete dir="${build.dir}"/>
-        <delete dir="${tmp.dir}"/>
-        <delete dir="${dist.dir}/dist"/>
-        <delete dir="${dist.dir}/" includes="*"/>
+        <delete dir="target"/>
     </target>
 </project>
 
