@@ -14,6 +14,7 @@ import scala.util.Sorting._
  * Extract keys
  */
 object JdbcModelExtractor {
+    
     def extractTable(tableName: String, conn: Connection): TableModel = {
         val data = conn.getMetaData
         val columns = data.getColumns(null, null, tableName, "%")
@@ -105,40 +106,6 @@ object JdbcModelExtractor {
             
             IndexModel(Some(indexName), rows.map(_.columnName), unique)
         }
-    }
-
-    def parseIndexes(table: TableModel, data: DatabaseMetaData, checkPrimaryKey: Boolean): Seq[IndexModel] = {
-        var indexesMap: Map[String, List[String]] = Map()
-        val indexes = data.getIndexInfo(null, null, table.name, false, true)
-        while (indexes.next) {
-            val colName = indexes.getString("COLUMN_NAME")
-            val indexName = indexes.getString("INDEX_NAME")
-            if (!checkPrimaryKey || !table.primaryKey.isDefined ||
-                table.primaryKey.get.name == null || table.primaryKey.get.name != indexName)
-
-            if (indexesMap.contains(indexName))
-                indexesMap(indexName) = (indexesMap(indexName) ++ List(colName)).toList
-            else
-                indexesMap(indexName) = List(colName)
-        }
-
-        val resultList = indexesMap.map(x => new IndexModel(Some(x._1), x._2, false))
-        if (table.keys == null)
-            table.keys = resultList.toList
-        else
-            table.keys = (table.keys ++ resultList.toList).toList
-        resultList.toList
-    }
-
-
-
-    def parseIndexes(table: TableModel, data: DatabaseMetaData): Seq[IndexModel] = {
-        parseIndexes(table, data, false)
-    }
-
-
-    def parseUnique(table: TableModel, data: DatabaseMetaData): Seq[IndexModel] = {
-        parseIndexes(table, data, true)
     }
 
     def extractTables(conn: Connection): Seq[TableModel] = {
