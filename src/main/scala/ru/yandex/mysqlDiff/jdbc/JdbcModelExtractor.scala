@@ -45,7 +45,10 @@ object JdbcModelExtractor {
         }
         
         val pk = extractPrimaryKey(tableName, conn)
+        
+        // MySQL adds PK to indexes, so exclude
         val indexes = extractIndexes(tableName, conn)
+                .filter(pk.isEmpty || _.columns.toList != pk.get.columns.toList)
         
         val t = new TableModel(tableName, columnsList)
         t.primaryKey = pk
@@ -64,20 +67,24 @@ object JdbcModelExtractor {
     def extractPrimaryKey(tableName: String, conn: Connection): Option[PrimaryKey] = {
         val rs = conn.getMetaData.getPrimaryKeys(null, null, tableName)
         
-        val r = read(rs) { rs =>
-            (rs.getString("PK_NAME"), rs.getString("COLUMN_NAME"))
+        case class R(pkName: String, columnName: String, keySeq: int)
+        
+        val r0 = read(rs) { rs =>
+            R(rs.getString("PK_NAME"), rs.getString("COLUMN_NAME"), rs.getInt("KEY_SEQ"))
         }
+        
+        val r = stableSort(r0, (r: R) => r.keySeq)
         
         if (r.isEmpty) None
         else {
-            val pkName = r.first._1
+            val pkName = r.first.pkName
             
             // check all rows have the same name
-            for ((p, _) <- r)
+            for (R(p, _, _) <- r)
                 if (p != pkName)
                     throw new IllegalStateException("got different names for pk: " + p + ", " + pkName)
             
-            Some(new PrimaryKey(if (pkName ne null) Some(pkName) else None, r.map(_._2)))
+            Some(new PrimaryKey(if (pkName ne null) Some(pkName) else None, r.map(_.columnName)))
         }
     }
     
@@ -179,7 +186,7 @@ object JdbcModelExtractorTests extends TestSuite("JdbcModelExtractor") {
         assert("VARCHAR" == table.columns(1).dataType.name)
         assert(100 == table.columns(1).dataType.length.get)
         
-        assert(List("id") == table.primaryKey.get.columns)
+        assert(List("id") == table.primaryKey.get.columns.toList)
     }
     
     "Indexes" is {
@@ -199,6 +206,15 @@ object JdbcModelExtractorTests extends TestSuite("JdbcModelExtractor") {
         
         val ageLastK = table.indexWithColumns("age", "last_name")
         assert(false == ageLastK.isUnique)
+    }
+    
+    "PK is not in indexes list" is {
+        dropTable("files")
+        execute("CREATE TABLE files (id INT, PRIMARY KEY(id))")
+        
+        val table = for (c <- conn) yield JdbcModelExtractor.extractTable("files", c)
+        assert(table.keys.length == 0)
+        assert(List("id") == table.primaryKey.get.columns.toList)
     }
 }
 

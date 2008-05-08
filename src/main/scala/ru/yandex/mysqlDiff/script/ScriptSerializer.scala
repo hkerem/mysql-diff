@@ -1,8 +1,8 @@
 package ru.yandex.mysqlDiff.script
 
-import scala.collection.mutable.ArrayBuffer
-
 import model._
+
+import scala.collection.mutable.ArrayBuffer
 
 object ScriptSerializer {
     /** Serializer options */
@@ -79,9 +79,12 @@ object ScriptSerializer {
             case ChangeColumn(oldName, column) => "CHANGE COLUMN " + oldName + " " + serializeColumn(column)
             case ModifyColumn(column) => "MODIFY COLUMN " + serializeColumn(column)
             case DropColumn(name) => "DROP COLUMN " + name
+            
             case DropPrimaryKey => "DROP PRIMARY KEY"
-            // XXX: key name
-            case AddPrimaryKey(PrimaryKey(_, columns)) => "ADD PRIMARY KEY (" + columns.mkString(", ") + ")"
+            case AddPrimaryKey(pk) => "ADD " + serializePrimaryKey(pk)
+            
+            case DropIndex(name) => "DROP INDEX " + name
+            case AddIndex(index) => "ADD INDEX " + serializeIndex(index)
         }
     }
    
@@ -113,11 +116,22 @@ object ScriptSerializer {
                 (if (attributes.isEmpty) "" else " " + attributes.mkString(" "))
     }
     
-    def serializePrimaryKey(pk: PrimaryKey) =
-        "PRIMARY KEY (" + pk.columns.mkString(", ") + ")"
+    def serializePrimaryKey(pk: PrimaryKey) = {
+        val words = new ArrayBuffer[String]
+        words += "PRIMARY KEY"
+        words ++= pk.name
+        words += ("(" + pk.columns.mkString(", ") + ")")
+        words.mkString(" ")
+    }
     
-    def serializeIndex(index: IndexModel) =
-        (if (index.isUnique) "UNIQUE " else "") + "INDEX " + index.name + "(" + index.columns.mkString(", ") + ")"
+    def serializeIndex(index: IndexModel) = {
+        val words = new ArrayBuffer[String]
+        if (index.isUnique) words += "UNIQUE"
+        words ++= index.name
+        words += ("(" + index.columns.mkString(", ") + ")")
+        words.mkString(" ")
+    }
+        
 }
 
 import scalax.testing._
