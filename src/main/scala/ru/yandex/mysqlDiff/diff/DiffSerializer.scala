@@ -36,11 +36,11 @@ object TableScriptBuilder {
         import AlterTableStatement._
         val ops = id match {
             case DropIndexDiff(index) =>
-                List(DropIndex(index.name))
+                List(DropIndex(index.name.get))
             case CreateIndexDiff(index) =>
                 List(AddIndex(index))
             case ChangeIndexDiff(oldIndex, newIndex) =>
-                List(DropIndex(oldIndex.name), AddIndex(newIndex))
+                List(DropIndex(oldIndex.name.get), AddIndex(newIndex))
         }
         AlterTableStatement(table.name, ops)
     }

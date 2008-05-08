@@ -33,28 +33,32 @@ case class ColumnModel(val name: String, val dataType: DataType)
     }
 }
 
-case class ConstraintModel(val name: String, val columns: Seq[String]) 
+abstract class ConstraintModel(val name: Option[String], val columns: Seq[String]) 
 
-case class IndexModel(override val name: String, override val columns: Seq[String], isUnique: Boolean)
+case class IndexModel(override val name: Option[String], override val columns: Seq[String], isUnique: Boolean)
     extends ConstraintModel(name, columns)
 {
     require(columns.length > 0)
 }
 
-case class PrimaryKey(override val name: String, override val columns: Seq[String])
+case class PrimaryKey(override val name: Option[String], override val columns: Seq[String])
     extends IndexModel(name, columns, true)
 
-case class ForeighKey(override val name: String,
-    val localColumns: Seq[String],
-    val externalTableName: String,
-    val externalColumns: Seq[String])
-    extends ConstraintModel(name: String, localColumns)
+case class ForeighKey(override val name: Option[String],
+        val localColumns: Seq[String],
+        val externalTableName: String,
+        val externalColumns: Seq[String])
+    extends ConstraintModel(name, localColumns)
+{
+    require(localColumns.length == externalColumns.length)
+}
 
 case class TableModel(override val name: String, val columns: Seq[ColumnModel]) 
     extends DatabaseDeclaration(name: String)
 {
     def column(name: String) = columns.find(_.name == name).get
     
+    // XXX: make these case columns
     var primaryKey: Option[PrimaryKey] = None
     var constraints: List[ConstraintModel] = null
     var keys =  List[IndexModel]()

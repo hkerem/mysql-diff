@@ -221,11 +221,6 @@ object ScriptParser {
         } else null
     }
   
-  
-  
-  
-  
-  
     private def parsePrimaryKeyDefinition(x: String): PrimaryKey = {
         val bStart = x.indexOf('(') + 1
         val bEnd = x.indexOf(')')
@@ -233,7 +228,7 @@ object ScriptParser {
         var columns = Set[String]()
         for (colName <- data.split(",")) columns = columns + (colName.trim())
 
-        new PrimaryKey("", List(columns.toArray: _*))
+        new PrimaryKey(None, List(columns.toArray: _*))
     }
   
     private def parseKeyKeyDefinition(x: String): IndexModel = {
@@ -256,7 +251,7 @@ object ScriptParser {
 
             val typeName = matcher.group(5)
             val columnNames = matcher.group(6).split(",").map(x => x.trim)
-            new IndexModel(name, columnNames, true)
+            new IndexModel(if (name != "") Some(name) else None, columnNames, true)
         } else
             null
     }
@@ -273,7 +268,7 @@ object ScriptParser {
             
             val typeName = matcher.group(2)
             val columnNames = matcher.group(3).split(",").map(x => x.trim)
-            new IndexModel(name, columnNames, false)
+            new IndexModel(if (name != "") Some(name) else None, columnNames, false)
         } else
             null
     }
@@ -322,10 +317,10 @@ object ScriptParser {
                                         columnsDefinitions = (columnsDefinitions ++ List(columnScriptDef))
                                         columns = (columns ++ List(columnModel)).toList
                                         if (columnScriptDef.isUnique) {
-                                            indexes = (indexes ++ List(new IndexModel(columnModel.name, List(columnModel.name), true))).toList
+                                            indexes = (indexes ++ List(new IndexModel(None, List(columnModel.name), true))).toList
                                         }
                                         if (columnScriptDef.isIndex) {
-                                            indexes = (indexes ++ List(new IndexModel(columnModel.name, List(columnModel.name), false))).toList
+                                            indexes = (indexes ++ List(new IndexModel(None, List(columnModel.name), false))).toList
                                         }
                                     }
                                 }
@@ -358,7 +353,7 @@ object ScriptParser {
                             } else {
                                 val primaryKeyColumns = columnsDefinitions.filter(x => x.isPrimaryKey)
                                 if (primaryKeyColumns.size > 0) {
-                                    tableModel.primaryKey = Some(new PrimaryKey("", primaryKeyColumns.map(x => x.columnModel.name)))
+                                    tableModel.primaryKey = Some(new PrimaryKey(None, primaryKeyColumns.map(x => x.columnModel.name)))
                                 }
                             }
                             tableModel.keys = indexes

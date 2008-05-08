@@ -4,15 +4,16 @@ import java.sql._
 
 import model._
 
+import scalax.control.ManagedResource
+
 /*
  * TBD:
  * Extract table engine, default charset
  * Extract keys
  */
 object JdbcModelExtractor {
-
-    def parseTable(tables: ResultSet, data: DatabaseMetaData): TableModel = {
-        val tableName = tables.getString("TABLE_NAME")
+    def extractTable(tableName: String, conn: Connection): TableModel = {
+        val data = conn.getMetaData
         val columns = data.getColumns(null, null, tableName, "%")
         var columnsList = List[ColumnModel]()
 
@@ -39,32 +40,41 @@ object JdbcModelExtractor {
 
             columnsList = (columnsList ++ List(cm)).toList
         }
-        new TableModel(tableName, columnsList)
+        
+        val pk = extractPrimaryKey(tableName, conn)
+        
+        val t = new TableModel(tableName, columnsList)
+        t.primaryKey = pk
+        t
     }
-
-
-    def parsePrimaryKeys(table: TableModel, data: DatabaseMetaData): PrimaryKey = {
-
-        var pkColumns = List[String]()
-
-        var pkName = ""
-
-        val primaryKeys: ResultSet = data.getPrimaryKeys(null, null, table.name)
-        while (primaryKeys.next) {
-            val column = primaryKeys.getString("COLUMN_NAME")
-            val indexName = primaryKeys.getString("PK_NAME")
-            pkColumns = (pkColumns ++ List(column)).toList
-            pkName = indexName
+    
+    private def read[T](rs: ResultSet)(f: ResultSet => T) = {
+        var r = List[T]()
+        while (rs.next()) {
+            r += f(rs)
         }
-
-        if (pkColumns.size > 0) {
-            var pk = new PrimaryKey(pkName, pkColumns)
-            table.primaryKey = Some(pk)
-            pk
-        } else null
+        r
     }
-
-
+    
+    def extractPrimaryKey(tableName: String, conn: Connection): Option[PrimaryKey] = {
+        val rs = conn.getMetaData.getPrimaryKeys(null, null, tableName)
+        
+        val r = read(rs) { rs =>
+            (rs.getString("PK_NAME"), rs.getString("COLUMN_NAME"))
+        }
+        
+        if (r.isEmpty) None
+        else {
+            val pkName = r.first._1
+            
+            // check all rows have the same name
+            for ((p, _) <- r)
+                if (p != pkName)
+                    throw new IllegalStateException("got different names for pk: " + p + ", " + pkName)
+            
+            Some(new PrimaryKey(if (pkName ne null) Some(pkName) else None, r.map(_._2)))
+        }
+    }
 
     def parseIndexes(table: TableModel, data: DatabaseMetaData, checkPrimaryKey: Boolean): Seq[IndexModel] = {
         var indexesMap: Map[String, List[String]] = Map()
@@ -81,7 +91,7 @@ object JdbcModelExtractor {
                 indexesMap(indexName) = List(colName)
         }
 
-        val resultList = indexesMap.map(x => new IndexModel(x._1, x._2, false))
+        val resultList = indexesMap.map(x => new IndexModel(Some(x._1), x._2, false))
         if (table.keys == null)
             table.keys = resultList.toList
         else
@@ -100,11 +110,7 @@ object JdbcModelExtractor {
         parseIndexes(table, data, true)
     }
 
-
-    def search(url: String): Seq[TableModel] = {
-        Class.forName("com.mysql.jdbc.Driver").newInstance
-
-        val conn: Connection = DriverManager.getConnection(url)
+    def extractTables(conn: Connection): Seq[TableModel] = {
         val data: DatabaseMetaData = conn.getMetaData
 
         val tables: ResultSet = data.getTables(null, "%", "%", List("TABLE").toArray)
@@ -112,13 +118,21 @@ object JdbcModelExtractor {
         var returnTables = List[TableModel]()
 
         while (tables.next) {
-            val tableModel = parseTable(tables, data)
-            val pk = parsePrimaryKeys(tableModel, data)
+            val tableName = tables.getString("TABLE_NAME")
+            val tableModel = extractTable(tableName, conn)
             val indexes = parseIndexes(tableModel, data)
             val unique = parseUnique(tableModel, data)
             returnTables = (returnTables ++ List(tableModel)).toList
         }
         returnTables
+    }
+    
+    def extractTables(conn: ManagedResource[Connection]): Seq[TableModel] = for (c <- conn) yield extractTables(c)
+
+    def search(url: String): Seq[TableModel] = {
+        Class.forName("com.mysql.jdbc.Driver")
+
+        extractTables(ManagedResource(DriverManager.getConnection(url)))
     }
 
 
@@ -132,3 +146,44 @@ object JdbcModelExtractor {
     	print(ModelSerializer.serializeDatabaseToText(model))
     }
 }
+
+import scalax.testing._
+object JdbcModelExtractorTests extends TestSuite("JdbcModelExtractor") {
+    Class.forName("com.mysql.jdbc.Driver")
+        
+    val testDsUrl = "jdbc:mysql://fastshot:3306/mysql_diff_test"
+    val testDsUser = "test"
+    val testDsPassword = "test"
+    
+    val conn = ManagedResource(DriverManager.getConnection(testDsUrl, testDsUser, testDsPassword))
+    
+    private def execute(q: String) {
+        for (c <- conn) {
+            c.createStatement().execute(q)
+        }
+    }
+    
+    private def dropTable(tableName: String) {
+        execute("DROP TABLE IF EXISTS " + tableName)
+    }
+    
+    "Simple Table" is {
+        dropTable("bananas")
+        execute("CREATE TABLE bananas (id INT, color VARCHAR(100), PRIMARY KEY(id))")
+        
+        val table = for (c <- conn) yield JdbcModelExtractor.extractTable("bananas", c)
+        
+        assert("bananas" == table.name)
+        
+        assert("id" == table.columns(0).name)
+        assert("INT" == table.columns(0).dataType.name)
+        
+        assert("color" == table.columns(1).name)
+        assert("VARCHAR" == table.columns(1).dataType.name)
+        assert(100 == table.columns(1).dataType.length.get)
+        
+        assert(List("id") == table.primaryKey.get.columns)
+    }
+}
+
+// vim: set ts=4 sw=4 et:
