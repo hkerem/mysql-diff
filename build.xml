@@ -35,7 +35,7 @@
                 classpathref="build.classpath" force="changed"/>
     </target>
 
-    <target name="run-tests" depends="clean, compile">
+    <target name="run-tests" depends="compile">
         <java classname="ru.yandex.mysqlDiff.MysqlDiffTest" failonerror="true">
             <sysproperty key="java.awt.headless" value="true"/>
             <classpath refid="build.classpath"/>
