@@ -34,35 +34,89 @@ object Sql extends StandardTokenParsers {
     
     lexical.reserved += ("CREATE", "TABLE", "VIEW", "IF", "NOT", "NULL", "EXISTS",
             "AS", "SELECT", "UNIQUE", "KEY", "INDEX", "PRIMARY", "DEFAULT", "NOW", "AUTO_INCREMENT")
+   
+    abstract class SqlValue
     
-    def dataType: Parser[Any] = name ~ opt("(" ~ numericLit ~ ")")
+    case object NullValue extends SqlValue
     
-    def nullability: Parser[Any] = "NULL" | ("NOT" ~ "NULL")
+    case class NumberValue(value: Int) extends SqlValue
     
-    def sqlValue: Parser[Any] = "NULL" | numericLit | stringLit | ("NOW" ~ "(" ~ ")") // XXX: string constant
+    case class StringValue(value: String) extends SqlValue
     
-    def defaultValue: Parser[Any] = "DEFAULT" ~ sqlValue
+    case object Now extends SqlValue
     
-    def column: Parser[Any] = name ~ dataType ~ opt(nullability) ~ opt(defaultValue) ~ opt("AUTO_INCREMENT")
+    // should be SqlValue
+    def nullValue: Parser[SqlValue] = "NULL" ^^ { x => NullValue }
     
-    def name: Parser[Any] = ident
+    def numberValue: Parser[NumberValue] = numericLit ^^ { x => NumberValue(x.toInt) } // silly
     
-    def nameList: Parser[Any] = "(" ~ repsep(name, ",") ~ ")"
+    def stringValue: Parser[StringValue] = stringLit ^^
+            { x => StringValue(x.replaceFirst("^[\"']", "").replaceFirst("[\"']$", "")) }
+    
+    def nowValue: Parser[SqlValue] = "NOW" ~ "(" ~ ")" ^^ { x => Now }
+    
+    def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | nowValue
+    
+    case class DataType(name: String, length: Option[Int])
+    
+    def dataType: Parser[Any] = name ~ opt("(" ~> numericLit <~ ")") ^^
+            { case name ~ length => DataType(name, length.map(_.toInt)) }
+   
+    abstract class TableEntry
+    
+    abstract class ColumnProperty
+    
+    case class Nullable(nullable: Boolean) extends ColumnProperty
+    
+    def nullability: Parser[Nullable] = opt("NOT") <~ "NULL" ^^ { x => Nullable(x.isEmpty) }
+    
+    case class DefaultValue(value: SqlValue) extends ColumnProperty
+    
+    def defaultValue: Parser[DefaultValue] = "DEFAULT" ~> sqlValue ^^ { value => DefaultValue(value) }
+    
+    case object AutoIncrement extends ColumnProperty
+    
+    // Parser[AutoIncrement.type] does not work
+    def autoIncrementability: Parser[ColumnProperty] = "AUTO_INCREMENT" ^^ { x => AutoIncrement }
+    
+    case class Column(name: String, dataType: Any, attrs: Seq[ColumnProperty]) extends TableEntry
+    
+    def columnAttr = nullability | defaultValue | autoIncrementability
+    
+    def column: Parser[Column] = name ~ dataType ~ rep(columnAttr) ^^
+            { case name ~ dataType ~ attrs => Column(name, dataType, attrs) }
+    
+    def name: Parser[String] = ident
+    
+    def nameList: Parser[Seq[String]] = "(" ~> repsep(name, ",") <~ ")"
     
     def trash: Parser[Any] = name | "=" | "DEFAULT"
     
-    //def select: Parser[Any] = "SELECT" ~ rep(not(";" | lexical.EOF))
-    def select: Parser[Any] = "SELECT" ~ rep(name)
+    //def select: Parser[Any] = "SELECT" ~> rep(not(";" | lexical.EOF))
+    def select: Parser[Any] = "SELECT" ~> rep(name)
     
-    def index: Parser[Any] = opt("UNIQUE") ~ ("INDEX" | "KEY") ~ opt(name) ~ nameList
+    case class Index(name: Option[String], unique: Boolean, columnNames: Seq[String]) extends TableEntry
     
-    def pk: Parser[Any] = "PRIMARY" ~ "KEY" ~ nameList
+    // XXX: why need braces?
+    def index: Parser[Index] = (opt("UNIQUE") <~ ("INDEX" | "KEY")) ~ opt(name) ~ nameList ^^
+            { case unique ~ name ~ columnNames => Index(name, unique.isDefined, columnNames) }
     
-    def tableAttr: Parser[Any] = column | index | pk
+    case class PrimaryKey(columnNames: Seq[String]) extends TableEntry
+    
+    def pk: Parser[PrimaryKey] = "PRIMARY" ~> "KEY" ~> nameList ^^ { nameList => PrimaryKey(nameList) }
+    
+    def tableEntry: Parser[TableEntry] = column | index | pk
     
     def ifNotExists: Parser[Any] = "IF" ~ "NOT" ~ "EXISTS"
     
-    def createTable: Parser[Any] = "CREATE" ~ "TABLE" ~ opt(ifNotExists) ~ name ~ "(" ~ repsep(tableAttr, ",") ~ ")" ~ rep(trash)
+    //def tableOptions: Parser[Any] = 
+    
+    case class CreateTable(name: String, ifNotExists: Boolean, entires: Seq[TableEntry])
+    
+    // XXX: parse table options
+    def createTable: Parser[CreateTable] = "CREATE" ~> "TABLE" ~> opt(ifNotExists) ~ name ~
+            ("(" ~> repsep(tableEntry, ",") <~ ")") ~ rep(trash) ^^
+                    { case ifne ~ name ~ entries ~ _ => CreateTable(name, ifne.isDefined, entries) }
     
     def createView: Parser[Any] = "CREATE" ~ "VIEW" ~ opt(ifNotExists) ~ name ~ opt(nameList) ~ "AS" ~ select
     
