@@ -47,13 +47,35 @@ object ScriptSerializer {
     
     def serializeStatement(stmt: ScriptStatement, options: Options): String = stmt match {
         case CreateTableStatement(t) => serializeCreateTable(t, options)
+        case st: CreateTableStatement2 => serializeCreateTable(st, options)
         case DropTableStatement(n) => serializeDropTable(n)
         case st: AlterTableStatement => serializeChangeTable(st)
     }
     
-    def serializeCreateTable(createTable: CreateTableStatement, options: Options): String =
-        serializeCreateTable(createTable.table, options)
+    def serializeValue(value: SqlValue) = value match {
+        case NullValue => "NULL"
+        case NumberValue(number) => number.toString
+        case StringValue(string) => "'" + string + "'" // XXX: escape
+        case NowValue => "NOW()"
+    }
     
+    def serializeColumnProperty(cp: CreateTableStatement.ColumnProperty) = cp match {
+        case CreateTableStatement.Nullable(true) => "NULL"
+        case CreateTableStatement.Nullable(false) => "NOT NULL"
+        case CreateTableStatement.DefaultValue(value) => "DEFAULT " + serializeValue(value)
+        case CreateTableStatement.AutoIncrement => "AUTO_INCREMENT"
+    }
+    
+    def serializeTableEntry(e: CreateTableStatement.Entry): String = e match {
+        case CreateTableStatement.Column(name, dataType, attrs) =>
+            name + " " + serializeDataType(dataType) +
+                    (if (attrs.isEmpty) ""
+                    else " " + attrs.map(serializeColumnProperty _).mkString(" "))
+        case CreateTableStatement.PrimaryKey(pk) => serializePrimaryKey(pk)
+        case CreateTableStatement.Index(index) => serializeIndex(index)
+    }
+    
+    // XXX: drop
     def serializeCreateTable(table: TableModel, options: Options): String = {
         val l = (
                 table.columns.map(serializeColumn _) ++
@@ -64,6 +86,15 @@ object ScriptSerializer {
         
         (List("CREATE TABLE " + table.name + " (") ++ lines ++ List(")")).mkString(options.stmtJoin)
     }
+    
+    def serializeCreateTable(t: CreateTableStatement2, options: Options): String = {
+        val l = t.entries.map(serializeTableEntry _).reverse
+        val lines = (List(l.first) ++ l.drop(1).map(_ + "," + options.afterComma)).reverse.map(options.indent + _)
+        (List("CREATE TABLE " + t.name + " (") ++ lines ++ List(")")).mkString(options.stmtJoin)
+    }
+    
+    def serializeCreateTable(createTable: CreateTableStatement, options: Options): String =
+        serializeCreateTable(createTable.table, options)
     
     def serializeDropTable(tableName: String) =
         "DROP TABLE " + tableName
@@ -104,6 +135,7 @@ object ScriptSerializer {
         result.trim
     }
     
+    // XXX: move to ModelSerializer
     def serializeColumn(model: ColumnModel) = {
         val attributes = new ArrayBuffer[String]
         

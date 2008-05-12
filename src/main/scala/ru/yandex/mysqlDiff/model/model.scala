@@ -12,7 +12,7 @@ case class NumberValue(value: Int) extends SqlValue
 case class StringValue(value: String) extends SqlValue
 
 // used as default value
-case object Now extends SqlValue
+case object NowValue extends SqlValue
 
 // XXX: reduce number of fields through subclassing
 case class DataType(val name: String, val length: Option[Int], val isUnsigned: Boolean, val isZerofill: Boolean, val characterSet: Option[String], val collate: Option[String])
@@ -24,7 +24,9 @@ object DataType {
     def apply(name: String): DataType = apply(name, None)
 }
 
-case class ColumnModel(val name: String, val dataType: DataType) 
+abstract class TableEntry
+
+case class ColumnModel(val name: String, val dataType: DataType) extends TableEntry
 {
     // XXX: make all this case class parameters
     var isNotNull: Boolean = false
@@ -47,7 +49,7 @@ case class ColumnModel(val name: String, val dataType: DataType)
     }
 }
 
-abstract class ConstraintModel(val name: Option[String], val columns: Seq[String]) 
+abstract class ConstraintModel(val name: Option[String], val columns: Seq[String]) extends TableEntry
 
 case class IndexModel(override val name: Option[String], override val columns: Seq[String], isUnique: Boolean)
     extends ConstraintModel(name, columns)
@@ -80,6 +82,9 @@ case class TableModel(override val name: String, val columns: Seq[ColumnModel])
     var keys: Seq[IndexModel] = Nil
     
     def indexes = keys
+    
+    /** PK then regular indexes */
+    def allIndexes = primaryKey.toList ++ indexes
     
     def indexWithColumns(columns: String*) = indexes.find(_.columns.toList == columns.toList).get
 }

@@ -13,7 +13,26 @@ abstract class ScriptStatement extends ScriptElement
 
 case class Unparsed(q: String) extends ScriptElement
 
-case class CreateTableStatement(table: TableModel) extends ScriptStatement
+case class CreateTableStatement2(name: String, ifNotExists: Boolean, entries: Seq[CreateTableStatement.Entry])
+    extends ScriptStatement
+
+object CreateTableStatement {
+    abstract class Entry
+    
+    abstract class ColumnProperty
+    
+    case class Nullable(nullable: Boolean) extends ColumnProperty
+    
+    case class DefaultValue(value: SqlValue) extends ColumnProperty
+    
+    case object AutoIncrement extends ColumnProperty
+    
+    case class Column(name: String, dataType: DataType, attrs: Seq[ColumnProperty]) extends Entry
+    
+    case class Index(index: model.IndexModel) extends Entry
+    
+    case class PrimaryKey(pk: model.PrimaryKey) extends Entry
+}
 
 case class DropTableStatement(name: String) extends ScriptStatement
 

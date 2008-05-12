@@ -36,6 +36,8 @@ class SqlLexical extends StdLexical {
 object SqlParserCombinator extends StandardTokenParsers {
     override val lexical = new SqlLexical
     
+    import CreateTableStatement._
+    
     lexical.delimiters += ("(", ")", "=", ",", ";", "=")
     
     lexical.reserved += ("CREATE", "TABLE", "VIEW", "IF", "NOT", "NULL", "EXISTS",
@@ -49,31 +51,20 @@ object SqlParserCombinator extends StandardTokenParsers {
     def stringValue: Parser[StringValue] = stringLit ^^
             { x => StringValue(x.replaceFirst("^[\"']", "").replaceFirst("[\"']$", "")) }
     
-    def nowValue: Parser[SqlValue] = "NOW" ~ "(" ~ ")" ^^ { x => Now }
+    def nowValue: Parser[SqlValue] = "NOW" ~ "(" ~ ")" ^^ { x => NowValue }
     
     def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | nowValue
     
     def dataType: Parser[DataType] = name ~ opt("(" ~> numericLit <~ ")") ^^
             { case name ~ length => DataType(name, length.map(_.toInt)) }
    
-    abstract class TableEntry
-    
-    abstract class ColumnProperty
-    
-    case class Nullable(nullable: Boolean) extends ColumnProperty
-    
     def nullability: Parser[Nullable] = opt("NOT") <~ "NULL" ^^ { x => Nullable(x.isEmpty) }
-    
-    case class DefaultValue(value: SqlValue) extends ColumnProperty
     
     def defaultValue: Parser[DefaultValue] = "DEFAULT" ~> sqlValue ^^ { value => DefaultValue(value) }
     
-    case object AutoIncrement extends ColumnProperty
-    
     // Parser[AutoIncrement.type] does not work
-    def autoIncrementability: Parser[ColumnProperty] = "AUTO_INCREMENT" ^^ { x => AutoIncrement }
-    
-    case class Column(name: String, dataType: DataType, attrs: Seq[ColumnProperty]) extends TableEntry
+    def autoIncrementability: Parser[ColumnProperty] =
+        "AUTO_INCREMENT" ^^ { x => AutoIncrement }
     
     def columnAttr = nullability | defaultValue | autoIncrementability
     
@@ -89,28 +80,23 @@ object SqlParserCombinator extends StandardTokenParsers {
     //def select: Parser[Any] = "SELECT" ~> rep(not(";" | lexical.EOF))
     def select: Parser[Any] = "SELECT" ~> rep(name)
     
-    case class Index(name: Option[String], unique: Boolean, columnNames: Seq[String]) extends TableEntry
-    
     // XXX: why need braces?
     def index: Parser[Index] = (opt("UNIQUE") <~ ("INDEX" | "KEY")) ~ opt(name) ~ nameList ^^
-            { case unique ~ name ~ columnNames => Index(name, unique.isDefined, columnNames) }
+            { case unique ~ name ~ columnNames => Index(IndexModel(name, columnNames, unique.isDefined)) }
     
-    case class PrimaryKey(columnNames: Seq[String]) extends TableEntry
+    def pk: Parser[PrimaryKey] =
+        "PRIMARY" ~> "KEY" ~> nameList ^^ { nameList => PrimaryKey(model.PrimaryKey(None, nameList)) }
     
-    def pk: Parser[PrimaryKey] = "PRIMARY" ~> "KEY" ~> nameList ^^ { nameList => PrimaryKey(nameList) }
-    
-    def tableEntry: Parser[TableEntry] = column | index | pk
+    def tableEntry: Parser[Entry] = column | index | pk
     
     def ifNotExists: Parser[Any] = "IF" ~ "NOT" ~ "EXISTS"
     
     //def tableOptions: Parser[Any] = 
     
-    case class CreateTable(name: String, ifNotExists: Boolean, entires: Seq[TableEntry])
-    
     // XXX: parse table options
-    def createTable: Parser[CreateTable] = "CREATE" ~> "TABLE" ~> opt(ifNotExists) ~ name ~
+    def createTable: Parser[CreateTableStatement2] = "CREATE" ~> "TABLE" ~> opt(ifNotExists) ~ name ~
             ("(" ~> repsep(tableEntry, ",") <~ ")") ~ rep(trash) ^^
-                    { case ifne ~ name ~ entries ~ _ => CreateTable(name, ifne.isDefined, entries) }
+                    { case ifne ~ name ~ entries ~ _ => CreateTableStatement2(name, ifne.isDefined, entries) }
     
     def createView: Parser[Any] = "CREATE" ~ "VIEW" ~ opt(ifNotExists) ~ name ~ opt(nameList) ~ "AS" ~ select
     
@@ -138,23 +124,7 @@ object SqlParserCombinator extends StandardTokenParsers {
 object Parser {
     def parse(text: String): Script = {
         val c = SqlParserCombinator
-        new Script(SqlParserCombinator.parse(text).map {
-            case c.CreateTable(name, ifNotExists, entries) =>
-                val columns = new ArrayBuffer[ColumnModel]
-                val pks = new ArrayBuffer[PrimaryKey]
-                val indexes = new ArrayBuffer[IndexModel]
-                entries.map {
-                    case c.Column(name, dataType, attrs) =>
-                        columns += new ColumnModel(name, dataType)
-                    case c.PrimaryKey(columnNames) =>
-                        pks += new PrimaryKey(None, columnNames)
-                    case c.Index(name, unique, columnNames) =>
-                        indexes += new IndexModel(name, columnNames, unique)
-                }
-                new CreateTableStatement(new TableModel(name, columns.toList))
-                // XXX: add pk
-                // XXX: add indexes
-        })
+        new Script(SqlParserCombinator.parse(text).map(_.asInstanceOf[ScriptElement]))
     }
     
     def main(args: Array[String]) {

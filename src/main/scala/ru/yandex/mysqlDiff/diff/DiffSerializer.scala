@@ -70,7 +70,7 @@ object DiffSerializer {
         val newTablesMap: Map[String, TableModel] = Map(newModel.declarations.map(o => (o.name, o)): _*)
         val oldTablesMap: Map[String, TableModel] = Map(oldModel.declarations.map(o => (o.name, o)): _*)
         diff.tableDiff.flatMap(tbl => tbl match {
-            case CreateTableDiff(t) => CreateTableStatement(t) :: Nil
+            case CreateTableDiff(t) => ModelSerializer.serializeTable(t) :: Nil
             case DropTableDiff(name) => DropTableStatement(name) :: Nil
             case diff @ ChangeTableDiff(name, renameTo, columnDiff, indexDiff) =>
                     renameTo.map(RenameTableStatement(name, _)) ++
