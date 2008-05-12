@@ -1,3 +1,5 @@
+package ru.yandex.mysqlDiff.script.parser
+
 import scala.util.parsing.combinator.lexical
 
 import scala.util.parsing.combinator._
