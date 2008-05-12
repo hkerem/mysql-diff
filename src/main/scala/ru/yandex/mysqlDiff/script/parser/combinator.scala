@@ -1,5 +1,7 @@
 package ru.yandex.mysqlDiff.script.parser
 
+import scala.collection.mutable.ArrayBuffer
+
 import scala.util.parsing.combinator.lexical
 
 import scala.util.parsing.combinator._
@@ -8,6 +10,8 @@ import scala.util.parsing.combinator.lexical._
 import java.util.regex.{Pattern, Matcher}
 
 import scalax.io._
+
+import model._
 
 class SqlLexical extends StdLexical {
     // ?
@@ -29,7 +33,7 @@ class SqlLexical extends StdLexical {
         if (reserved contains name.toUpperCase) Keyword(name.toUpperCase) else Identifier(name)
 }
 
-object Sql extends StandardTokenParsers {
+object SqlParserCombinator extends StandardTokenParsers {
     override val lexical = new SqlLexical
     
     lexical.delimiters += ("(", ")", "=", ",", ";", "=")
@@ -37,17 +41,7 @@ object Sql extends StandardTokenParsers {
     lexical.reserved += ("CREATE", "TABLE", "VIEW", "IF", "NOT", "NULL", "EXISTS",
             "AS", "SELECT", "UNIQUE", "KEY", "INDEX", "PRIMARY", "DEFAULT", "NOW", "AUTO_INCREMENT")
    
-    abstract class SqlValue
-    
-    case object NullValue extends SqlValue
-    
-    case class NumberValue(value: Int) extends SqlValue
-    
-    case class StringValue(value: String) extends SqlValue
-    
-    case object Now extends SqlValue
-    
-    // should be SqlValue
+    // should be NullValue
     def nullValue: Parser[SqlValue] = "NULL" ^^ { x => NullValue }
     
     def numberValue: Parser[NumberValue] = numericLit ^^ { x => NumberValue(x.toInt) } // silly
@@ -59,9 +53,7 @@ object Sql extends StandardTokenParsers {
     
     def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | nowValue
     
-    case class DataType(name: String, length: Option[Int])
-    
-    def dataType: Parser[Any] = name ~ opt("(" ~> numericLit <~ ")") ^^
+    def dataType: Parser[DataType] = name ~ opt("(" ~> numericLit <~ ")") ^^
             { case name ~ length => DataType(name, length.map(_.toInt)) }
    
     abstract class TableEntry
@@ -81,7 +73,7 @@ object Sql extends StandardTokenParsers {
     // Parser[AutoIncrement.type] does not work
     def autoIncrementability: Parser[ColumnProperty] = "AUTO_INCREMENT" ^^ { x => AutoIncrement }
     
-    case class Column(name: String, dataType: Any, attrs: Seq[ColumnProperty]) extends TableEntry
+    case class Column(name: String, dataType: DataType, attrs: Seq[ColumnProperty]) extends TableEntry
     
     def columnAttr = nullability | defaultValue | autoIncrementability
     
@@ -124,7 +116,13 @@ object Sql extends StandardTokenParsers {
     
     def topLevel: Parser[Any] = createView | createTable
     
-    def script: Parser[Any] = repsep(topLevel, ";") <~ opt(";") ~ lexical.EOF
+    def script: Parser[Seq[Any]] = repsep(topLevel, ";") <~ opt(";") ~ lexical.EOF
+    
+    def parse(text: String): Seq[Any] = {
+        val tokens = new lexical.Scanner(text)
+        val Success(result, _) = phrase(script)(tokens)
+        result
+    }
     
     def main(args: Array[String]) {
         val text =
@@ -133,11 +131,41 @@ object Sql extends StandardTokenParsers {
             } else {
                 ReaderResource.apply(args(1)).slurp()
             }
-        val tokens = new lexical.Scanner(text)
-        println(phrase(script)(tokens))
-        //println(phrase(script)(tokens).getClass)
-        //println(phrase(script)(tokens).get)
-        //println(phrase(script)(tokens).get.asInstanceOf[AnyRef].getClass)
+        println(parse(text))
+    }
+}
+
+object Parser {
+    def parse(text: String): Script = {
+        val c = SqlParserCombinator
+        new Script(SqlParserCombinator.parse(text).map {
+            case c.CreateTable(name, ifNotExists, entries) =>
+                val columns = new ArrayBuffer[ColumnModel]
+                val pks = new ArrayBuffer[PrimaryKey]
+                val indexes = new ArrayBuffer[IndexModel]
+                entries.map {
+                    case c.Column(name, dataType, attrs) =>
+                        columns += new ColumnModel(name, dataType)
+                    case c.PrimaryKey(columnNames) =>
+                        pks += new PrimaryKey(None, columnNames)
+                    case c.Index(name, unique, columnNames) =>
+                        indexes += new IndexModel(name, columnNames, unique)
+                }
+                new CreateTableStatement(new TableModel(name, columns.toList))
+                // XXX: add pk
+                // XXX: add indexes
+        })
+    }
+    
+    def main(args: Array[String]) {
+        val text =
+            if (args.length == 1) {
+                args(0)
+            } else {
+                ReaderResource.apply(args(1)).slurp()
+            }
+        val script = parse(text)
+        print(ScriptSerializer.serialize(script.stmts, ScriptSerializer.Options.multiline))
     }
 }
 

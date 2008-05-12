@@ -3,11 +3,25 @@ package ru.yandex.mysqlDiff.model
 import scala.collection.mutable._
 
 
+abstract class SqlValue
+
+case object NullValue extends SqlValue
+
+case class NumberValue(value: Int) extends SqlValue
+
+case class StringValue(value: String) extends SqlValue
+
+// used as default value
+case object Now extends SqlValue
+
+// XXX: reduce number of fields through subclassing
 case class DataType(val name: String, val length: Option[Int], val isUnsigned: Boolean, val isZerofill: Boolean, val characterSet: Option[String], val collate: Option[String])
 
 object DataType {
-    def varchar(length: Int) = DataType("VARCHAR", Some(length), false, false, None, None)
-    def int() = DataType("INT", None, false, false, None, None)
+    def varchar(length: Int) = apply("VARCHAR", Some(length))
+    def int = apply("INT")
+    def apply(name: String, length: Option[Int]): DataType = new DataType(name, length, false, false, None, None)
+    def apply(name: String): DataType = apply(name, None)
 }
 
 case class ColumnModel(val name: String, val dataType: DataType) 
@@ -56,6 +70,8 @@ case class ForeighKey(override val name: Option[String],
 case class TableModel(override val name: String, val columns: Seq[ColumnModel]) 
     extends DatabaseDeclaration(name: String)
 {
+    require(columns.length > 0)
+    
     def column(name: String) = columns.find(_.name == name).get
     
     // XXX: make these case columns
