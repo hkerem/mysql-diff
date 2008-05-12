@@ -69,19 +69,16 @@ case class ForeighKey(override val name: Option[String],
     require(localColumns.length == externalColumns.length)
 }
 
-case class TableModel(override val name: String, val columns: Seq[ColumnModel]) 
+case class TableModel(override val name: String, columns: Seq[ColumnModel],
+        primaryKey: Option[PrimaryKey], indexes: Seq[IndexModel]) 
     extends DatabaseDeclaration(name: String)
 {
+    def this(name: String, columns: Seq[ColumnModel]) =
+        this(name, columns, None, Nil)
+
     require(columns.length > 0)
     
     def column(name: String) = columns.find(_.name == name).get
-    
-    // XXX: make these case columns
-    var primaryKey: Option[PrimaryKey] = None
-    var constraints: List[ConstraintModel] = null
-    var keys: Seq[IndexModel] = Nil
-    
-    def indexes = keys
     
     /** PK then regular indexes */
     def allIndexes = primaryKey.toList ++ indexes

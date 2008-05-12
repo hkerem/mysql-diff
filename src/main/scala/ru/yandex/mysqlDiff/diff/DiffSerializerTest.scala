@@ -10,11 +10,11 @@ object DiffSerializerTest extends TestSuite("Simple Diff Script Bulder test") {
 
 
     "Column add to table" is {
-        val c1_1 = new ColumnModel("id", DataType.int())
+        val c1_1 = new ColumnModel("id", DataType.int)
         val table1 = new TableModel("table_test", List(c1_1))
 
    
-        val c2_1 = new ColumnModel("id", DataType.int())
+        val c2_1 = new ColumnModel("id", DataType.int)
         val c2_2 = new ColumnModel("name", DataType.varchar(1000))
         val table2 = new TableModel("table_test", List(c2_1, c2_2))
 
@@ -130,15 +130,17 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         }
         
         script(1) match {
-            case CreateTableStatement(tableFromScript @ TableModel("table_test", _)) =>
+            case tableFromScript @ CreateTableStatement("table_test", _, _) =>
+                import CreateTableStatement._
+                
                 assert(2 == tableFromScript.columns.length)
                 tableFromScript.columns(0) match {
-                    case ColumnModel("id", _) =>
+                    case Column("id", _, _) =>
                     case _ => fail()
                 }
 
                 tableFromScript.columns(1) match {
-                    case ColumnModel("name", _) =>
+                    case Column("name", _, _) =>
                     case _ => fail()
                 }
     

@@ -72,7 +72,7 @@ object DiffMaker {
 
         val primaryKeyDiff: Seq[IndexDiff] = comparePrimaryKeys(from.primaryKey, to.primaryKey).toList
 
-        val (fromIndexes, toIndexes, changeIndexPairs) = compareSeqs(from.keys, to.keys, (x: IndexModel, y: IndexModel) => x.name == y.name)
+        val (fromIndexes, toIndexes, changeIndexPairs) = compareSeqs(from.indexes, to.indexes, (x: IndexModel, y: IndexModel) => x.name == y.name)
 
         val dropIndexesDiff = fromIndexes.map(idx => DropIndexDiff(idx))
         val createIndexesDiff = toIndexes.map(idx => CreateIndexDiff(idx))

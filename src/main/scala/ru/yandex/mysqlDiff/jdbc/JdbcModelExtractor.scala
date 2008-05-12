@@ -50,10 +50,7 @@ object JdbcModelExtractor {
         val indexes = extractIndexes(tableName, conn)
                 .filter(pk.isEmpty || _.columns.toList != pk.get.columns.toList)
         
-        val t = new TableModel(tableName, columnsList)
-        t.primaryKey = pk
-        t.keys = indexes
-        t
+        new TableModel(tableName, columnsList, pk, indexes)
     }
     
     private def read[T](rs: ResultSet)(f: ResultSet => T) = {
@@ -200,7 +197,7 @@ object JdbcModelExtractorTests extends TestSuite("JdbcModelExtractor") {
         
         //println(table.keys)
         
-        val ageK = table.keys.find(_.name.get == "age_k").get
+        val ageK = table.indexes.find(_.name.get == "age_k").get
         assert(List("age") == ageK.columns.toList)
         assert(false == ageK.isUnique)
         
@@ -216,7 +213,7 @@ object JdbcModelExtractorTests extends TestSuite("JdbcModelExtractor") {
         execute("CREATE TABLE files (id INT, PRIMARY KEY(id))")
         
         val table = for (c <- conn) yield JdbcModelExtractor.extractTable("files", c)
-        assert(table.keys.length == 0)
+        assert(table.indexes.length == 0)
         assert(List("id") == table.primaryKey.get.columns.toList)
     }
 }

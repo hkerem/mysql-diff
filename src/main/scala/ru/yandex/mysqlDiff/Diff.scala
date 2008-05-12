@@ -55,7 +55,7 @@ object Diff {
             val sourceF = new File(arg)
             if (!sourceF.isFile)  throw new MysqlDiffException("\"" + arg + "\" file is not a file.")
             var str = new FileExtras(sourceF).slurp
-            ScriptParser.parseModel(str)
+            model.ModelParser.parseModel(str)
         }
     }
 

@@ -46,8 +46,7 @@ object ScriptSerializer {
     def serialize(stmt: ScriptElement): String = serialize(stmt, Options.singleline)
     
     def serializeStatement(stmt: ScriptStatement, options: Options): String = stmt match {
-        case CreateTableStatement(t) => serializeCreateTable(t, options)
-        case st: CreateTableStatement2 => serializeCreateTable(st, options)
+        case st: CreateTableStatement => serializeCreateTable(st, options)
         case DropTableStatement(n) => serializeDropTable(n)
         case st: AlterTableStatement => serializeChangeTable(st)
     }
@@ -75,26 +74,11 @@ object ScriptSerializer {
         case CreateTableStatement.Index(index) => serializeIndex(index)
     }
     
-    // XXX: drop
-    def serializeCreateTable(table: TableModel, options: Options): String = {
-        val l = (
-                table.columns.map(serializeColumn _) ++
-                table.primaryKey.map(serializePrimaryKey _) ++
-                table.keys.map(serializeIndex _)
-            ).reverse
-        val lines = (List(l.first) ++ l.drop(1).map(_ + "," + options.afterComma)).reverse.map(options.indent + _)
-        
-        (List("CREATE TABLE " + table.name + " (") ++ lines ++ List(")")).mkString(options.stmtJoin)
-    }
-    
-    def serializeCreateTable(t: CreateTableStatement2, options: Options): String = {
+    def serializeCreateTable(t: CreateTableStatement, options: Options): String = {
         val l = t.entries.map(serializeTableEntry _).reverse
         val lines = (List(l.first) ++ l.drop(1).map(_ + "," + options.afterComma)).reverse.map(options.indent + _)
         (List("CREATE TABLE " + t.name + " (") ++ lines ++ List(")")).mkString(options.stmtJoin)
     }
-    
-    def serializeCreateTable(createTable: CreateTableStatement, options: Options): String =
-        serializeCreateTable(createTable.table, options)
     
     def serializeDropTable(tableName: String) =
         "DROP TABLE " + tableName
