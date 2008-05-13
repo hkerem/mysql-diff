@@ -160,12 +160,10 @@ object ScriptSerializer {
         
 }
 
-import scalax.testing._
-
-object ScriptSerializerTest extends TestSuite("ScriptSerializerTest") {
+object ScriptSerializerTests extends org.specs.Specification {
     import ScriptSerializer._
     
-    "serialize semi singleline" is {
+    "serialize semi singleline" in {
         val dt = DropTableStatement("users")
         val c = CommentElement("/* h */")
         
@@ -177,6 +175,17 @@ object ScriptSerializerTest extends TestSuite("ScriptSerializerTest") {
         
         //println("'" + serialized + "'")
         assert(serialized == "DROP TABLE users; /* h */ DROP TABLE users; DROP TABLE users; /* h */ /* h */ DROP TABLE users;")
+    }
+    
+    "serialize default value" in {
+        serializeColumnProperty(DefaultValue(NumberValue(15))).get must_== "DEFAULT 15"
+    }
+    
+    "serialize value" in {
+        serializeValue(NullValue) must_== "NULL"
+        serializeValue(NumberValue(15)) must_== "15"
+        serializeValue(StringValue("hello")) must_== "'hello'"
+        serializeValue(NowValue) must_== "NOW()" // XXX: or CURRENT_TIMESTAMP
     }
 }
 
