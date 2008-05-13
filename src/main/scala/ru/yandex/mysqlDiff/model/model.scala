@@ -28,6 +28,8 @@ object DataType {
 abstract class TableEntry
 
 class ColumnProperties(val properties: Seq[ColumnProperty]) {
+    // XXX: add check each property type appears more then once
+    
     def isEmpty = properties.isEmpty
     
     def find[T <: ColumnPropertyType](pt: T): Option[T#ValueType] =
@@ -45,6 +47,10 @@ class ColumnProperties(val properties: Seq[ColumnProperty]) {
     
     /** True iff all properties are model properties */
     def isModelProperties = properties.forall(_.isModelProperty)
+    
+    def withDefaultProperty(property: ColumnProperty) =
+        if (find(property.propertyType).isDefined) this
+        else new ColumnProperties(properties ++ List(property))
 }
 
 object ColumnProperties {
