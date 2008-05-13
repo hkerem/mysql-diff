@@ -2,7 +2,12 @@ package ru.yandex.mysqlDiff.script
 
 import model._
 
-class Script(val stmts: Seq[ScriptElement])
+class Script(val stmts: Seq[ScriptElement]) {
+    def statements = stmts.flatMap {
+        case s: ScriptStatement => Some(s)
+        case _ => None
+    }
+}
 
 abstract class ScriptElement
 
