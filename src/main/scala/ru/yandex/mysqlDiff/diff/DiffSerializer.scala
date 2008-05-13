@@ -53,7 +53,7 @@ object TableScriptBuilder {
     def alterScript(diff: ChangeTableDiff, model: TableModel): Seq[ScriptElement] = {
 
         List[ScriptElement]() ++
-        //List(CommentElement("-- Modify Table \"" + model.name + "\"")) ++
+        List(CommentElement("-- " + diff.toString)) ++
         diff.columnDiff.map(alterColumnScript(_, model)) ++
         diff.indexDiff.map(alterIndexScript(_, model)) ++
         //List(CommentElement("-- End modify Table \"" + model.name + "\""))
