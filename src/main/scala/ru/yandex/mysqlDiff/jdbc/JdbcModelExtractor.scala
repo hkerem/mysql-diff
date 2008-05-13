@@ -7,6 +7,7 @@ import model._
 import scalax.control.ManagedResource
 
 import scala.util.Sorting._
+import scala.collection.mutable.ArrayBuffer
 
 /*
  * TBD:
@@ -16,11 +17,37 @@ import scala.util.Sorting._
 object JdbcModelExtractor {
     import JdbcUtils._
     
+    private def currentMysqlSchema(conn: Connection) = {
+        val schema = conn.getMetaData.getURL.replaceFirst("\\?.*", "").replaceFirst(".*/", "")
+        require(schema.length > 0)
+        schema
+    }
+    
+    def extractMysqlColumnDefaultValues(tableName: String, conn: Connection) = {
+        val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? AND table_name = ?"
+        val ps = conn.prepareStatement(q)
+        ps.setString(1, currentMysqlSchema(conn))
+        ps.setString(2, tableName)
+        
+        val values = new ArrayBuffer[(String, String)]
+        
+        val rs = ps.executeQuery()
+        while (rs.next()) {
+            val columnName = rs.getString("column_name")
+            val defaultValue = rs.getString("column_default")
+            values += (columnName, defaultValue)
+        }
+        
+        values.toList
+    }
+    
     def extractTable(tableName: String, conn: Connection): TableModel = {
         val data = conn.getMetaData
         val columns = data.getColumns(null, null, tableName, "%")
         var columnsList = List[ColumnModel]()
-
+        
+        val defaultValuesFromMysql = extractMysqlColumnDefaultValues(tableName, conn)
+        
         while (columns.next) {
             val colName = columns.getString("COLUMN_NAME")
             
@@ -48,8 +75,12 @@ object JdbcModelExtractor {
             
             val dataType = DataType(colType, colTypeSize)
 
-            // http://bugs.mysql.com/36699
-            val defaultValue = (columns.getString("COLUMN_DEF") match {
+            val defaultValueFromDb =
+                // http://bugs.mysql.com/36699
+                if (true) defaultValuesFromMysql.find(_._1 == colName).get._2
+                else columns.getString("COLUMN_DEF")
+            
+            val defaultValue = (defaultValueFromDb match {
                 case null => None
                 case s =>
                     if (!dataType.name.equalsIgnoreCase("VARCHAR") || s.matches("'.*'"))
@@ -273,7 +304,7 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         table.column("a").defaultValue must_== None
         table.column("b").defaultValue must_== Some(StringValue(""))
         table.column("c").defaultValue must_== Some(StringValue("x"))
-        //table.column("d").defaultValue must_== None
+        table.column("d").defaultValue must_== None
         table.column("e").defaultValue must_== Some(StringValue(""))
         table.column("f").defaultValue must_== Some(StringValue("y"))
     }
