@@ -154,7 +154,7 @@ object JdbcModelExtractor {
 }
 
 import scalax.testing._
-object JdbcModelExtractorTests extends TestSuite("JdbcModelExtractor") {
+object JdbcModelExtractorTests extends org.specs.Specification {
     Class.forName("com.mysql.jdbc.Driver")
         
     val testDsUrl = "jdbc:mysql://fastshot:3306/mysql_diff_test"
@@ -173,7 +173,9 @@ object JdbcModelExtractorTests extends TestSuite("JdbcModelExtractor") {
         execute("DROP TABLE IF EXISTS " + tableName)
     }
     
-    "Simple Table" is {
+    def extractTable(name: String) = for (c <- conn) yield JdbcModelExtractor.extractTable(name, c)
+    
+    "Simple Table" in {
         dropTable("bananas")
         execute("CREATE TABLE bananas (id INT, color VARCHAR(100), PRIMARY KEY(id))")
         
@@ -191,7 +193,7 @@ object JdbcModelExtractorTests extends TestSuite("JdbcModelExtractor") {
         assert(List("id") == table.primaryKey.get.columns.toList)
     }
     
-    "Indexes" is {
+    "Indexes" in {
         dropTable("users")
         execute("CREATE TABLE users (first_name VARCHAR(20), last_name VARCHAR(20), age INT, INDEX age_k(age), UNIQUE KEY(first_name, last_name), KEY(age, last_name))")
         
@@ -210,13 +212,22 @@ object JdbcModelExtractorTests extends TestSuite("JdbcModelExtractor") {
         assert(false == ageLastK.isUnique)
     }
     
-    "PK is not in indexes list" is {
+    "PK is not in indexes list" in {
         dropTable("files")
         execute("CREATE TABLE files (id INT, PRIMARY KEY(id))")
         
-        val table = for (c <- conn) yield JdbcModelExtractor.extractTable("files", c)
-        assert(table.indexes.length == 0)
-        assert(List("id") == table.primaryKey.get.columns.toList)
+        val table = extractTable("files")
+        table.indexes.length must_== 0
+        table.primaryKey.get.columns.toList must_== List("id")
+    }
+    
+    "DEFAULT NOW()" in {
+        dropTable("cars")
+        execute("CREATE TABLE cars (id INT, created TIMESTAMP DEFAULT NOW())")
+        
+        val table = extractTable("cars")
+        val created = table.column("created")
+        created.defaultValue must_== Some(NowValue)
     }
 }
 

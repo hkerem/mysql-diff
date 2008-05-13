@@ -42,6 +42,9 @@ class ColumnProperties(val properties: Seq[ColumnProperty]) {
     def isAutoIncrement = find(AutoIncrementPropertyType).map(_.autoIncrement).getOrElse(false)
     
     def defaultValue: Option[SqlValue] = find(DefaultValuePropertyType).map(_.value)
+    
+    /** True iff all properties are model properties */
+    def isModelProperties = properties.forall(_.isModelProperty)
 }
 
 object ColumnProperties {
@@ -52,6 +55,8 @@ case class ColumnModel(val name: String, val dataType: DataType, properties: Col
     extends TableEntry
 {
     def this(name: String, dataType: DataType) = this(name, dataType, ColumnProperties.empty)
+    
+    require(properties.isModelProperties)
     
     def isNotNull = properties.isNotNull
     def isAutoIncrement = properties.isAutoIncrement
@@ -99,6 +104,9 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel],
     def allIndexes = primaryKey.toList ++ indexes
     
     def indexWithColumns(columns: String*) = indexes.find(_.columns.toList == columns.toList).get
+    
+    def createLikeThis(newName: String) =
+        TableModel(newName, columns, primaryKey, indexes, options)
 }
 
 abstract class DatabaseDeclaration(val name: String) 
@@ -108,10 +116,15 @@ case class DatabaseModel(override val name: String, val declarations: Seq[TableM
 
 abstract class ColumnProperty {
     def propertyType: ColumnPropertyType
+    
+    final def isModelProperty = propertyType.isModelProperty
 }
 
 abstract class ColumnPropertyType {
     type ValueType <: ColumnProperty
+    
+    /** True iff property belongs to column model */
+    def isModelProperty = true
 }
 
 case class Nullability(nullable: Boolean) extends ColumnProperty {
