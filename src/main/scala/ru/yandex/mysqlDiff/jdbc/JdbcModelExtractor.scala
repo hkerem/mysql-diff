@@ -14,6 +14,7 @@ import scala.util.Sorting._
  * Extract keys
  */
 object JdbcModelExtractor {
+    import JdbcUtils._
     
     def extractTable(tableName: String, conn: Connection): TableModel = {
         val data = conn.getMetaData
@@ -45,9 +46,16 @@ object JdbcModelExtractor {
                 case "" => None
             }
             
+            val dataType = DataType(colType, colTypeSize)
+
+            // http://bugs.mysql.com/36699
             val defaultValue = (columns.getString("COLUMN_DEF") match {
                 case null => None
-                case s => Some(script.parser.SqlParserCombinator.parseValue(s))
+                case s =>
+                    if (!dataType.name.equalsIgnoreCase("VARCHAR") || s.matches("'.*'"))
+                        Some(script.parser.SqlParserCombinator.parseValue(s))
+                    else
+                        Some(StringValue(s))
             }).map(DefaultValue(_))
 
             val isUnsigned = false
@@ -56,8 +64,6 @@ object JdbcModelExtractor {
             val collate: Option[String] = None
 
             val props = new ColumnProperties(List[ColumnProperty]() ++ nullable ++ defaultValue ++ autoIncrement)
-
-            val dataType = DataType(colType, colTypeSize)
 
             val cm = new ColumnModel(colName, dataType, props)
 
@@ -152,20 +158,30 @@ object JdbcModelExtractor {
     }
     
     def extractTables(conn: ManagedResource[Connection]): Seq[TableModel] = for (c <- conn) yield extractTables(c)
-
+    
     def search(url: String): Seq[TableModel] = {
-        Class.forName("com.mysql.jdbc.Driver")
-
-        extractTables(ManagedResource(DriverManager.getConnection(url)))
+        extractTables(connection(url))
     }
 
 
-    def parse(connectionString: String): DatabaseModel = new DatabaseModel("database", search(connectionString))
+    def parse(jdbcUrl: String): DatabaseModel = new DatabaseModel("database", search(jdbcUrl))
+    
+    def parseTable(tableName: String, jdbcUrl: String) =
+        for (c <- connection(jdbcUrl)) yield extractTable(tableName, c)
     
     def main(args: scala.Array[String]) {
-    	require(args.length == 1)
+    	def usage() {
+    	    Console.err.println("usage: JdbcModelExtractor jdbc-url [table-name]")
+    	}
     	
-    	val model = parse(args.first)
+    	val model = args match {
+    	    case Seq(jdbcUrl) =>
+                parse(jdbcUrl)
+    	    case Seq(jdbcUrl, tableName) =>
+                new DatabaseModel("xx", List(parseTable(tableName, jdbcUrl)))
+            case _ =>
+                usage(); exit(1)
+    	}
     	
     	print(ModelSerializer.serializeDatabaseToText(model))
     }
@@ -246,6 +262,20 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         val table = extractTable("cars")
         val created = table.column("created")
         created.defaultValue must_== Some(NowValue)
+    }
+    
+    "MySQL string DEFAULT values" in {
+        dropTable("jets")
+        execute("CREATE TABLE jets (a VARCHAR(2), b VARCHAR(2) DEFAULT '', c VARCHAR(2) DEFAULT 'x', " +
+            "d VARCHAR(2) NOT NULL, e VARCHAR(2) NOT NULL DEFAULT '', f VARCHAR(2) NOT NULL DEFAULT 'y')")
+        
+        val table = extractTable("jets")
+        table.column("a").defaultValue must_== None
+        table.column("b").defaultValue must_== Some(StringValue(""))
+        table.column("c").defaultValue must_== Some(StringValue("x"))
+        //table.column("d").defaultValue must_== None
+        table.column("e").defaultValue must_== Some(StringValue(""))
+        table.column("f").defaultValue must_== Some(StringValue("y"))
     }
 }
 
