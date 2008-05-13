@@ -22,24 +22,42 @@ object JdbcModelExtractor {
 
         while (columns.next) {
             val colName = columns.getString("COLUMN_NAME")
+            
             val colType = columns.getString("TYPE_NAME")
-            var colTypeSize: Int = -1
-            if (columns.getObject("COLUMN_SIZE") != null) colTypeSize = columns.getInt("COLUMN_SIZE")
+            
+            def getIntOption(rs: ResultSet, columnName: String) = {
+                val v = rs.getInt(columnName)
+                if (rs.wasNull) None
+                else Some(v)
+            }
+            
+            val colTypeSize = getIntOption(columns, "COLUMN_SIZE")
 
-            val nullable = columns.getString("IS_NULLABLE").equalsIgnoreCase("yes")
-            val autoIncrement = columns.getString("IS_AUTOINCREMENT").equalsIgnoreCase("YES")
+            val nullable = columns.getString("IS_NULLABLE") match {
+                case "YES" => Some(Nullability(true))
+                case "NO" => Some(Nullability(false))
+                case "" => None
+            }
+            
+            val autoIncrement = columns.getString("IS_AUTOINCREMENT") match {
+                case "YES" => Some(AutoIncrement(true))
+                case "NO" => Some(AutoIncrement(false))
+                case "" => None
+            }
+            
+            val defaultValue = (columns.getString("COLUMN_DEF") match {
+                case null => None
+                case s => Some(script.parser.SqlParserCombinator.parseValue(s))
+            }).map(DefaultValue(_))
 
             val isUnsigned = false
             val isZerofill = false
             val characterSet: Option[String] = None
             val collate: Option[String] = None
 
-            var typeSizeOption: Option[Int] = None
-            if (colTypeSize  != -1) typeSizeOption = Some(colTypeSize)
-            
-            val props = new ColumnProperties(List[ColumnProperty](Nullability(nullable), AutoIncrement(autoIncrement)))
+            val props = new ColumnProperties(List[ColumnProperty]() ++ nullable ++ defaultValue ++ autoIncrement)
 
-            val dataType = DataType(colType, typeSizeOption)
+            val dataType = DataType(colType, colTypeSize)
 
             val cm = new ColumnModel(colName, dataType, props)
 

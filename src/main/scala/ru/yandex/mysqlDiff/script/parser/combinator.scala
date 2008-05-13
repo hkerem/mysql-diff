@@ -55,7 +55,7 @@ object SqlParserCombinator extends StandardTokenParsers {
     def stringValue: Parser[StringValue] = stringLit ^^
             { x => StringValue(x.replaceFirst("^[\"']", "").replaceFirst("[\"']$", "")) }
     
-    def nowValue: Parser[SqlValue] = "NOW" ~ "(" ~ ")" ^^ { x => NowValue }
+    def nowValue: Parser[SqlValue] = (("NOW" ~ "(" ~ ")") | "CURRENT_TIMESTAMP") ^^ { x => NowValue }
     
     def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | nowValue
     
@@ -135,6 +135,9 @@ object SqlParserCombinator extends StandardTokenParsers {
     
     def parseColumn(text: String) =
         parse(column)(text)
+    
+    def parseValue(text: String) =
+        parse(sqlValue)(text)
     
     def main(args: Array[String]) {
         val text =
