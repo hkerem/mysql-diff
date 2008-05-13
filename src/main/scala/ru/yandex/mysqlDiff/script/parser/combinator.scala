@@ -40,9 +40,13 @@ object SqlParserCombinator extends StandardTokenParsers {
     
     lexical.delimiters += ("(", ")", "=", ",", ";", "=")
     
-    lexical.reserved += ("CREATE", "TABLE", "VIEW", "IF", "NOT", "NULL", "EXISTS",
-            "AS", "SELECT", "UNIQUE", "KEY", "INDEX", "PRIMARY", "DEFAULT", "NOW", "AUTO_INCREMENT")
+    //lexical.reserved += ("CREATE", "TABLE", "VIEW", "IF", "NOT", "NULL", "EXISTS",
+    //        "AS", "SELECT", "UNIQUE", "KEY", "INDEX", "PRIMARY", "DEFAULT", "NOW", "AUTO_INCREMENT")
    
+    // XXX: allow ignore case
+    implicit override def keyword(chars: String): Parser[String] =
+        (accept(lexical.Keyword(chars)) ^^ (_.chars)) | (accept(lexical.Identifier(chars)) ^^ (_.chars))
+    
     // should be NullValue
     def nullValue: Parser[SqlValue] = "NULL" ^^ { x => NullValue }
     
@@ -87,7 +91,7 @@ object SqlParserCombinator extends StandardTokenParsers {
     def pk: Parser[PrimaryKey] =
         "PRIMARY" ~> "KEY" ~> nameList ^^ { nameList => PrimaryKey(model.PrimaryKey(None, nameList)) }
     
-    def tableEntry: Parser[Entry] = column | index | pk
+    def tableEntry: Parser[Entry] = pk | index | column
     
     def ifNotExists: Parser[Any] = "IF" ~ "NOT" ~ "EXISTS"
     
