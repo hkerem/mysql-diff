@@ -150,6 +150,10 @@ object SqlParserCombinator extends StandardTokenParsers {
 object SqlParserCombinatorTests extends org.specs.Specification {
     import SqlParserCombinator._
     
+    "parseScript" in {
+        parse("CREATE TABLE a (id INT); CREATE TABLE b (name VARCHAR(10))")
+    }
+    
     "parseCreateTable simple" in {
         import CreateTableStatement._
         
