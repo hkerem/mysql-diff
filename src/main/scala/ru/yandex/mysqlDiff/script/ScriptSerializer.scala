@@ -51,7 +51,7 @@ object ScriptSerializer {
         case st: AlterTableStatement => serializeChangeTable(st)
     }
     
-    def serializeValue(value: SqlValue) = value match {
+    def serializeValue(value: SqlValue): String = value match {
         case NullValue => "NULL"
         case NumberValue(number) => number.toString
         case StringValue(string) => "'" + string + "'" // XXX: escape
@@ -128,18 +128,8 @@ object ScriptSerializer {
         result.trim
     }
     
-    // XXX: move to ModelSerializer
-    def serializeColumn(model: ColumnModel) = {
-        val attributes = new ArrayBuffer[String]
-        
-        attributes += (if (model.isNotNull) "NOT NULL" else "NULL")
-        if (model.isAutoIncrement) attributes += "AUTOINCREMENT"
-        if (model.defaultValue.isDefined) attributes += ("DEFAULT " + model.defaultValue.get)
-        if (model.comment.isDefined) attributes += ("COMMENT " + model.comment.get) // XXX: lies
-        
-        model.name + " " + serializeDataType(model.dataType) +
-                (if (attributes.isEmpty) "" else " " + attributes.mkString(" "))
-    }
+    def serializeColumn(model: ColumnModel) =
+        serializeTableEntry(ModelSerializer.serializeColumn(model))
     
     def serializePrimaryKey(pk: PrimaryKey) = {
         val words = new ArrayBuffer[String]

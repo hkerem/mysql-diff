@@ -27,7 +27,7 @@ object DataType {
 
 abstract class TableEntry
 
-class ColumnProperties(val properties: Seq[ColumnProperty]) {
+case class ColumnProperties(val properties: Seq[ColumnProperty]) {
     // XXX: add check each property type appears more then once
     
     def isEmpty = properties.isEmpty

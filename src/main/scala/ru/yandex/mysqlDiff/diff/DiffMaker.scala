@@ -43,10 +43,10 @@ object DiffMaker {
             val fromO = from.properties.find(pt)
             val toO = to.properties.find(pt)
             (fromO, toO) match {
-                case (Some(fromP), Some(toP)) => diff += new ChangeColumnPropertyDiff(fromP, toP)
+                case (Some(fromP), Some(toP)) if fromP != toP => diff += new ChangeColumnPropertyDiff(fromP, toP)
                 case (Some(fromP), None) => diff += new DropColumnPropertyDiff(fromP)
                 case (None, Some(toP)) => diff += new CreateColumnPropertyDiff(toP)
-                case (None, None) =>
+                case _ =>
             }
         }
         

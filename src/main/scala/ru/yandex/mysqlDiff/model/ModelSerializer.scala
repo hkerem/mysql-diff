@@ -5,7 +5,7 @@ import scala.collection.mutable.ArrayBuffer
 import script._
 
 /**
- * Serialize model to create statements.
+ * Serialize model to create statements (except for methods with toText or toString methods).
  */
 object ModelSerializer {
     def serializeColumn(column: ColumnModel) =
