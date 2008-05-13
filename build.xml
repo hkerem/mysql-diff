@@ -32,7 +32,11 @@
         <mkdir dir="target/classes"/>
         <scalac srcdir="src/main/scala" destdir="target/classes"
                 deprecation="on" unchecked="on" encoding="UTF-8"
-                classpathref="build.classpath" force="changed"/>
+                classpathref="build.classpath" force="changed"
+                />
+                <!--
+                addparams="-Xprint:typer"
+                -->
     </target>
 
     <target name="run-tests" depends="compile">
