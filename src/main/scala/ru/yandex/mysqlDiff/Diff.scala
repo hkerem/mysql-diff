@@ -15,48 +15,46 @@ object Diff {
         "mysqlDiff.sh from_file|from_jdbc_url to_file|to_jdbc_url"
 
     def main(args: Array[String]) {
-        if (args.length != 2) {
-            System.err.println(helpBanner)
-            System.exit(1)
-        } else {
-            val fromArgs = args(0)
-            val toArgs = args(1)
-            if (fromArgs == null || fromArgs.trim == "" || toArgs == null|| toArgs.trim == "") {
-                System.err.println(helpBanner)
-                System.exit(1)
-            } else {
-                try {
-                    var fromdb = getModelFromArgsLine(args(0))
-                    var todb = getModelFromArgsLine(args(1))
-                    Console.println("-- Start diff script from " + fromArgs  + " to " + toArgs + "\n")
-
-                    val dbDiff = DiffMaker.compareDatabases(fromdb, todb)
-
-                    val script = DiffSerializer.serialize(fromdb, todb, dbDiff)
-
-                    println(script)
-
-                    Console.println("-- End of diff script from " + fromArgs  + " to " + toArgs)
-                } catch {
-                    case e: MysqlDiffException => {
-                        System.err.println("An error while diff building")
-                        System.err.println(e.message)
-                        System.exit(2)
-                    }
-                }
-            }
+        def usage() {
+            Console.err.println("mysql-diff.sh from_file|from_jdbc_url to_file|to_jdbc_url <table>")
         }
-    }
+        
+        val (fromdb, todb) = args match {
+            case Seq(from, to) =>
+                (getModelFromArgsLine(from), getModelFromArgsLine(to))
+            case Seq(from, to, table) =>
+                (getModelFromArgsLine(from, table), getModelFromArgsLine(to, table))
+            case _ =>
+                usage()
+                exit(1)
+        }
+        
+        val dbDiff = DiffMaker.compareDatabases(fromdb, todb)
 
+        val script = DiffSerializer.serialize(fromdb, todb, dbDiff)
+
+        print(script)
+
+    }
+    
     def getModelFromArgsLine(arg: String): DatabaseModel = {
-        if (arg.toLowerCase.startsWith("jdbc:"))
-            JdbcModelExtractor.parse(arg.trim)
+        if (arg.startsWith("jdbc:"))
+            JdbcModelExtractor.parse(arg)
         else {
-            val sourceF = new File(arg)
-            if (!sourceF.isFile)  throw new MysqlDiffException("\"" + arg + "\" file is not a file.")
-            var str = new FileExtras(sourceF).slurp
+            var str = ReaderResource.file(arg).slurp
             model.ModelParser.parseModel(str)
         }
     }
-
+    
+    def getModelFromArgsLine(arg: String, table: String) = {
+        if (arg.startsWith("jdbc:"))
+            new DatabaseModel("xx", List(JdbcModelExtractor.parseTable(table, arg)))
+        else {
+            var str = ReaderResource.file(arg).slurp
+            val tableModel = model.ModelParser.parseModel(str).declarations.filter(_.name == table).first
+            new DatabaseModel("xx", List(tableModel))
+        }
+    }
 }
+
+// vim: set ts=4 sw=4 et:
