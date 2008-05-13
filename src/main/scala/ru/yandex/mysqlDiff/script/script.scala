@@ -13,9 +13,13 @@ abstract class ScriptStatement extends ScriptElement
 
 case class Unparsed(q: String) extends ScriptElement
 
-case class CreateTableStatement(name: String, ifNotExists: Boolean, entries: Seq[CreateTableStatement.Entry])
+case class CreateTableStatement(name: String, ifNotExists: Boolean,
+        entries: Seq[CreateTableStatement.Entry], options: Seq[TableOption])
     extends ScriptStatement
 {
+    def this(name: String, ifNotExists: Boolean, entries: Seq[CreateTableStatement.Entry]) =
+        this(name, ifNotExists, entries, Nil)
+
     import CreateTableStatement._
     
     def columns = entries.filter(_.isInstanceOf[Column])

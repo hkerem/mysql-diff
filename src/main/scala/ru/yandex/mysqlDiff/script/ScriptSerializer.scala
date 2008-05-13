@@ -77,8 +77,16 @@ object ScriptSerializer {
     def serializeCreateTable(t: CreateTableStatement, options: Options): String = {
         val l = t.entries.map(serializeTableEntry _).reverse
         val lines = (List(l.first) ++ l.drop(1).map(_ + "," + options.afterComma)).reverse.map(options.indent + _)
-        (List("CREATE TABLE " + t.name + " (") ++ lines ++ List(")")).mkString(options.stmtJoin)
+        
+        val firstLine = "CREATE TABLE " + t.name + " ("
+        val lastLine = ")" +
+            (if (t.options.isEmpty) "" else " " + t.options.map(serializeTableOption _).mkString(" "))
+        
+        (List(firstLine) ++ lines ++ List(lastLine)).mkString(options.stmtJoin)
     }
+    
+    def serializeTableOption(opt: TableOption) =
+        opt.name + "=" + opt.value
     
     def serializeDropTable(tableName: String) =
         "DROP TABLE " + tableName

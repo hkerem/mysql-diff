@@ -69,10 +69,15 @@ case class ForeighKey(override val name: Option[String],
     require(localColumns.length == externalColumns.length)
 }
 
+case class TableOption(name: String, value: String)
+
 case class TableModel(override val name: String, columns: Seq[ColumnModel],
-        primaryKey: Option[PrimaryKey], indexes: Seq[IndexModel]) 
+        primaryKey: Option[PrimaryKey], indexes: Seq[IndexModel], options: Seq[TableOption])
     extends DatabaseDeclaration(name: String)
 {
+    def this(name: String, columns: Seq[ColumnModel], pk: Option[PrimaryKey], indexes: Seq[IndexModel]) =
+        this(name, columns, pk, indexes, Nil)
+    
     def this(name: String, columns: Seq[ColumnModel]) =
         this(name, columns, None, Nil)
 
