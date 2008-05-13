@@ -4,6 +4,8 @@ import scala.collection.mutable.ArrayBuffer
 
 import script._
 
+import scalax.io._
+
 object ModelParser {
     def parseModel(text: String): DatabaseModel =
         parseModel(parser.Parser.parse(text))
@@ -33,6 +35,12 @@ object ModelParser {
         require(pks.length <= 1)
         
         new TableModel(name, columns.toList, pks.firstOption, indexes.toList)
+    }
+    
+    def main(args: Array[String]) {
+        val text = InputStreamResource.file(args(0)).reader.slurp()
+        val model = parseModel(text)
+        print(ModelSerializer.serializeDatabaseToText(model))
     }
 }
 
