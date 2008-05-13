@@ -130,7 +130,7 @@ ALTER TABLE table_test ADD COLUMN name varchar (Some(1000));
         }
         
         script(1) match {
-            case tableFromScript @ CreateTableStatement("table_test", _, _) =>
+            case tableFromScript @ CreateTableStatement("table_test", _, _, _) =>
                 import CreateTableStatement._
                 
                 assert(2 == tableFromScript.columns.length)

@@ -33,7 +33,7 @@ object ModelParser {
         
         require(pks.length <= 1)
         
-        TableModel(name, columns.toList, pks.firstOption, indexes.toList)
+        new TableModel(name, columns.toList, pks.firstOption, indexes.toList)
     }
 }
 
