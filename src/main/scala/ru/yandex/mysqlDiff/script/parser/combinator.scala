@@ -128,6 +128,12 @@ object SqlParserCombinator extends StandardTokenParsers {
         result
     }
     
+    def parseCreateTable(text: String) = {
+        val tokens = new lexical.Scanner(text)
+        val Success(result, _) = phrase(createTable)(tokens)
+        result
+    }
+    
     def main(args: Array[String]) {
         val text =
             if (args.length == 1) {
@@ -136,6 +142,22 @@ object SqlParserCombinator extends StandardTokenParsers {
                 ReaderResource.apply(args(1)).slurp()
             }
         println(parse(text))
+    }
+}
+
+object SqlParserCombinatorTests extends org.specs.Specification {
+    import SqlParserCombinator._
+    
+    "parseCreateTable simple" in {
+        import CreateTableStatement._
+        
+        parseCreateTable("CREATE TABLE a (id INT)") must beLike {
+            case t @ CreateTableStatement("a", _, _, _) =>
+                t.columns.length must_== 1
+                //t.columns must beLike { case s: Seq[_] => s.length == 1 }
+                t.column("id") must beLike { case Column("id", _, Nil) => true }
+                true
+        }
     }
 }
 

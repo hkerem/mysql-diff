@@ -20,6 +20,7 @@ case class DataType(val name: String, val length: Option[Int], val isUnsigned: B
 object DataType {
     def varchar(length: Int) = apply("VARCHAR", Some(length))
     def int = apply("INT")
+    
     def apply(name: String, length: Option[Int]): DataType = new DataType(name, length, false, false, None, None)
     def apply(name: String): DataType = apply(name, None)
 }
