@@ -48,14 +48,14 @@ object SqlParserCombinator extends StandardTokenParsers {
         (accept(lexical.Keyword(chars)) ^^ (_.chars)) | (accept(lexical.Identifier(chars)) ^^ (_.chars))
     
     // should be NullValue
-    def nullValue: Parser[SqlValue] = "NULL" ^^ { x => NullValue }
+    def nullValue: Parser[SqlValue] = "NULL" ^^^ NullValue
     
     def numberValue: Parser[NumberValue] = numericLit ^^ { x => NumberValue(x.toInt) } // silly
     
     def stringValue: Parser[StringValue] = stringLit ^^
             { x => StringValue(x.replaceFirst("^[\"']", "").replaceFirst("[\"']$", "")) }
     
-    def nowValue: Parser[SqlValue] = (("NOW" ~ "(" ~ ")") | "CURRENT_TIMESTAMP") ^^ { x => NowValue }
+    def nowValue: Parser[SqlValue] = (("NOW" ~ "(" ~ ")") | "CURRENT_TIMESTAMP") ^^^ NowValue
     
     def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | nowValue
     
@@ -67,7 +67,7 @@ object SqlParserCombinator extends StandardTokenParsers {
     def defaultValue: Parser[DefaultValue] = "DEFAULT" ~> sqlValue ^^ { value => DefaultValue(value) }
     
     def autoIncrementability: Parser[AutoIncrement] =
-        "AUTO_INCREMENT" ^^ { x => AutoIncrement(true) }
+        "AUTO_INCREMENT" ^^^ AutoIncrement(true)
     
     def columnAttr = nullability | defaultValue | autoIncrementability
     
