@@ -23,8 +23,8 @@ object ModelSerializer {
     }
     
     def serializeTable(table: TableModel) =
-        new CreateTableStatement(table.name, false,
-            table.columns.map(serializeColumn _) ++ table.allIndexes.map(serializeIndex _))
+        CreateTableStatement(table.name, false,
+            table.columns.map(serializeColumn _) ++ table.allIndexes.map(serializeIndex _), table.options)
     
     def serializeDatabase(db: DatabaseModel) = db.declarations.map(serializeTable _)
     

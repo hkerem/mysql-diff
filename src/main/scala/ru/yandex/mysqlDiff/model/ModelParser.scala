@@ -34,7 +34,7 @@ object ModelParser {
         
         require(pks.length <= 1)
         
-        new TableModel(name, columns.toList, pks.firstOption, indexes.toList)
+        TableModel(name, columns.toList, pks.firstOption, indexes.toList, ct.options)
     }
     
     def main(args: Array[String]) {
