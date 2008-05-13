@@ -8,18 +8,8 @@ import script._
  * Serialize model to create statements.
  */
 object ModelSerializer {
-    def serializeColumn(column: ColumnModel) = {
-        import CreateTableStatement._
-        
-        val attrs = new ArrayBuffer[ColumnProperty]
-        
-        attrs += Nullable(!column.isNotNull)
-        if (column.isAutoIncrement) attrs += AutoIncrement
-        //if (defaultValue.isDefined) // XXX
-        // XXX: comment
-        
-        Column(column.name, column.dataType, attrs.toList)
-    }
+    def serializeColumn(column: ColumnModel) =
+        CreateTableStatement.Column(column.name, column.dataType, column.properties)
     
     def serializePk(pk: PrimaryKey) =
         new CreateTableStatement.PrimaryKey(pk)

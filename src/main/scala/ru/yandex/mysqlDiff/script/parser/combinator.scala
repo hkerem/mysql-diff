@@ -62,18 +62,17 @@ object SqlParserCombinator extends StandardTokenParsers {
     def dataType: Parser[DataType] = name ~ opt("(" ~> numericLit <~ ")") ^^
             { case name ~ length => DataType(name, length.map(_.toInt)) }
    
-    def nullability: Parser[Nullable] = opt("NOT") <~ "NULL" ^^ { x => Nullable(x.isEmpty) }
+    def nullability: Parser[Nullability] = opt("NOT") <~ "NULL" ^^ { x => Nullability(x.isEmpty) }
     
     def defaultValue: Parser[DefaultValue] = "DEFAULT" ~> sqlValue ^^ { value => DefaultValue(value) }
     
-    // Parser[AutoIncrement.type] does not work
-    def autoIncrementability: Parser[ColumnProperty] =
-        "AUTO_INCREMENT" ^^ { x => AutoIncrement }
+    def autoIncrementability: Parser[AutoIncrement] =
+        "AUTO_INCREMENT" ^^ { x => AutoIncrement(true) }
     
     def columnAttr = nullability | defaultValue | autoIncrementability
     
     def column: Parser[Column] = name ~ dataType ~ rep(columnAttr) ^^
-            { case name ~ dataType ~ attrs => Column(name, dataType, attrs) }
+            { case name ~ dataType ~ attrs => Column(name, dataType, new ColumnProperties(attrs)) }
     
     def name: Parser[String] = ident
     
@@ -158,18 +157,22 @@ object SqlParserCombinatorTests extends org.specs.Specification {
             case t @ CreateTableStatement("a", _, _, _) =>
                 t.columns.length must_== 1
                 //t.columns must beLike { case s: Seq[_] => s.length == 1 }
-                t.column("id") must beLike { case Column("id", _, Nil) => true }
+                t.column("id") must beLike { case Column("id", _, attrs) if attrs.isEmpty => true }
                 true
         }
     }
     
     "parseColumn default value" in {
-        import CreateTableStatement._
-        
-        val column = parseColumn("friend_files_count INT NOT NULL DEFAULT 0")
+        val column = parseColumn("friend_files_count INT NOT NULL DEFAULT 17")
         column.name must_== "friend_files_count"
         column.dataType must_== DataType.int
-        column.defaultValue must_== NumberValue(0)
+        column.defaultValue must_== Some(NumberValue(17))
+    }
+    
+    "parseColumn nullability" in {
+        parseColumn("id INT NOT NULL").isNotNull must_== true
+        parseColumn("id INT NULL").isNotNull must_== false
+        parseColumn("id INT").isNotNull must_== false
     }
 }
 

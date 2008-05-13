@@ -2,6 +2,15 @@ package ru.yandex.mysqlDiff.model
 
 abstract class ColumnDiff
 
+abstract class ColumnPropertyDiff
+case class DropColumnPropertyDiff(property: ColumnProperty) extends ColumnPropertyDiff
+case class CreateColumnPropertyDiff(property: ColumnProperty) extends ColumnPropertyDiff
+case class ChangeColumnPropertyDiff(oldProperty: ColumnProperty, newProperty: ColumnProperty)
+    extends ColumnPropertyDiff
+{
+    require(oldProperty.propertyType == newProperty.propertyType)
+}
+
 trait ChangeSomethingDiff {
     def name: String
     def renameTo: Option[String]
@@ -13,13 +22,6 @@ case class DropColumnDiff(name: String) extends ColumnDiff
 case class ChangeColumnDiff(override val name: String, override val renameTo: Option[String],
         diff: Seq[ColumnPropertyDiff])
     extends ColumnDiff with ChangeSomethingDiff
-
-case class ColumnPropertyDiff(propertyType: PropertyType, oldValue1: Any, newValue1: Any) {
-    type T = propertyType.ValueType
-
-    def oldValue: T = oldValue1.asInstanceOf[T]
-    def newValue: T = newValue1.asInstanceOf[T]
-}
 
 
 abstract class IndexDiff

@@ -1,5 +1,6 @@
 package ru.yandex.mysqlDiff.diff
 
+import scala.collection.mutable.ArrayBuffer
 
 import model._
 
@@ -29,17 +30,28 @@ object DiffMaker {
     }
     
     def compareColumns(from: ColumnModel, to: ColumnModel): Option[ColumnDiff] = {
-        var diff = List[ColumnPropertyDiff]()
-        if (from.comment != to.comment)
-            diff += new ColumnPropertyDiff(CommentValue, from.comment, to.comment)
-        if (from.isNotNull != to.isNotNull)
-            diff += new ColumnPropertyDiff(CommentValue, from.isNotNull, to.isNotNull)
-        if (from.isAutoIncrement != to.isAutoIncrement)
-            diff += new ColumnPropertyDiff(AutoIncrementality, from.isAutoIncrement, to.isAutoIncrement)
+        var diff = new ArrayBuffer[ColumnPropertyDiff]
+        
+        val comparePropertyTypes = List[ColumnPropertyType](
+            CommentPropertyType,
+            AutoIncrementPropertyType,
+            NullabilityPropertyType,
+            DefaultValuePropertyType
+        )
+        
+        for (pt <- comparePropertyTypes) {
+            val fromO = from.properties.find(pt)
+            val toO = to.properties.find(pt)
+            (fromO, toO) match {
+                case (Some(fromP), Some(toP)) => diff += new ChangeColumnPropertyDiff(fromP, toP)
+                case (Some(fromP), None) => diff += new DropColumnPropertyDiff(fromP)
+                case (None, Some(toP)) => diff += new CreateColumnPropertyDiff(toP)
+                case (None, None) =>
+            }
+        }
+        
         if (from.dataType != to.dataType)
-            diff += new ColumnPropertyDiff(DataTypeValue, from.dataType, to.dataType)
-        if (from.defaultValue != to.defaultValue)
-            diff += new ColumnPropertyDiff(DefaultValue, from.defaultValue, to.defaultValue)
+            diff += new ChangeColumnPropertyDiff(DataTypeProperty(from.dataType), DataTypeProperty(to.dataType))
         
         if (from.name != to.name) Some(new ChangeColumnDiff(from.name, Some(to.name), diff))
         else if (diff.size > 0) Some(new ChangeColumnDiff(from.name, None, diff))

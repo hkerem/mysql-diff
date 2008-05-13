@@ -26,20 +26,22 @@ object JdbcModelExtractor {
             var colTypeSize: Int = -1
             if (columns.getObject("COLUMN_SIZE") != null) colTypeSize = columns.getInt("COLUMN_SIZE")
 
-            val isNotNull = !columns.getString("IS_NULLABLE").equalsIgnoreCase("yes")
-            val isAutoinrement = columns.getString("IS_AUTOINCREMENT").equalsIgnoreCase("YES")
+            val nullable = columns.getString("IS_NULLABLE").equalsIgnoreCase("yes")
+            val autoIncrement = columns.getString("IS_AUTOINCREMENT").equalsIgnoreCase("YES")
 
-            val isUnsigned = false;
-            val isZerofill = false;
-            val characterSet: Option[String] = None;
-            val collate: Option[String] = None;
+            val isUnsigned = false
+            val isZerofill = false
+            val characterSet: Option[String] = None
+            val collate: Option[String] = None
 
             var typeSizeOption: Option[Int] = None
             if (colTypeSize  != -1) typeSizeOption = Some(colTypeSize)
+            
+            val props = new ColumnProperties(List[ColumnProperty](Nullability(nullable), AutoIncrement(autoIncrement)))
 
-            val cm = new ColumnModel(colName, new DataType(colType, typeSizeOption, isUnsigned, isZerofill, characterSet, collate))
-            cm.isNotNull = isNotNull
-            cm.isAutoIncrement = isAutoinrement
+            val dataType = DataType(colType, typeSizeOption)
+
+            val cm = new ColumnModel(colName, dataType, props)
 
             columnsList = (columnsList ++ List(cm)).toList
         }

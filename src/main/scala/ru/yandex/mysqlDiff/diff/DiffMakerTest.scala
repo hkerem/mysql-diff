@@ -15,7 +15,7 @@ object DiffTest extends TestSuite("Simple Diff") {
         val nodiff = DiffMaker.compareColumns(c1, c1_eq)
         assert(!nodiff.isDefined)
     
-        val c2 = ColumnModel("c2", new DataType("varchar", Some(20), false, false, None, None))
+        val c2 = new ColumnModel("c2", new DataType("varchar", Some(20), false, false, None, None))
 
         val diff = DiffMaker.compareColumns(c1, c2)
         assert(diff.isDefined)
@@ -24,7 +24,7 @@ object DiffTest extends TestSuite("Simple Diff") {
         assert(diff1.name == "c1")
         assert(diff1.renameTo == Some("c2"))
 
-        val c3 = ColumnModel("c1", new DataType("int", Some(11), false, false, None, None))
+        val c3 = new ColumnModel("c1", new DataType("int", Some(11), false, false, None, None))
         val diff2O = DiffMaker.compareColumns(c1, c3)
         assert(diff2O.isDefined)
         val diff2 = diff2O.get.asInstanceOf[ChangeColumnDiff]

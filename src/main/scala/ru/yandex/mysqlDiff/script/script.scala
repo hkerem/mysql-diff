@@ -33,19 +33,9 @@ case class CreateTableStatement(name: String, ifNotExists: Boolean,
 object CreateTableStatement {
     abstract class Entry
     
-    abstract class ColumnProperty
-    
-    case class Nullable(nullable: Boolean) extends ColumnProperty
-    
-    case class DefaultValue(value: SqlValue) extends ColumnProperty
-    
-    case object AutoIncrement extends ColumnProperty
-    
-    case class Column(name: String, dataType: DataType, attrs: Seq[ColumnProperty]) extends Entry {
-        def defaultValue = attrs.flatMap {
-            case DefaultValue(value) => Some(value)
-            case _ => None
-        }.first
+    case class Column(name: String, dataType: DataType, properties: ColumnProperties) extends Entry {
+        def defaultValue = properties.defaultValue
+        def isNotNull = properties.isNotNull
     }
     
     case class Index(index: model.IndexModel) extends Entry

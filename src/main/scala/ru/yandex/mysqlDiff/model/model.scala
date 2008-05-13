@@ -27,27 +27,36 @@ object DataType {
 
 abstract class TableEntry
 
-case class ColumnModel(val name: String, val dataType: DataType) extends TableEntry
-{
-    // XXX: make all this case class parameters
-    var isNotNull: Boolean = false
-    var isAutoIncrement: Boolean = false
-    var defaultValue: Option[String] = None
-    var comment: Option[String] = None
+class ColumnProperties(val properties: Seq[ColumnProperty]) {
+    def isEmpty = properties.isEmpty
+    
+    def find[T <: ColumnPropertyType](pt: T): Option[T#ValueType] =
+        properties.find(_.propertyType == pt).map(_.asInstanceOf[T#ValueType])
+    
+    /** True iff NOT NULL or unknown */
+    def isNotNull = find(NullabilityPropertyType).map(!_.nullable).getOrElse(false)
+    
+    def comment: Option[String] = find(CommentPropertyType).map(_.comment)
+    
+    /** False iff true or unknown */
+    def isAutoIncrement = find(AutoIncrementPropertyType).map(_.autoIncrement).getOrElse(false)
+    
+    def defaultValue: Option[SqlValue] = find(DefaultValuePropertyType).map(_.value)
+}
 
-    override def equals(otherO: Any): Boolean = {
-        if (otherO == null || !otherO.isInstanceOf[ColumnModel])
-            false
-        else {
-            val other = otherO.asInstanceOf[ColumnModel]
-            if (!(name == other.name)) false
-            else if (!(comment == other.comment)) false
-            else if (isNotNull != other.isNotNull) false
-            else if (isAutoIncrement != other.isAutoIncrement) false
-            else if (!(defaultValue != other.defaultValue)) false
-            else true
-        }
-    }
+object ColumnProperties {
+    val empty = new ColumnProperties(Nil)
+}
+
+case class ColumnModel(val name: String, val dataType: DataType, properties: ColumnProperties)
+    extends TableEntry
+{
+    def this(name: String, dataType: DataType) = this(name, dataType, ColumnProperties.empty)
+    
+    def isNotNull = properties.isNotNull
+    def isAutoIncrement = properties.isAutoIncrement
+    def defaultValue = properties.defaultValue
+    def comment = properties.comment
 }
 
 abstract class ConstraintModel(val name: Option[String], val columns: Seq[String]) extends TableEntry
@@ -97,35 +106,60 @@ abstract class DatabaseDeclaration(val name: String)
 case class DatabaseModel(override val name: String, val declarations: Seq[TableModel])
     extends DatabaseDeclaration(name)
 
-
-abstract class PropertyType {
-    type ValueType
-    def get(column: ColumnModel): ValueType
+abstract class ColumnProperty {
+    def propertyType: ColumnPropertyType
 }
 
-case object Nullability extends PropertyType {
-    override type ValueType = Boolean
-    override def get(column: ColumnModel) = !column.isNotNull
+abstract class ColumnPropertyType {
+    type ValueType <: ColumnProperty
 }
 
-case object AutoIncrementality extends PropertyType {
-    override type ValueType = Boolean
-    override def get(column: ColumnModel) = column.isAutoIncrement
+case class Nullability(nullable: Boolean) extends ColumnProperty {
+    override def propertyType = NullabilityPropertyType
 }
 
-case object DefaultValue extends PropertyType {
-    override type ValueType = Option[String]
-    override def get(column: ColumnModel) = column.defaultValue
+case object NullabilityPropertyType extends ColumnPropertyType {
+    override type ValueType = Nullability
 }
 
-case object CommentValue extends PropertyType {
-    override type ValueType = Option[String]
-    override def get(column: ColumnModel) = column.comment
+case class DefaultValue(value: SqlValue) extends ColumnProperty {
+    override def propertyType = DefaultValuePropertyType
 }
 
-case object DataTypeValue extends PropertyType {
-    override type ValueType = DataType
-    override def get(column: ColumnModel) = column.dataType
+case object DefaultValuePropertyType extends ColumnPropertyType {
+    override type ValueType = DefaultValue
+}
+
+case class AutoIncrement(autoIncrement: Boolean) extends ColumnProperty {
+    override def propertyType = AutoIncrementPropertyType
+}
+
+case object AutoIncrementPropertyType extends ColumnPropertyType {
+    override type ValueType = AutoIncrement
+}
+
+case class CommentProperty(comment: String) extends ColumnProperty {
+    override def propertyType = CommentPropertyType
+}
+
+case object CommentPropertyType extends ColumnPropertyType {
+    override type ValueType = CommentProperty
+}
+
+case class DataTypeProperty(dataType: DataType) extends ColumnProperty {
+    override def propertyType = DataTypePropertyType
+}
+
+case object DataTypePropertyType extends ColumnPropertyType {
+    override type ValueType = DataTypeProperty
+}
+
+object ModelTests extends org.specs.Specification {
+    "ColumnProperties" in {
+        new ColumnProperties(List(Nullability(true))).isNotNull must_== false
+        new ColumnProperties(List(Nullability(false))).isNotNull must_== true
+        new ColumnProperties(List(DefaultValue(NumberValue(0)))).isNotNull must_== false
+    }
 }
 
 // vim: set ts=4 sw=4 et:

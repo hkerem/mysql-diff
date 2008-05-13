@@ -25,8 +25,7 @@ object ModelParser {
         val indexes = new ArrayBuffer[IndexModel]
         ct.entries.map {
             case c.Column(name, dataType, attrs) =>
-                columns += ColumnModel(name, dataType)
-                // XXX: parse attrs
+                columns += ColumnModel(name, dataType, attrs)
             case c.PrimaryKey(pk) => pks += pk
             case c.Index(index) => indexes += index
         }

@@ -58,18 +58,19 @@ object ScriptSerializer {
         case NowValue => "NOW()"
     }
     
-    def serializeColumnProperty(cp: CreateTableStatement.ColumnProperty) = cp match {
-        case CreateTableStatement.Nullable(true) => "NULL"
-        case CreateTableStatement.Nullable(false) => "NOT NULL"
-        case CreateTableStatement.DefaultValue(value) => "DEFAULT " + serializeValue(value)
-        case CreateTableStatement.AutoIncrement => "AUTO_INCREMENT"
+    def serializeColumnProperty(cp: ColumnProperty): Option[String] = cp match {
+        case Nullability(true) => Some("NULL")
+        case Nullability(false) => Some("NOT NULL")
+        case DefaultValue(value) => Some("DEFAULT " + serializeValue(value))
+        case AutoIncrement(true) => Some("AUTO_INCREMENT")
+        case AutoIncrement(false) => None
     }
     
     def serializeTableEntry(e: CreateTableStatement.Entry): String = e match {
         case CreateTableStatement.Column(name, dataType, attrs) =>
             name + " " + serializeDataType(dataType) +
                     (if (attrs.isEmpty) ""
-                    else " " + attrs.map(serializeColumnProperty _).mkString(" "))
+                    else " " + attrs.properties.flatMap(serializeColumnProperty _).mkString(" "))
         case CreateTableStatement.PrimaryKey(pk) => serializePrimaryKey(pk)
         case CreateTableStatement.Index(index) => serializeIndex(index)
     }
@@ -133,8 +134,8 @@ object ScriptSerializer {
         
         attributes += (if (model.isNotNull) "NOT NULL" else "NULL")
         if (model.isAutoIncrement) attributes += "AUTOINCREMENT"
-        if (model.defaultValue.isDefined) attributes += "DEFAULT " + model.defaultValue.get
-        if (model.comment.isDefined) attributes += "COMMENT " + model.comment.get // XXX: lies
+        if (model.defaultValue.isDefined) attributes += ("DEFAULT " + model.defaultValue.get)
+        if (model.comment.isDefined) attributes += ("COMMENT " + model.comment.get) // XXX: lies
         
         model.name + " " + serializeDataType(model.dataType) +
                 (if (attributes.isEmpty) "" else " " + attributes.mkString(" "))
