@@ -41,7 +41,12 @@ object CreateTableStatement {
     
     case object AutoIncrement extends ColumnProperty
     
-    case class Column(name: String, dataType: DataType, attrs: Seq[ColumnProperty]) extends Entry
+    case class Column(name: String, dataType: DataType, attrs: Seq[ColumnProperty]) extends Entry {
+        def defaultValue = attrs.flatMap {
+            case DefaultValue(value) => Some(value)
+            case _ => None
+        }.first
+    }
     
     case class Index(index: model.IndexModel) extends Entry
     

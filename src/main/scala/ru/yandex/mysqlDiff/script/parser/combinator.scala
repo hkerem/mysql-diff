@@ -122,17 +122,20 @@ object SqlParserCombinator extends StandardTokenParsers {
     
     def script: Parser[Seq[Any]] = repsep(topLevel, ";") <~ opt(";") ~ lexical.EOF
     
-    def parse(text: String): Seq[Any] = {
+    def parse[T](parser: Parser[T])(text: String) = {
         val tokens = new lexical.Scanner(text)
-        val Success(result, _) = phrase(script)(tokens)
+        val Success(result, _) = phrase(parser)(tokens)
         result
     }
     
-    def parseCreateTable(text: String) = {
-        val tokens = new lexical.Scanner(text)
-        val Success(result, _) = phrase(createTable)(tokens)
-        result
-    }
+    def parse(text: String): Seq[Any] =
+        parse(script)(text)
+    
+    def parseCreateTable(text: String) =
+        parse(createTable)(text)
+    
+    def parseColumn(text: String) =
+        parse(column)(text)
     
     def main(args: Array[String]) {
         val text =
@@ -158,6 +161,15 @@ object SqlParserCombinatorTests extends org.specs.Specification {
                 t.column("id") must beLike { case Column("id", _, Nil) => true }
                 true
         }
+    }
+    
+    "parseColumn default value" in {
+        import CreateTableStatement._
+        
+        val column = parseColumn("friend_files_count INT NOT NULL DEFAULT 0")
+        column.name must_== "friend_files_count"
+        column.dataType must_== DataType.int
+        column.defaultValue must_== NumberValue(0)
     }
 }
 
