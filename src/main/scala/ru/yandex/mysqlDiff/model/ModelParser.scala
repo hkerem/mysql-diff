@@ -27,14 +27,25 @@ object ModelParser {
         val indexes = new ArrayBuffer[IndexModel]
         ct.entries.map {
             case c.Column(name, dataType, attrs) =>
-                columns += ColumnModel(name, dataType, attrs.withDefaultProperty(Nullability(true)))
+                columns += ColumnModel(name, dataType, attrs)
             case c.PrimaryKey(pk) => pks += pk
             case c.Index(index) => indexes += index
         }
         
         require(pks.length <= 1)
         
-        TableModel(name, columns.toList, pks.firstOption, indexes.toList, ct.options)
+        val pk = pks.firstOption
+        
+        def pkContainsColumn(c: String) =
+            pk.exists(_.columns.exists(_ == c))
+        
+        val columns2 = columns.map {
+            c =>
+                val defaultNullability = Nullability(!pkContainsColumn(c.name))
+                ColumnModel(c.name, c.dataType, c.properties.withDefaultProperty(defaultNullability))
+        }
+        
+        TableModel(name, columns2.toList, pk, indexes.toList, ct.options)
     }
     
     def main(args: Array[String]) {
@@ -48,12 +59,20 @@ object ModelParserTests extends org.specs.Specification {
     import ModelParser._
     
     "unspecified nullability means nullable" in {
-        val ctc = CreateTableStatement.Column("id", DataType.int,
+        val ctc = CreateTableStatement.Column("age", DataType.int,
             new ColumnProperties(List(DefaultValue(NumberValue(0)))))
         val ct = CreateTableStatement("x", false, List(ctc), Nil)
         val t = parseCreateTable(ct)
-        val tc = t.column("id")
+        val tc = t.column("age")
         tc.properties.find(NullabilityPropertyType) must_== Some(Nullability(true))
+    }
+    
+    "PK is automatically NOT NULL" in {
+        val ct = script.parser.SqlParserCombinator.parseCreateTable(
+            "CREATE TABLE users (id INT, name VARCHAR(10), PRIMARY KEY(id))")
+        val t = parseCreateTable(ct)
+        val idColumn = t.column("id")
+        idColumn.properties.find(NullabilityPropertyType) must_== Some(Nullability(false))
     }
 }
 
