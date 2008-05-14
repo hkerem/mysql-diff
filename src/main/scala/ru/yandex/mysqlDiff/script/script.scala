@@ -7,6 +7,16 @@ class Script(val stmts: Seq[ScriptElement]) {
         case s: ScriptStatement => Some(s)
         case _ => None
     }
+    
+    def ddlStatements = statements.flatMap {
+        case s: DdlStatement => Some(s)
+        case _ => None
+    }
+    
+    def dmlStatements = statements.flatMap {
+        case s: DmlStatement => Some(s)
+        case _ => None
+    }
 }
 
 abstract class ScriptElement

@@ -11,11 +11,11 @@ object ModelParser {
         parseModel(parser.Parser.parse(text))
     
     def parseModel(script: Script): DatabaseModel =
-        new DatabaseModel("db", script.stmts.flatMap(parseScriptElement _))
+        new DatabaseModel("db", script.ddlStatements.map(parseScriptElement _))
     
-    def parseScriptElement(stmt: ScriptElement): Option[TableModel] = stmt match {
-        case _: CommentElement => None
-        case ct: CreateTableStatement => Some(parseCreateTable(ct))
+    def parseScriptElement(stmt: DdlStatement): TableModel = stmt match {
+        case ct: CreateTableStatement => parseCreateTable(ct)
+        case _ => throw new IllegalArgumentException
     }
     
     def parseCreateTable(ct: CreateTableStatement): TableModel = {
