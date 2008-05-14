@@ -6,6 +6,7 @@ object Tests extends org.specs.Specification {
     include(model.ModelParserTests)
     include(jdbc.JdbcModelExtractorTests)
     include(script.ScriptSerializerTests)
+    include(script.ScriptTests)
     include(diff.DiffMakerTests)
 }
 

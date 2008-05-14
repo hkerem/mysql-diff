@@ -33,6 +33,9 @@ class SqlLexical extends StdLexical {
         if (reserved contains name.toUpperCase) Keyword(name.toUpperCase) else Identifier(name)
 }
 
+/*
+ * Note to readers: ~ operator has higher priority then ~> or <~
+ */
 object SqlParserCombinator extends StandardTokenParsers {
     override val lexical = new SqlLexical
     
@@ -83,7 +86,6 @@ object SqlParserCombinator extends StandardTokenParsers {
     //def select: Parser[Any] = "SELECT" ~> rep(not(";" | lexical.EOF))
     def select: Parser[Any] = "SELECT" ~> rep(name)
     
-    // XXX: why need braces?
     def index: Parser[Index] = (opt("UNIQUE") <~ ("INDEX" | "KEY")) ~ opt(name) ~ nameList ^^
             { case unique ~ name ~ columnNames => Index(IndexModel(name, columnNames, unique.isDefined)) }
     
@@ -117,7 +119,13 @@ object SqlParserCombinator extends StandardTokenParsers {
     
     def createView: Parser[Any] = "CREATE" ~ "VIEW" ~ opt(ifNotExists) ~ name ~ opt(nameList) ~ "AS" ~ select
     
-    def topLevel: Parser[Any] = createView | createTable
+    def insertDataRow: Parser[Seq[SqlValue]] = "(" ~> rep1sep(sqlValue, ",") <~ ")"
+    
+    def insert: Parser[InsertStatement] =
+        (("INSERT" ~> opt("IGNORE") <~ "INTO") ~ name ~ opt(nameList) <~ "VALUES") ~ rep1sep(insertDataRow, ",") ^^
+            { case ignore ~ name ~ columns ~ data => new InsertStatement(name, ignore.isDefined, columns, data) }
+    
+    def topLevel: Parser[Any] = createView | createTable | insert
     
     def script: Parser[Seq[Any]] = repsep(topLevel, ";") <~ opt(";") ~ lexical.EOF
     
@@ -138,7 +146,10 @@ object SqlParserCombinator extends StandardTokenParsers {
     
     def parseValue(text: String) =
         parse(sqlValue)(text)
-    
+   
+    def parseInsert(text: String) =
+        parse(insert)(text)
+   
     def main(args: Array[String]) {
         val text =
             if (args.length == 1) {
@@ -180,6 +191,14 @@ object SqlParserCombinatorTests extends org.specs.Specification {
         parseColumn("id INT NOT NULL").isNotNull must_== true
         parseColumn("id INT NULL").isNotNull must_== false
         parseColumn("id INT").isNotNull must_== false
+    }
+    
+    "parseInsert IGNORE" in {
+        val insert = parseInsert("INSERT IGNORE INTO users (id, login) VALUES (15, 'vasya')")
+        insert.table must_== "users"
+        insert.columns.get.toList must_== List("id", "login")
+        insert.data.length must_== 1
+        insert.data.first.toList must_== List(NumberValue(15), StringValue("vasya"))
     }
 }
 

@@ -18,9 +18,11 @@ abstract class ScriptStatement extends ScriptElement
 
 case class Unparsed(q: String) extends ScriptElement
 
+abstract class DdlStatement extends ScriptStatement
+
 case class CreateTableStatement(name: String, ifNotExists: Boolean,
         entries: Seq[CreateTableStatement.Entry], options: Seq[TableOption])
-    extends ScriptStatement
+    extends DdlStatement
 {
     def this(name: String, ifNotExists: Boolean, entries: Seq[CreateTableStatement.Entry]) =
         this(name, ifNotExists, entries, Nil)
@@ -48,12 +50,12 @@ object CreateTableStatement {
     case class PrimaryKey(pk: model.PrimaryKey) extends Entry
 }
 
-case class DropTableStatement(name: String) extends ScriptStatement
+case class DropTableStatement(name: String) extends DdlStatement
 
-case class RenameTableStatement(oldName: String, newName: String) extends ScriptStatement
+case class RenameTableStatement(oldName: String, newName: String) extends DdlStatement
 
 case class AlterTableStatement(tableName: String, ops: Seq[AlterTableStatement.Operation])
-        extends ScriptStatement
+        extends DdlStatement
 {
     require(ops.length > 0)
     
@@ -80,6 +82,23 @@ object AlterTableStatement {
     case class AddIndex(id: IndexModel) extends Operation
     
     case class DropIndex(name: String) extends Operation
+}
+
+abstract class DmlStatement extends ScriptStatement
+
+case class InsertStatement(table: String, ignore: Boolean,
+        columns: Option[Seq[String]], data: Seq[Seq[SqlValue]])
+{
+    require(table.length > 0)
+    
+    require(columns.isDefined || !data.isEmpty)
+    
+    val columnsCount = columns.map(_.length).getOrElse(data.first.length)
+    
+    require(data.forall(columnsCount == _.length))
+}
+
+object ScriptTests extends org.specs.Specification {
 }
 
 // vim: set ts=4 sw=4 et:
