@@ -114,6 +114,7 @@ object ScriptSerializer {
    
     def serializeDataType(dataType: DataType) = {
         // XXX: dirty
+        /*
         var charset = ""
         if (dataType.characterSet.isDefined) charset = " CHARACTER SET " + dataType.characterSet
         var collate = ""
@@ -122,10 +123,11 @@ object ScriptSerializer {
         if (dataType.isUnsigned) unsigned = " UNSIGNED"
         var zerofill = ""
         if (dataType.isZerofill) zerofill = " ZEROFILL"
-        var size = ""
-        if (dataType.length.isDefined) size = "(" + dataType.length.get + ")"
         val result = dataType.name + size + charset + collate + unsigned + zerofill
         result.trim
+        */
+        var size = dataType.length.map("(" + _ + ")").getOrElse("")
+        dataType.name + size
     }
     
     def serializeColumn(model: ColumnModel) =
