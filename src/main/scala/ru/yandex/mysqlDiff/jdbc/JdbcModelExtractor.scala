@@ -281,17 +281,15 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         
         val table = for (c <- conn) yield JdbcModelExtractor.extractTable("users", c)
         
-        //println(table.keys)
-        
         val ageK = table.indexes.find(_.name.get == "age_k").get
-        assert(List("age") == ageK.columns.toList)
-        assert(false == ageK.isUnique)
+        List("age") must_== ageK.columns.toList
+        ageK.isUnique must_== false
         
         val firstLastK = table.indexWithColumns("first_name", "last_name")
-        assert(true == firstLastK.isUnique)
+        firstLastK.isUnique must_== true
         
         val ageLastK = table.indexWithColumns("age", "last_name")
-        assert(false == ageLastK.isUnique)
+        ageLastK.isUnique must_== false
     }
     
     "PK is not in indexes list" in {
