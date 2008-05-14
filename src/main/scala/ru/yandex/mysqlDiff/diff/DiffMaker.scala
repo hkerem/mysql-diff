@@ -55,7 +55,7 @@ object DiffMaker {
             DefaultValuePropertyType
         )
         
-        if (from.dataType != to.dataType)
+        if (!dataTypesEquivalent(from.dataType, to.dataType))
             diff += new ChangeColumnPropertyDiff(DataTypeProperty(from.dataType), DataTypeProperty(to.dataType))
         
         for (pt <- comparePropertyTypes) {
