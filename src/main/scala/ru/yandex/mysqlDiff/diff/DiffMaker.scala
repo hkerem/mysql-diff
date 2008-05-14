@@ -39,6 +39,9 @@ object DiffMaker {
             DefaultValuePropertyType
         )
         
+        if (from.dataType != to.dataType)
+            diff += new ChangeColumnPropertyDiff(DataTypeProperty(from.dataType), DataTypeProperty(to.dataType))
+        
         for (pt <- comparePropertyTypes) {
             val fromO = from.properties.find(pt)
             val toO = to.properties.find(pt)
@@ -49,9 +52,6 @@ object DiffMaker {
                 case _ =>
             }
         }
-        
-        if (from.dataType != to.dataType)
-            diff += new ChangeColumnPropertyDiff(DataTypeProperty(from.dataType), DataTypeProperty(to.dataType))
         
         if (from.name != to.name) Some(new ChangeColumnDiff(from.name, Some(to.name), diff))
         else if (diff.size > 0) Some(new ChangeColumnDiff(from.name, None, diff))
@@ -120,6 +120,13 @@ object DiffMakerTests extends org.specs.Specification {
         List(1, 5) must_== onlyInA.toList
         List("4") must_== onlyInB.toList
         List((2, "2"), (3, "3")) must_== inBoth.toList
+    }
+    
+    "compareColumns rename" in {
+        val oldC = new ColumnModel("user", DataType.varchar(10), new ColumnProperties(List(Nullability(true))))
+        val newC = new ColumnModel("user_name", DataType.varchar(10), new ColumnProperties(List(Nullability(true))))
+        val diff = DiffMaker.compareColumns(oldC, newC).get
+        diff must beLike { case ChangeColumnDiff("user", Some("user_name"), Seq()) => true; case _ => false }
     }
 }
 
