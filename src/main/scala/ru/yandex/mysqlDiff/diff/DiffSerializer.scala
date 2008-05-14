@@ -64,6 +64,7 @@ object TableScriptBuilder {
 }
 
 object DiffSerializer {
+    // XXX: rename to serialize
     def serializeToScript(diff: DatabaseDiff, oldModel: DatabaseModel, newModel: DatabaseModel)
             : Seq[ScriptElement] =
     {
@@ -78,6 +79,7 @@ object DiffSerializer {
         })
     }
     
+    // XXX: rename to serializeToText
     def serialize(oldModel: DatabaseModel, newModel: DatabaseModel, diff: DatabaseDiff): String = {
         val options = ScriptSerializer.Options.multiline
         ScriptSerializer.serialize(serializeToScript(diff, oldModel, newModel), options)
