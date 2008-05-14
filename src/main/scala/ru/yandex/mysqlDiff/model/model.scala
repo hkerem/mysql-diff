@@ -41,7 +41,10 @@ object DataType {
 abstract class TableEntry
 
 case class ColumnProperties(val properties: Seq[ColumnProperty]) {
-    // XXX: add check each property type appears more then once
+    def propertyTypes = properties.map(_.propertyType)
+    
+    // check there are no duplicate property types
+    require(Set(propertyTypes: _*).size == properties.length)
     
     def isEmpty = properties.isEmpty
     
@@ -70,6 +73,9 @@ case class ColumnProperties(val properties: Seq[ColumnProperty]) {
     
     def overrideProperty(o: ColumnProperty) =
         new ColumnProperties(removeProperty(o.propertyType).properties ++ List(o))
+    
+    def addProperty(p: ColumnProperty) =
+        new ColumnProperties(properties ++ List(p))
 }
 
 object ColumnProperties {

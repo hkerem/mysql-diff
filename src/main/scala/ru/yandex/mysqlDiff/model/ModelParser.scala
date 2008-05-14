@@ -27,7 +27,11 @@ object ModelParser {
         val indexes = new ArrayBuffer[IndexModel]
         ct.entries.map {
             case c.Column(name, dataType, attrs) =>
-                columns += ColumnModel(name, dataType, attrs)
+                val newAttrs =
+                    // MySQL specific
+                    if (dataType.name == "TIMESTAMP") attrs.withDefaultProperty(DefaultValue(NowValue))
+                    else attrs
+                columns += ColumnModel(name, dataType, newAttrs)
             case c.PrimaryKey(pk) => pks += pk
             case c.Index(index) => indexes += index
         }
@@ -73,6 +77,14 @@ object ModelParserTests extends org.specs.Specification {
         val t = parseCreateTable(ct)
         val idColumn = t.column("id")
         idColumn.properties.find(NullabilityPropertyType) must_== Some(Nullability(false))
+    }
+    
+    "MySQL TIMESTAMP is DEFAULT NOW()" in {
+        val ct = script.parser.SqlParserCombinator.parseCreateTable(
+            "CREATE TABLE files (created TIMESTAMP)")
+        val t = parseCreateTable(ct)
+        val c = t.column("created")
+        c.properties.defaultValue must_== Some(NowValue)
     }
 }
 
