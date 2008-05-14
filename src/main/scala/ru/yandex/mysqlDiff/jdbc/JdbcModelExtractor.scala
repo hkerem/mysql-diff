@@ -117,20 +117,13 @@ object JdbcModelExtractor {
         def columnExistsInPk(name: String) =
             pk.exists(_.columns.exists(_ == name))
         
-        val columns2 = columnsList.map {
-            // work around for http://bugs.mysql.com/36723
-            case c if columnExistsInPk(c.name) =>
-                ColumnModel(c.name, c.dataType, c.properties.removeProperty(DefaultValuePropertyType))
-            case c => c
-        }
-        
         // MySQL adds PK to indexes, so exclude
         val indexes = extractIndexes(tableName, conn)
                 .filter(pk.isEmpty || _.columns.toList != pk.get.columns.toList)
         
         
         
-        new TableModel(tableName, columns2.toList, pk, indexes)
+        new TableModel(tableName, columnsList.toList, pk, indexes)
     }
     
     private def read[T](rs: ResultSet)(f: ResultSet => T) = {
@@ -336,14 +329,6 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         table.column("f").defaultValue must_== Some(StringValue("y"))
     }
     
-    "ignore PK left default value" in {
-        dropTable("file_of_day_history")
-        execute("CREATE TABLE file_of_day_history (big_date DATE, file_id INT NOT NULL, PRIMARY KEY(big_date))")
-        
-        val table = extractTable("file_of_day_history")
-        
-        table.column("big_date").properties.defaultValue must_== None
-    }
 }
 
 // vim: set ts=4 sw=4 et:
