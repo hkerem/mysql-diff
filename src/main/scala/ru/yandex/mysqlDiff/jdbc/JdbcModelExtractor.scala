@@ -9,6 +9,8 @@ import scalax.control.ManagedResource
 import scala.util.Sorting._
 import scala.collection.mutable.ArrayBuffer
 
+class JdbcModelExtractorException(msg: String, cause: Throwable) extends Exception(msg, cause)
+
 /*
  * TBD:
  * Extract table engine, default charset
@@ -39,6 +41,22 @@ object JdbcModelExtractor {
         }
         
         values.toList
+    }
+    
+    protected def parseDefaultValueFromDb(s: String, dataType: DataType): Option[SqlValue] = {
+        if (s == null) None
+        else if (dataType.isAnyChar) {
+            if (s matches "'.*'") Some(StringValue(s.replaceFirst("^'", "").replaceFirst("'$", "")))
+            else Some(StringValue(s))
+        }
+        else if (s == "NULL") None
+        else if (dataType.isAnyDateTime) {
+            if (s == "CURRENT_TIMESTAMP") Some(NowValue)
+            else Some(StringValue(s))
+        }
+        else if (dataType.isAnyNumber)
+            Some(script.parser.SqlParserCombinator.parseValue(s))
+        else Some(StringValue(s))
     }
     
     def extractTable(tableName: String, conn: Connection): TableModel = {
@@ -80,14 +98,7 @@ object JdbcModelExtractor {
                 if (true) defaultValuesFromMysql.find(_._1 == colName).get._2
                 else columns.getString("COLUMN_DEF")
             
-            val defaultValue = (defaultValueFromDb match {
-                case null => None
-                case s =>
-                    if (!dataType.name.equalsIgnoreCase("VARCHAR") || s.matches("'.*'"))
-                        Some(script.parser.SqlParserCombinator.parseValue(s))
-                    else
-                        Some(StringValue(s))
-            }).map(DefaultValue(_))
+            val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
 
             val isUnsigned = false
             val isZerofill = false
@@ -313,6 +324,11 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         table.column("d").defaultValue must_== None
         table.column("e").defaultValue must_== Some(StringValue(""))
         table.column("f").defaultValue must_== Some(StringValue("y"))
+    }
+    
+    "TIMESTAMP 0 DEFAULT value" in {
+        dropTable("trains")
+        //execute("CREATE TABLE trains 
     }
 }
 

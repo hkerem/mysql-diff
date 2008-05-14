@@ -14,12 +14,19 @@ case class StringValue(value: String) extends SqlValue
 // used as default value
 case object NowValue extends SqlValue
 
-// XXX: reduce number of fields through subclassing
-case class DataType(val name: String, val length: Option[Int])
+case class DataType(val name: String, val length: Option[Int]) {
+    def isAnyChar = name.toUpperCase.matches(".*CHAR")
+    def isAnyDateTime = List("DATE", "TIME", "TIMESTAMP") contains name.toUpperCase
+    def isAnyNumber = List("NUMBER", "INT", "TINYINT", "BIGINT") contains name.toUpperCase
+}
+
 case class MysqlDataType(override val name: String, override val length: Option[Int],
         val isUnsigned: Boolean, val isZerofill: Boolean,
         val characterSet: Option[String], val collate: Option[String])
     extends DataType(name, length)
+{
+    // assert not all properties have default values (in this case DataType class must be used)
+}
 
 object DataType {
     def varchar(length: Int) = new DataType("VARCHAR", Some(length))

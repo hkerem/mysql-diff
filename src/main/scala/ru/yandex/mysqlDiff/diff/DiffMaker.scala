@@ -29,6 +29,22 @@ object DiffMaker {
         (onlyInA, onlyInB, inBothA)
     }
     
+    def dataTypesEquivalent(a: DataType, b: DataType) = {
+        if (a == b) true
+        else if (a.name != b.name) false
+        else if (a.isAnyNumber) true // ignore size change
+        else a == b
+    }
+    
+    def columnPropertiesEquivalent(a: ColumnProperty, b: ColumnProperty) = {
+        require(a.propertyType == b.propertyType)
+        val propertyType = a.propertyType
+        (a, b) match {
+            case (DataTypeProperty(adt), DataTypeProperty(bdt)) => dataTypesEquivalent(adt, bdt)
+            case _ => a == b
+        }
+    }
+    
     def compareColumns(from: ColumnModel, to: ColumnModel): Option[ChangeColumnDiff] = {
         var diff = new ArrayBuffer[ColumnPropertyDiff]
         
@@ -46,9 +62,12 @@ object DiffMaker {
             val fromO = from.properties.find(pt)
             val toO = to.properties.find(pt)
             (fromO, toO) match {
-                case (Some(fromP), Some(toP)) if fromP != toP => diff += new ChangeColumnPropertyDiff(fromP, toP)
-                case (Some(fromP), None) => diff += new DropColumnPropertyDiff(fromP)
-                case (None, Some(toP)) => diff += new CreateColumnPropertyDiff(toP)
+                case (Some(fromP), Some(toP)) if !columnPropertiesEquivalent(fromP, toP) =>
+                    diff += new ChangeColumnPropertyDiff(fromP, toP)
+                case (Some(fromP), None) =>
+                    diff += new DropColumnPropertyDiff(fromP)
+                case (None, Some(toP)) =>
+                    diff += new CreateColumnPropertyDiff(toP)
                 case _ =>
             }
         }
@@ -111,6 +130,7 @@ object DiffMaker {
 
 object DiffMakerTests extends org.specs.Specification {
     import org.specs.matcher.Matcher
+    import DiffMaker._
     
     "compareSeqs" in {
         val a = List(1, 2, 3, 5)
@@ -164,6 +184,20 @@ object DiffMakerTests extends org.specs.Specification {
         val diff = DiffMaker.compareColumns(oldC, newC).get
         diff must changeDataType(DataType.varchar(10), DataType.varchar(9))
         diff.diff.length must_== 1
+    }
+    
+    "BIGINT equivalent to BIGINT(19)" in {
+        dataTypesEquivalent(DataType("BIGINT"), DataType("BIGINT", Some(19))) must_== true
+        dataTypesEquivalent(DataType("BIGINT", Some(19)), DataType("BIGINT")) must_== true
+    }
+    
+    "INT not equivalent to BIGINT" in {
+        dataTypesEquivalent(DataType("INT"), DataType("BIGINT")) must_== false
+        dataTypesEquivalent(DataType("BIGINT"), DataType("INT")) must_== false
+    }
+    
+    "VARCHAR(10) not equivalent to VARCHAR(20)" in {
+        dataTypesEquivalent(DataType("VARCHAR", Some(10)), DataType("VARCHAR", Some(20))) must_== false
     }
 } //~
 
