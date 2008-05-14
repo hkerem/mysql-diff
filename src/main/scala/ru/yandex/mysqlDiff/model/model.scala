@@ -15,6 +15,8 @@ case class StringValue(value: String) extends SqlValue
 case object NowValue extends SqlValue
 
 case class DataType(val name: String, val length: Option[Int]) {
+    require(name.toUpperCase == name)
+    
     def isAnyChar = name.toUpperCase.matches(".*CHAR")
     def isAnyDateTime = List("DATE", "TIME", "TIMESTAMP") contains name.toUpperCase
     def isAnyNumber = List("NUMBER", "INT", "TINYINT", "BIGINT") contains name.toUpperCase
