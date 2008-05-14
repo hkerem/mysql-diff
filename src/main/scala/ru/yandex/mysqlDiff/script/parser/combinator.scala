@@ -13,6 +13,8 @@ import scalax.io._
 
 import model._
 
+class CombinatorParserException(msg: String) extends Exception(msg)
+
 class SqlLexical extends StdLexical {
     // ?
     import scala.util.parsing.input.CharArrayReader.EofCh
@@ -131,8 +133,11 @@ object SqlParserCombinator extends StandardTokenParsers {
     
     def parse[T](parser: Parser[T])(text: String) = {
         val tokens = new lexical.Scanner(text)
-        val Success(result, _) = phrase(parser)(tokens)
-        result
+        phrase(parser)(tokens) match {
+            case Success(result, _) => result
+            case ns: NoSuccess =>
+                throw new CombinatorParserException(ns.toString) // XXX: make singleline
+        }
     }
     
     def parse(text: String): Seq[Any] =
