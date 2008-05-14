@@ -92,12 +92,11 @@ object DiffMaker {
             case _ => None
         }
     
-    def compareIndexes(from: IndexModel, to: IndexModel): Option[IndexDiff] = {
-        if (from.columns.toList != to.columns.toList || from.isUnique != to.isUnique) Some(new ChangeIndexDiff(from, to))
-        else None
-    }
+    def indexesEquivalent(a: IndexModel, b: IndexModel) =
+        (a.columns == b.columns) && (a.isUnique == b.isUnique) &&
+            (a.name == b.name || a.name == None || b.name == None)
     
-    def compareTables(from: TableModel, to: TableModel): Option[TableDiff] = {
+    def compareTables(from: TableModel, to: TableModel): Option[ChangeTableDiff] = {
 
         val (fromColumns, toColumns, changeColumnPairs) = compareSeqs(from.columns, to.columns, (x: ColumnModel, y: ColumnModel) => x.name == y.name)
 
@@ -109,11 +108,11 @@ object DiffMaker {
 
         val primaryKeyDiff: Seq[IndexDiff] = comparePrimaryKeys(from.primaryKey, to.primaryKey).toList
 
-        val (fromIndexes, toIndexes, changeIndexPairs) = compareSeqs(from.indexes, to.indexes, (x: IndexModel, y: IndexModel) => x.name == y.name)
+        val (fromIndexes, toIndexes, changeIndexPairs) = compareSeqs(from.indexes, to.indexes, indexesEquivalent _)
 
         val dropIndexesDiff = fromIndexes.map(idx => DropIndexDiff(idx))
         val createIndexesDiff = toIndexes.map(idx => CreateIndexDiff(idx))
-        val alterIndexesDiff = changeIndexPairs.flatMap(idx => compareIndexes(idx._1, idx._2))
+        val alterIndexesDiff = Nil // we have no alter index
 
         val alterIndexDiff = primaryKeyDiff ++ createIndexesDiff ++ dropIndexesDiff ++ alterIndexesDiff
 
@@ -196,6 +195,15 @@ object DiffMakerTests extends org.specs.Specification {
         val oldC = new ColumnModel("user", DataType.varchar(10), new ColumnProperties(List(AutoIncrement(false))))
         val newC = new ColumnModel("user", DataType.varchar(10), new ColumnProperties(List()))
         DiffMaker.compareColumns(oldC, newC) must_== None
+    }
+    
+    "ignore index name change" in {
+        val columns = List(new ColumnModel("id", DataType.int), new ColumnModel("b", DataType.int))
+        val i1 = new IndexModel(Some("my_index"), List("b"), true)
+        val i2 = new IndexModel(None, List("b"), true)
+        val t1 = new TableModel("a", columns, None, List(i1), Nil)
+        val t2 = new TableModel("a", columns, None, List(i2), Nil)
+        compareTables(t1, t2) must_== None
     }
     
     "BIGINT equivalent to BIGINT(19)" in {
