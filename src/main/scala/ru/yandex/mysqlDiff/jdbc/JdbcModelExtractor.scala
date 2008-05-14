@@ -190,6 +190,12 @@ object JdbcModelExtractor {
     
     def extractTables(conn: ManagedResource[Connection]): Seq[TableModel] = for (c <- conn) yield extractTables(c)
     
+    def extract(conn: Connection): DatabaseModel =
+        new DatabaseModel("xx", extractTables(conn))
+    
+    def extract(conn: ManagedResource[Connection]): DatabaseModel =
+        for (c <- conn) yield extract(c)
+    
     def search(url: String): Seq[TableModel] = {
         extractTables(connection(url))
     }
