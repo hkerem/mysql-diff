@@ -6,6 +6,7 @@ object Tests extends org.specs.Specification {
     include(model.ModelParserTests)
     include(jdbc.JdbcModelExtractorTests)
     include(script.ScriptSerializerTests)
+    include(diff.DiffMakerTests)
 }
 
 // vim: set ts=4 sw=4 et:

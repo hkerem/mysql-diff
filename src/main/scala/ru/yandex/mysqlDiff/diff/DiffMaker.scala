@@ -109,4 +109,18 @@ object DiffMaker {
     }
 }        
 
+object DiffMakerTests extends org.specs.Specification {
+    "compareSeqs" in {
+        val a = List(1, 2, 3, 5)
+        val b = List("4", "3", "2")
+
+        def comparator(x: Int, y: String) = x.toString == y
+        val (onlyInA, onlyInB, inBoth) = DiffMaker.compareSeqs(a, b, comparator _)
+
+        List(1, 5) must_== onlyInA.toList
+        List("4") must_== onlyInB.toList
+        List((2, "2"), (3, "3")) must_== inBoth.toList
+    }
+}
+
 // vim: set ts=4 sw=4 et:

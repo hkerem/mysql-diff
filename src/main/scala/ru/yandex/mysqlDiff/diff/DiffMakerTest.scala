@@ -175,17 +175,6 @@ object DiffTest extends TestSuite("Simple Diff") {
 
 */    
     
-    "compareSeqs" is {
-        val a = List(1, 2, 3, 5)
-        val b = List("4", "3", "2")
-        
-        def comparator(x: Int, y: String) = x.toString == y
-        val (onlyInA, onlyInB, inBoth) = DiffMaker.compareSeqs(a, b, comparator _)
-        
-        assert(List(1, 5) == onlyInA)
-        assert(List("4") == onlyInB)
-        assert(List((2, "2"), (3, "3")) == inBoth)
-    }
 }
 
 // vim: set ts=4 sw=4 et:
