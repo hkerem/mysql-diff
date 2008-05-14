@@ -15,13 +15,17 @@ case class StringValue(value: String) extends SqlValue
 case object NowValue extends SqlValue
 
 // XXX: reduce number of fields through subclassing
-case class DataType(val name: String, val length: Option[Int], val isUnsigned: Boolean, val isZerofill: Boolean, val characterSet: Option[String], val collate: Option[String])
+case class DataType(val name: String, val length: Option[Int])
+case class MysqlDataType(override val name: String, override val length: Option[Int],
+        val isUnsigned: Boolean, val isZerofill: Boolean,
+        val characterSet: Option[String], val collate: Option[String])
+    extends DataType(name, length)
 
 object DataType {
-    def varchar(length: Int) = apply("VARCHAR", Some(length))
+    def varchar(length: Int) = new DataType("VARCHAR", Some(length))
+    
     def int = apply("INT")
     
-    def apply(name: String, length: Option[Int]): DataType = new DataType(name, length, false, false, None, None)
     def apply(name: String): DataType = apply(name, None)
 }
 

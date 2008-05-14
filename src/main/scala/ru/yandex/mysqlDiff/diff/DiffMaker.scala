@@ -29,7 +29,7 @@ object DiffMaker {
         (onlyInA, onlyInB, inBothA)
     }
     
-    def compareColumns(from: ColumnModel, to: ColumnModel): Option[ColumnDiff] = {
+    def compareColumns(from: ColumnModel, to: ColumnModel): Option[ChangeColumnDiff] = {
         var diff = new ArrayBuffer[ColumnPropertyDiff]
         
         val comparePropertyTypes = List[ColumnPropertyType](
@@ -110,6 +110,8 @@ object DiffMaker {
 }        
 
 object DiffMakerTests extends org.specs.Specification {
+    import org.specs.matcher.Matcher
+    
     "compareSeqs" in {
         val a = List(1, 2, 3, 5)
         val b = List("4", "3", "2")
@@ -128,6 +130,41 @@ object DiffMakerTests extends org.specs.Specification {
         val diff = DiffMaker.compareColumns(oldC, newC).get
         diff must beLike { case ChangeColumnDiff("user", Some("user_name"), Seq()) => true; case _ => false }
     }
-}
+    
+    // probably too complex
+    case class changeProperty(oldValue: ColumnProperty, newValue: ColumnProperty)
+        extends Matcher[ChangeColumnDiff]
+    {
+        require(oldValue.propertyType == newValue.propertyType)
+        val propertyType = oldValue.propertyType
+        
+        override def apply(ccf: => ChangeColumnDiff) = {
+            val title = ccf.toString
+            val changeO = ccf.changeDiff.find(_.propertyType == propertyType)
+            changeO match {
+                case None =>
+                    (false,
+                        title + " has change of property " + propertyType,
+                        title + " has no change of property " + propertyType)
+                case Some(change @ ChangeColumnPropertyDiff(oldP, newP)) =>
+                    val result = (oldValue, newValue) == (oldP, newP)
+                    (result,
+                        title + " has change to " + (oldValue, newValue),
+                        title + " has wrong change " + change + ", should be " + (oldValue, newValue))
+            }
+        }
+    }
+    
+    def changeDataType(oldType: DataType, newType: DataType) =
+        changeProperty(new DataTypeProperty(oldType), new DataTypeProperty(newType))
+    
+    "compareColumns change type" in {
+        val oldC = new ColumnModel("user", DataType.varchar(10), new ColumnProperties(List(Nullability(true))))
+        val newC = new ColumnModel("user", DataType.varchar(9), new ColumnProperties(List(Nullability(true))))
+        val diff = DiffMaker.compareColumns(oldC, newC).get
+        diff must changeDataType(DataType.varchar(10), DataType.varchar(9))
+        diff.diff.length must_== 1
+    }
+} //~
 
 // vim: set ts=4 sw=4 et:
