@@ -82,8 +82,11 @@ object DiffMaker {
                 case (Some(fromP), Some(toP)) if !columnPropertiesEquivalent(fromP, toP) =>
                     diff += new ChangeColumnPropertyDiff(fromP, toP)
                 
+                // hacks, that makes diff wrong
                 case (Some(AutoIncrement(false)), None) =>
+                case (None, Some(DefaultValue(NullValue))) =>
                 
+                // XXX: should not compare properties that are unknown (probably)
                 case (Some(fromP), None) =>
                     diff += new DropColumnPropertyDiff(fromP)
                 
