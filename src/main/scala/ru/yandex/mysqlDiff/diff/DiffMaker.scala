@@ -32,7 +32,8 @@ object DiffMaker {
     def dataTypesEquivalent(a: DataType, b: DataType) = {
         if (a == b) true
         else if (a.name != b.name) false
-        else if (a.isAnyNumber) true // ignore size change
+        else if (a.isAnyNumber) true // ignore size change: XXX: should rather know DB defaults
+        else if (a.isAnyDateTime) true // probably
         else a == b
     }
     
@@ -64,10 +65,15 @@ object DiffMaker {
             (fromO, toO) match {
                 case (Some(fromP), Some(toP)) if !columnPropertiesEquivalent(fromP, toP) =>
                     diff += new ChangeColumnPropertyDiff(fromP, toP)
+                
+                case (Some(AutoIncrement(false)), None) =>
+                
                 case (Some(fromP), None) =>
                     diff += new DropColumnPropertyDiff(fromP)
+                
                 case (None, Some(toP)) =>
                     diff += new CreateColumnPropertyDiff(toP)
+                
                 case _ =>
             }
         }
@@ -184,6 +190,12 @@ object DiffMakerTests extends org.specs.Specification {
         val diff = DiffMaker.compareColumns(oldC, newC).get
         diff must changeDataType(DataType.varchar(10), DataType.varchar(9))
         diff.diff.length must_== 1
+    }
+    
+    "compareColumn drop AutoIncrement(false) to none" in {
+        val oldC = new ColumnModel("user", DataType.varchar(10), new ColumnProperties(List(AutoIncrement(false))))
+        val newC = new ColumnModel("user", DataType.varchar(10), new ColumnProperties(List()))
+        DiffMaker.compareColumns(oldC, newC) must_== None
     }
     
     "BIGINT equivalent to BIGINT(19)" in {
