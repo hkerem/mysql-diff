@@ -93,7 +93,7 @@ object DiffMaker {
         }
     
     def indexesEquivalent(a: IndexModel, b: IndexModel) =
-        (a.columns == b.columns) && (a.isUnique == b.isUnique) &&
+        (a.columns.toList == b.columns.toList) && (a.isUnique == b.isUnique) &&
             (a.name == b.name || a.name == None || b.name == None)
     
     def compareTables(from: TableModel, to: TableModel): Option[ChangeTableDiff] = {
