@@ -46,7 +46,10 @@ object ModelParser {
         val columns2 = columns.map {
             c =>
                 val defaultNullability = Nullability(!pkContainsColumn(c.name))
-                ColumnModel(c.name, c.dataType, c.properties.withDefaultProperty(defaultNullability))
+                ColumnModel(c.name, c.dataType,
+                    c.properties
+                        .withDefaultProperty(defaultNullability)
+                        .withDefaultProperty(DefaultValue(NullValue)))
         }
         
         TableModel(name, columns2.toList, pk, indexes.toList, ct.options)
@@ -77,6 +80,14 @@ object ModelParserTests extends org.specs.Specification {
         val t = parseCreateTable(ct)
         val idColumn = t.column("id")
         idColumn.properties.find(NullabilityPropertyType) must_== Some(Nullability(false))
+    }
+    
+    "unspecified DEFAULT VALUE means NULL" in {
+        val ct = script.parser.SqlParserCombinator.parseCreateTable(
+            "CREATE TABLE users (login VARCHAR(10))")
+        val t = parseCreateTable(ct)
+        val c = t.column("login")
+        c.properties.defaultValue must_== Some(NullValue)
     }
     
     "MySQL TIMESTAMP is DEFAULT NOW()" in {
