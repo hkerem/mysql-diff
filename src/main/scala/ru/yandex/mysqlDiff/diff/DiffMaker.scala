@@ -29,6 +29,15 @@ object DiffMaker {
         (onlyInA, onlyInB, inBothA)
     }
     
+    def defaultValuesEquivalent(a: SqlValue, b: SqlValue) = {
+        def e1(a: SqlValue, b: SqlValue) = (a, b) match {
+            case (NumberValue(x), StringValue(y)) if x.toString == y => true
+            case _ => false
+        }
+
+        a == b || e1(a, b) || e1(b, a)
+    }
+    
     def dataTypesEquivalent(a: DataType, b: DataType) = {
         def e1(a: DataType, b: DataType) =
             if (a == DataType("TINYINT", Some(1)) && b == DataType("BIT", None)) true
@@ -48,6 +57,7 @@ object DiffMaker {
         val propertyType = a.propertyType
         (a, b) match {
             case (DataTypeProperty(adt), DataTypeProperty(bdt)) => dataTypesEquivalent(adt, bdt)
+            case (DefaultValue(adv), DefaultValue(bdv)) => defaultValuesEquivalent(adv, bdv)
             case _ => a == b
         }
     }
@@ -226,8 +236,16 @@ object DiffMakerTests extends org.specs.Specification {
         dataTypesEquivalent(DataType("VARCHAR", Some(10)), DataType("VARCHAR", Some(20))) must_== false
     }
     
-    "TINYINT(1) equivalent BIT" in {
+    "TINYINT(1) equivalent to BIT" in {
         dataTypesEquivalent(DataType("BIT"), DataType("TINYINT", Some(1)))
+    }
+    
+    "0 not equivalent to 1" in {
+        defaultValuesEquivalent(NumberValue(0), NumberValue(1)) must beFalse
+    }
+    
+    "0 equivalent to '0'" in {
+        defaultValuesEquivalent(NumberValue(0), StringValue("0")) must beTrue
     }
     
 } //~
