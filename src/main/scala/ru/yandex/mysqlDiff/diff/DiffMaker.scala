@@ -30,7 +30,13 @@ object DiffMaker {
     }
     
     def dataTypesEquivalent(a: DataType, b: DataType) = {
+        def e1(a: DataType, b: DataType) =
+            if (a == DataType("TINYINT", Some(1)) && b == DataType("BIT", None)) true
+            else false
+        
         if (a == b) true
+        else if (e1(a, b)) true
+        else if (e1(b, a)) true
         else if (a.name != b.name) false
         else if (a.isAnyNumber) true // ignore size change: XXX: should rather know DB defaults
         else if (a.isAnyDateTime) true // probably
@@ -219,6 +225,11 @@ object DiffMakerTests extends org.specs.Specification {
     "VARCHAR(10) not equivalent to VARCHAR(20)" in {
         dataTypesEquivalent(DataType("VARCHAR", Some(10)), DataType("VARCHAR", Some(20))) must_== false
     }
+    
+    "TINYINT(1) equivalent BIT" in {
+        dataTypesEquivalent(DataType("BIT"), DataType("TINYINT", Some(1)))
+    }
+    
 } //~
 
 // vim: set ts=4 sw=4 et:
