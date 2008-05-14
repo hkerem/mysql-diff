@@ -62,10 +62,45 @@ case class ColumnProperties(val properties: Seq[ColumnProperty]) {
     def withDefaultProperty(property: ColumnProperty) =
         if (find(property.propertyType).isDefined) this
         else new ColumnProperties(properties ++ List(property))
+    
+    def removeProperty(pt: ColumnPropertyType) =
+        new ColumnProperties(properties.filter(_.propertyType != pt))
+    
+    def overrideProperty(o: ColumnProperty) =
+        new ColumnProperties(removeProperty(o.propertyType).properties ++ List(o))
 }
 
 object ColumnProperties {
     val empty = new ColumnProperties(Nil)
+}
+
+object ColumnPropertiesTests extends org.specs.Specification {
+    "isNotNull" in {
+        new ColumnProperties(List(Nullability(true))).isNotNull must_== false
+        new ColumnProperties(List(Nullability(false))).isNotNull must_== true
+        new ColumnProperties(List(DefaultValue(NumberValue(0)))).isNotNull must_== false
+    }
+    
+    "removeProperty" in {
+        val cp = new ColumnProperties(List(Nullability(false), DefaultValue(NumberValue(3))))
+        
+        cp.removeProperty(NullabilityPropertyType).properties mustNot contain(Nullability(false))
+        cp.removeProperty(NullabilityPropertyType).properties must contain(DefaultValue(NumberValue(3)))
+        
+        cp.removeProperty(AutoIncrementPropertyType).properties must contain(Nullability(false))
+    }
+    
+    "overrideProperty" in {
+        val cp = new ColumnProperties(List(Nullability(false), DefaultValue(NumberValue(3))))
+        
+        cp.overrideProperty(Nullability(true)).properties must contain(Nullability(true))
+        cp.overrideProperty(Nullability(true)).properties mustNot contain(Nullability(false))
+        cp.overrideProperty(Nullability(true)).properties must contain(DefaultValue(NumberValue(3)))
+        
+        cp.overrideProperty(AutoIncrement(true)).properties must contain(AutoIncrement(true))
+        cp.overrideProperty(AutoIncrement(true)).properties must contain(Nullability(false))
+        cp.overrideProperty(AutoIncrement(true)).properties must contain(DefaultValue(NumberValue(3)))
+    }
 }
 
 case class ColumnModel(val name: String, val dataType: DataType, properties: ColumnProperties)
@@ -185,11 +220,7 @@ case object DataTypePropertyType extends ColumnPropertyType {
 }
 
 object ModelTests extends org.specs.Specification {
-    "ColumnProperties" in {
-        new ColumnProperties(List(Nullability(true))).isNotNull must_== false
-        new ColumnProperties(List(Nullability(false))).isNotNull must_== true
-        new ColumnProperties(List(DefaultValue(NumberValue(0)))).isNotNull must_== false
-    }
+    include(ColumnPropertiesTests)
 }
 
 // vim: set ts=4 sw=4 et:
