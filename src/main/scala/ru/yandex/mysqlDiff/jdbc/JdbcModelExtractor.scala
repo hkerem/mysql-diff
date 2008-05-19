@@ -329,6 +329,15 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         table.column("f").defaultValue must_== Some(StringValue("y"))
     }
     
+    "unspecified AUTO_INCREMENT" in {
+        dropTable("ships")
+        execute("CREATE TABLE ships (id INT NOT NULL, name VARCHAR(10), PRIMARY KEY(id))")
+        
+        val t = extractTable("ships")
+        t.column("id").properties.autoIncrement must_== Some(false)
+        //t.column("name").properties.autoIncrement must_== None
+    }
+    
 }
 
 // vim: set ts=4 sw=4 et:

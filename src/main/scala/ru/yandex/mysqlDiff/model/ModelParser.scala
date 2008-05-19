@@ -46,10 +46,14 @@ object ModelParser {
         val columns2 = columns.map {
             c =>
                 val defaultNullability = Nullability(!pkContainsColumn(c.name))
-                ColumnModel(c.name, c.dataType,
-                    c.properties
-                        .withDefaultProperty(defaultNullability)
-                        .withDefaultProperty(DefaultValue(NullValue)))
+                val defaultAutoincrement = AutoIncrement(false)
+                
+                val properties = c.properties
+                    .withDefaultProperty(defaultNullability)
+                    .withDefaultProperty(DefaultValue(NullValue))
+                    .withDefaultProperty(defaultAutoincrement)
+                
+                ColumnModel(c.name, c.dataType, properties)
         }
         
         TableModel(name, columns2.toList, pk, indexes.toList, ct.options)
@@ -74,20 +78,28 @@ object ModelParserTests extends org.specs.Specification {
         tc.properties.find(NullabilityPropertyType) must_== Some(Nullability(true))
     }
     
-    "PK is automatically NOT NULL" in {
-        val ct = script.parser.SqlParserCombinator.parseCreateTable(
-            "CREATE TABLE users (id INT, name VARCHAR(10), PRIMARY KEY(id))")
-        val t = parseCreateTable(ct)
-        val idColumn = t.column("id")
-        idColumn.properties.find(NullabilityPropertyType) must_== Some(Nullability(false))
-    }
-    
     "unspecified DEFAULT VALUE means NULL" in {
         val ct = script.parser.SqlParserCombinator.parseCreateTable(
             "CREATE TABLE users (login VARCHAR(10))")
         val t = parseCreateTable(ct)
         val c = t.column("login")
         c.properties.defaultValue must_== Some(NullValue)
+    }
+    
+    "unspecified autoincrement" in {
+        val ct = script.parser.SqlParserCombinator.parseCreateTable(
+            "CREATE TABLE user (id INT, login VARCHAR(10), PRIMARY KEY(id))")
+        val t = parseCreateTable(ct)
+        t.column("id").properties.autoIncrement must_== Some(false)
+        //t.column("login").properties.autoIncrement must_== None
+    }
+    
+    "PK is automatically NOT NULL" in {
+        val ct = script.parser.SqlParserCombinator.parseCreateTable(
+            "CREATE TABLE users (id INT, name VARCHAR(10), PRIMARY KEY(id))")
+        val t = parseCreateTable(ct)
+        val idColumn = t.column("id")
+        idColumn.properties.find(NullabilityPropertyType) must_== Some(Nullability(false))
     }
     
     "MySQL TIMESTAMP is DEFAULT NOW()" in {

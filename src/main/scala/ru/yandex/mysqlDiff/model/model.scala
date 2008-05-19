@@ -61,6 +61,8 @@ case class ColumnProperties(val properties: Seq[ColumnProperty]) {
     
     def defaultValue: Option[SqlValue] = find(DefaultValuePropertyType).map(_.value)
     
+    def autoIncrement: Option[Boolean] = find(AutoIncrementPropertyType).map(_.autoIncrement)
+    
     /** True iff all properties are model properties */
     def isModelProperties = properties.forall(_.isModelProperty)
     
