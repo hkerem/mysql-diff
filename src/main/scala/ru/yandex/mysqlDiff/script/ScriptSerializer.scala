@@ -61,6 +61,7 @@ object ScriptSerializer {
     def serializeColumnProperty(cp: ColumnProperty): Option[String] = cp match {
         case Nullability(true) => Some("NULL")
         case Nullability(false) => Some("NOT NULL")
+        case DefaultValue(NullValue) => None // MySQL does not allow NOT NULL DEFAULT NULL
         case DefaultValue(value) => Some("DEFAULT " + serializeValue(value))
         case AutoIncrement(true) => Some("AUTO_INCREMENT")
         case AutoIncrement(false) => None
