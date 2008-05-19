@@ -27,11 +27,10 @@ object ModelParser {
         val indexes = new ArrayBuffer[IndexModel]
         ct.entries.map {
             case c.Column(name, dataType, attrs) =>
-                val newAttrs =
-                    // MySQL specific
-                    if (dataType.name == "TIMESTAMP") attrs.withDefaultProperty(DefaultValue(NowValue))
-                    else attrs
-                columns += ColumnModel(name, dataType, newAttrs)
+                if (dataType.name == "TIMESTAMP" && attrs.defaultValue.isEmpty)
+                    // because of MySQL-specifc features that are hard to deal with
+                    throw new Exception("TIMESTAMP without DEFAULT value is prohibited")
+                columns += ColumnModel(name, dataType, attrs)
             case c.PrimaryKey(pk) => pks += pk
             case c.Index(index) => indexes += index
         }
@@ -102,12 +101,25 @@ object ModelParserTests extends org.specs.Specification {
         idColumn.properties.find(NullabilityPropertyType) must_== Some(Nullability(false))
     }
     
+    /*
     "MySQL TIMESTAMP is DEFAULT NOW()" in {
         val ct = script.parser.SqlParserCombinator.parseCreateTable(
             "CREATE TABLE files (created TIMESTAMP)")
         val t = parseCreateTable(ct)
         val c = t.column("created")
         c.properties.defaultValue must_== Some(NowValue)
+    }
+    */
+    
+    "Prohibit TIMESTAMP without DEFAULT value" in {
+        val ct = script.parser.SqlParserCombinator.parseCreateTable(
+            "CREATE TABLE x (a TIMESTAMP)")
+        try {
+            val t = parseCreateTable(ct)
+            fail("table should not be allowed, created " + t)
+        } catch {
+            case e: Exception if e.getMessage contains "prohibited" =>
+        }
     }
 }
 
