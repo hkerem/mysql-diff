@@ -24,6 +24,15 @@ object JdbcModelExtractor {
     // http://bugs.mysql.com/36699
     private val PROPER_COLUMN_DEF_MIN_MYSQL_VERSION = MysqlServerVersion.parse("5.0.51")
     
+    class Lazy[T](create: T) {
+        var value: Option[T] = None
+        def get = {
+            if (value.isEmpty) value = Some(create)
+            value.get
+        }
+        def isCreated = value.isDefined
+    }
+    
     class SchemaExtractor(conn: Connection) {
         lazy val currentSchema = {
             val schema = conn.getMetaData.getURL.replaceFirst("\\?.*", "").replaceFirst(".*/", "")
@@ -33,23 +42,29 @@ object JdbcModelExtractor {
     
         def extract(): DatabaseModel =
             new DatabaseModel("xx", extractTables())
-    
-        def extractTables(): Seq[TableModel] = {
+        
+        private def findTableNames() = {
             val data: DatabaseMetaData = conn.getMetaData
 
-            val tables: ResultSet = data.getTables(null, "%", "%", List("TABLE").toArray)
+            val rs: ResultSet = data.getTables(null, "%", "%", List("TABLE").toArray)
 
-            var returnTables = List[TableModel]()
+            var names = List[String]()
 
-            while (tables.next) {
-                val tableName = tables.getString("TABLE_NAME")
-                val tableModel = extractTable(tableName)
-                returnTables += tableModel
+            while (rs.next) {
+                val tableName = rs.getString("TABLE_NAME")
+                names = names ++ List(tableName)
             }
             
-            returnTables
+            names
         }
+        
+        private val cachedTableNames = new Lazy(findTableNames)
+        
+        def tableNames = cachedTableNames.get
     
+        def extractTables(): Seq[TableModel] =
+            tableNames.map(extractTable _)
+        
         def extractMysqlColumnDefaultValues(tableName: String) = {
             val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? AND table_name = ?"
             val ps = conn.prepareStatement(q)
