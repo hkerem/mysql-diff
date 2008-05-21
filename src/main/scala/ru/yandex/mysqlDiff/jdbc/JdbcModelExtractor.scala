@@ -19,6 +19,11 @@ class JdbcModelExtractorException(msg: String, cause: Throwable) extends Excepti
 object JdbcModelExtractor {
     import JdbcUtils._
     
+    import vendor.mysql._
+    
+    // http://bugs.mysql.com/36699
+    private val PROPER_COLUMN_DEF_MIN_MYSQL_VERSION = MysqlServerVersion.parse("5.0.51")
+    
     private def currentMysqlSchema(conn: Connection) = {
         val schema = conn.getMetaData.getURL.replaceFirst("\\?.*", "").replaceFirst(".*/", "")
         require(schema.length > 0)
