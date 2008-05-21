@@ -24,28 +24,180 @@ object JdbcModelExtractor {
     // http://bugs.mysql.com/36699
     private val PROPER_COLUMN_DEF_MIN_MYSQL_VERSION = MysqlServerVersion.parse("5.0.51")
     
-    private def currentMysqlSchema(conn: Connection) = {
-        val schema = conn.getMetaData.getURL.replaceFirst("\\?.*", "").replaceFirst(".*/", "")
-        require(schema.length > 0)
-        schema
-    }
+    class SchemaExtractor(conn: Connection) {
+        lazy val currentSchema = {
+            val schema = conn.getMetaData.getURL.replaceFirst("\\?.*", "").replaceFirst(".*/", "")
+            require(schema.length > 0)
+            schema
+        }
     
-    def extractMysqlColumnDefaultValues(tableName: String, conn: Connection) = {
-        val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? AND table_name = ?"
-        val ps = conn.prepareStatement(q)
-        ps.setString(1, currentMysqlSchema(conn))
-        ps.setString(2, tableName)
-        
-        val values = new ArrayBuffer[(String, String)]
-        
-        val rs = ps.executeQuery()
-        while (rs.next()) {
-            val columnName = rs.getString("column_name")
-            val defaultValue = rs.getString("column_default")
-            values += (columnName, defaultValue)
+        def extract(): DatabaseModel =
+            new DatabaseModel("xx", extractTables())
+    
+        def extractTables(): Seq[TableModel] = {
+            val data: DatabaseMetaData = conn.getMetaData
+
+            val tables: ResultSet = data.getTables(null, "%", "%", List("TABLE").toArray)
+
+            var returnTables = List[TableModel]()
+
+            while (tables.next) {
+                val tableName = tables.getString("TABLE_NAME")
+                val tableModel = extractTable(tableName)
+                returnTables += tableModel
+            }
+            
+            returnTables
+        }
+    
+        def extractMysqlColumnDefaultValues(tableName: String) = {
+            val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? AND table_name = ?"
+            val ps = conn.prepareStatement(q)
+            ps.setString(1, currentSchema)
+            ps.setString(2, tableName)
+            
+            val values = new ArrayBuffer[(String, String)]
+            
+            val rs = ps.executeQuery()
+            while (rs.next()) {
+                val columnName = rs.getString("column_name")
+                val defaultValue = rs.getString("column_default")
+                values += (columnName, defaultValue)
+            }
+            
+            values.toList
+        }
+    
+        def extractTableOptions(tableName: String): Seq[TableOption] = {
+            val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ? AND table_name = ?"
+            val ps = conn.prepareStatement(q)
+            ps.setString(1, currentSchema)
+            ps.setString(2, tableName)
+            val rs = ps.executeQuery()
+            rs.next()
+            val engine = rs.getString("ENGINE")
+            List(TableOption("ENGINE", engine))
+        }
+    
+        def extractTable(tableName: String): TableModel = {
+            val data = conn.getMetaData
+            val columns = data.getColumns(null, null, tableName, "%")
+            var columnsList = List[ColumnModel]()
+            
+            val defaultValuesFromMysql = extractMysqlColumnDefaultValues(tableName)
+            
+            while (columns.next) {
+                val colName = columns.getString("COLUMN_NAME")
+                
+                val colType = columns.getString("TYPE_NAME")
+                
+                def getIntOption(rs: ResultSet, columnName: String) = {
+                    val v = rs.getInt(columnName)
+                    if (rs.wasNull) None
+                    else Some(v)
+                }
+                
+                val colTypeSize = getIntOption(columns, "COLUMN_SIZE")
+
+                val nullable = columns.getString("IS_NULLABLE") match {
+                    case "YES" => Some(Nullability(true))
+                    case "NO" => Some(Nullability(false))
+                    case "" => None
+                }
+                
+                val autoIncrement = columns.getString("IS_AUTOINCREMENT") match {
+                    case "YES" => Some(AutoIncrement(true))
+                    case "NO" => Some(AutoIncrement(false))
+                    case "" => None
+                }
+                
+                val dataType = DataType(colType, colTypeSize)
+
+                val defaultValueFromDb =
+                    // http://bugs.mysql.com/36699
+                    if (true) defaultValuesFromMysql.find(_._1 == colName).get._2
+                    else columns.getString("COLUMN_DEF")
+                
+                val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
+
+                val isUnsigned = false
+                val isZerofill = false
+                val characterSet: Option[String] = None
+                val collate: Option[String] = None
+
+                val props = new ColumnProperties(List[ColumnProperty]() ++ nullable ++ defaultValue ++ autoIncrement)
+
+                val cm = new ColumnModel(colName, dataType, props)
+
+                columnsList = (columnsList ++ List(cm)).toList
+            }
+            
+            val pk = extractPrimaryKey(tableName, conn)
+            
+            def columnExistsInPk(name: String) =
+                pk.exists(_.columns.exists(_ == name))
+            
+            // MySQL adds PK to indexes, so exclude
+            val indexes = extractIndexes(tableName, conn)
+                    .filter(pk.isEmpty || _.columns.toList != pk.get.columns.toList)
+            
+            new TableModel(tableName, columnsList.toList, pk, indexes, extractTableOptions(tableName))
         }
         
-        values.toList
+        def extractPrimaryKey(tableName: String, conn: Connection): Option[PrimaryKey] = {
+            val rs = conn.getMetaData.getPrimaryKeys(null, null, tableName)
+            
+            case class R(pkName: String, columnName: String, keySeq: int)
+            
+            val r0 = read(rs) { rs =>
+                R(rs.getString("PK_NAME"), rs.getString("COLUMN_NAME"), rs.getInt("KEY_SEQ"))
+            }
+            
+            val r = stableSort(r0, (r: R) => r.keySeq)
+            
+            if (r.isEmpty) None
+            else {
+                val pkName = r.first.pkName
+                
+                // check all rows have the same name
+                for (R(p, _, _) <- r)
+                    if (p != pkName)
+                        throw new IllegalStateException("got different names for pk: " + p + ", " + pkName)
+                
+                // MySQL names primary key PRIMARY
+                val pkNameO = if (pkName != null && pkName != "PRIMARY") Some(pkName) else None
+                
+                Some(new PrimaryKey(pkNameO, r.map(_.columnName)))
+            }
+        }
+        
+        // regular indexes
+        def extractIndexes(tableName: String, conn: Connection): Seq[IndexModel] = {
+            val rs = conn.getMetaData.getIndexInfo(null, null, tableName, false, false)
+            
+            case class R(indexName: String, nonUnique: Boolean, ordinalPosition: Int,
+                    columnName: String, ascOrDesc: String)
+            {
+                def unique = !nonUnique
+            }
+            
+            val r = read(rs) { rs =>
+                R(rs.getString("INDEX_NAME"), rs.getBoolean("NON_UNIQUE"), rs.getInt("ORDINAL_POSITION"),
+                        rs.getString("COLUMN_NAME"), rs.getString("ASC_OR_DESC"))
+            }
+            
+            val indexNames = Set(r.map(_.indexName): _*).toSeq
+            
+            indexNames.map { indexName =>
+                val rowsWithName = r.filter(_.indexName == indexName)
+                val rows = stableSort(rowsWithName, (r: R) => r.ordinalPosition)
+                
+                val unique = rows.first.unique
+                
+                IndexModel(Some(indexName), rows.map(_.columnName), unique)
+            }
+        }
+
     }
     
     protected def parseDefaultValueFromDb(s: String, dataType: DataType): Option[SqlValue] = {
@@ -64,81 +216,6 @@ object JdbcModelExtractor {
         else Some(StringValue(s))
     }
     
-    def extractTableOptions(tableName: String, conn: Connection): Seq[TableOption] = {
-        val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ? AND table_name = ?"
-        val ps = conn.prepareStatement(q)
-        ps.setString(1, currentMysqlSchema(conn))
-        ps.setString(2, tableName)
-        val rs = ps.executeQuery()
-        rs.next()
-        val engine = rs.getString("ENGINE")
-        List(TableOption("ENGINE", engine))
-    }
-    
-    def extractTable(tableName: String, conn: Connection): TableModel = {
-        val data = conn.getMetaData
-        val columns = data.getColumns(null, null, tableName, "%")
-        var columnsList = List[ColumnModel]()
-        
-        val defaultValuesFromMysql = extractMysqlColumnDefaultValues(tableName, conn)
-        
-        while (columns.next) {
-            val colName = columns.getString("COLUMN_NAME")
-            
-            val colType = columns.getString("TYPE_NAME")
-            
-            def getIntOption(rs: ResultSet, columnName: String) = {
-                val v = rs.getInt(columnName)
-                if (rs.wasNull) None
-                else Some(v)
-            }
-            
-            val colTypeSize = getIntOption(columns, "COLUMN_SIZE")
-
-            val nullable = columns.getString("IS_NULLABLE") match {
-                case "YES" => Some(Nullability(true))
-                case "NO" => Some(Nullability(false))
-                case "" => None
-            }
-            
-            val autoIncrement = columns.getString("IS_AUTOINCREMENT") match {
-                case "YES" => Some(AutoIncrement(true))
-                case "NO" => Some(AutoIncrement(false))
-                case "" => None
-            }
-            
-            val dataType = DataType(colType, colTypeSize)
-
-            val defaultValueFromDb =
-                // http://bugs.mysql.com/36699
-                if (true) defaultValuesFromMysql.find(_._1 == colName).get._2
-                else columns.getString("COLUMN_DEF")
-            
-            val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
-
-            val isUnsigned = false
-            val isZerofill = false
-            val characterSet: Option[String] = None
-            val collate: Option[String] = None
-
-            val props = new ColumnProperties(List[ColumnProperty]() ++ nullable ++ defaultValue ++ autoIncrement)
-
-            val cm = new ColumnModel(colName, dataType, props)
-
-            columnsList = (columnsList ++ List(cm)).toList
-        }
-        
-        val pk = extractPrimaryKey(tableName, conn)
-        
-        def columnExistsInPk(name: String) =
-            pk.exists(_.columns.exists(_ == name))
-        
-        // MySQL adds PK to indexes, so exclude
-        val indexes = extractIndexes(tableName, conn)
-                .filter(pk.isEmpty || _.columns.toList != pk.get.columns.toList)
-        
-        new TableModel(tableName, columnsList.toList, pk, indexes, extractTableOptions(tableName, conn))
-    }
     
     private def read[T](rs: ResultSet)(f: ResultSet => T) = {
         var r = List[T]()
@@ -148,83 +225,11 @@ object JdbcModelExtractor {
         r
     }
     
-    def extractPrimaryKey(tableName: String, conn: Connection): Option[PrimaryKey] = {
-        val rs = conn.getMetaData.getPrimaryKeys(null, null, tableName)
-        
-        case class R(pkName: String, columnName: String, keySeq: int)
-        
-        val r0 = read(rs) { rs =>
-            R(rs.getString("PK_NAME"), rs.getString("COLUMN_NAME"), rs.getInt("KEY_SEQ"))
-        }
-        
-        val r = stableSort(r0, (r: R) => r.keySeq)
-        
-        if (r.isEmpty) None
-        else {
-            val pkName = r.first.pkName
-            
-            // check all rows have the same name
-            for (R(p, _, _) <- r)
-                if (p != pkName)
-                    throw new IllegalStateException("got different names for pk: " + p + ", " + pkName)
-            
-            // MySQL names primary key PRIMARY
-            val pkNameO = if (pkName != null && pkName != "PRIMARY") Some(pkName) else None
-            
-            Some(new PrimaryKey(pkNameO, r.map(_.columnName)))
-        }
-    }
-    
-    // regular indexes
-    def extractIndexes(tableName: String, conn: Connection): Seq[IndexModel] = {
-        val rs = conn.getMetaData.getIndexInfo(null, null, tableName, false, false)
-        
-        case class R(indexName: String, nonUnique: Boolean, ordinalPosition: Int,
-                columnName: String, ascOrDesc: String)
-        {
-            def unique = !nonUnique
-        }
-        
-        val r = read(rs) { rs =>
-            R(rs.getString("INDEX_NAME"), rs.getBoolean("NON_UNIQUE"), rs.getInt("ORDINAL_POSITION"),
-                    rs.getString("COLUMN_NAME"), rs.getString("ASC_OR_DESC"))
-        }
-        
-        val indexNames = Set(r.map(_.indexName): _*).toSeq
-        
-        indexNames.map { indexName =>
-            val rowsWithName = r.filter(_.indexName == indexName)
-            val rows = stableSort(rowsWithName, (r: R) => r.ordinalPosition)
-            
-            val unique = rows.first.unique
-            
-            IndexModel(Some(indexName), rows.map(_.columnName), unique)
-        }
-    }
-
-    def extractTables(conn: Connection): Seq[TableModel] = {
-        val data: DatabaseMetaData = conn.getMetaData
-
-        val tables: ResultSet = data.getTables(null, "%", "%", List("TABLE").toArray)
-
-        var returnTables = List[TableModel]()
-
-        while (tables.next) {
-            val tableName = tables.getString("TABLE_NAME")
-            val tableModel = extractTable(tableName, conn)
-            returnTables += tableModel
-        }
-        
-        returnTables
-    }
-    
-    def extractTables(conn: ManagedResource[Connection]): Seq[TableModel] = for (c <- conn) yield extractTables(c)
-    
-    def extract(conn: Connection): DatabaseModel =
-        new DatabaseModel("xx", extractTables(conn))
+    def extractTables(conn: ManagedResource[Connection]): Seq[TableModel] =
+        for (c <- conn) yield new SchemaExtractor(c).extractTables()
     
     def extract(conn: ManagedResource[Connection]): DatabaseModel =
-        for (c <- conn) yield extract(c)
+        for (c <- conn) yield new SchemaExtractor(c).extract()
     
     def search(url: String): Seq[TableModel] = {
         extractTables(connection(url))
@@ -234,7 +239,7 @@ object JdbcModelExtractor {
     def parse(jdbcUrl: String): DatabaseModel = new DatabaseModel("database", search(jdbcUrl))
     
     def parseTable(tableName: String, jdbcUrl: String) =
-        for (c <- connection(jdbcUrl)) yield extractTable(tableName, c)
+        for (c <- connection(jdbcUrl)) yield new SchemaExtractor(c).extractTable(tableName)
     
     def main(args: scala.Array[String]) {
     	def usage() {
@@ -274,13 +279,14 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         execute("DROP TABLE IF EXISTS " + tableName)
     }
     
-    def extractTable(name: String) = for (c <- conn) yield JdbcModelExtractor.extractTable(name, c)
+    def extractTable(name: String) =
+        for (c <- conn) yield new JdbcModelExtractor.SchemaExtractor(c).extractTable(name)
     
     "Simple Table" in {
         dropTable("bananas")
         execute("CREATE TABLE bananas (id INT, color VARCHAR(100), PRIMARY KEY(id))")
         
-        val table = for (c <- conn) yield JdbcModelExtractor.extractTable("bananas", c)
+        val table = extractTable("bananas")
         
         assert("bananas" == table.name)
         
@@ -298,7 +304,7 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         dropTable("users")
         execute("CREATE TABLE users (first_name VARCHAR(20), last_name VARCHAR(20), age INT, INDEX age_k(age), UNIQUE KEY(first_name, last_name), KEY(age, last_name))")
         
-        val table = for (c <- conn) yield JdbcModelExtractor.extractTable("users", c)
+        val table = extractTable("users")
         
         val ageK = table.indexes.find(_.name.get == "age_k").get
         List("age") must_== ageK.columns.toList
