@@ -64,6 +64,17 @@ object JdbcModelExtractor {
         else Some(StringValue(s))
     }
     
+    def extractTableOptions(tableName: String, conn: Connection): Seq[TableOption] = {
+        val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ? AND table_name = ?"
+        val ps = conn.prepareStatement(q)
+        ps.setString(1, currentMysqlSchema(conn))
+        ps.setString(2, tableName)
+        val rs = ps.executeQuery()
+        rs.next()
+        val engine = rs.getString("ENGINE")
+        List(TableOption("ENGINE", engine))
+    }
+    
     def extractTable(tableName: String, conn: Connection): TableModel = {
         val data = conn.getMetaData
         val columns = data.getColumns(null, null, tableName, "%")
@@ -126,9 +137,7 @@ object JdbcModelExtractor {
         val indexes = extractIndexes(tableName, conn)
                 .filter(pk.isEmpty || _.columns.toList != pk.get.columns.toList)
         
-        
-        
-        new TableModel(tableName, columnsList.toList, pk, indexes)
+        new TableModel(tableName, columnsList.toList, pk, indexes, extractTableOptions(tableName, conn))
     }
     
     private def read[T](rs: ResultSet)(f: ResultSet => T) = {
@@ -300,6 +309,13 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         
         val ageLastK = table.indexWithColumns("age", "last_name")
         ageLastK.isUnique must_== false
+    }
+    
+    "table options" in {
+        dropTable("dogs")
+        execute("CREATE TABLE dogs (id INT) ENGINE=InnoDB")
+        val table = extractTable("dogs")
+        table.options must contain(TableOption("ENGINE", "InnoDB"))
     }
     
     "PK is not in indexes list" in {
