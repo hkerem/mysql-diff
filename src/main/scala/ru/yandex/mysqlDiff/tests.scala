@@ -8,6 +8,7 @@ object Tests extends org.specs.Specification {
     include(script.ScriptSerializerTests)
     include(script.ScriptTests)
     include(diff.DiffMakerTests)
+    include(vendor.VendorTests)
 }
 
 // vim: set ts=4 sw=4 et:
