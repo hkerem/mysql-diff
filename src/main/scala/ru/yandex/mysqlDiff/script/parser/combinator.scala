@@ -31,8 +31,6 @@ class SqlLexical extends StdLexical {
       | ('-' ~ '-' ~ rep(chrExcept(EofCh, '\n')))
     )
     
-    protected override def processIdent(name: String) =
-        if (reserved contains name.toUpperCase) Keyword(name.toUpperCase) else Identifier(name)
 }
 
 /*
@@ -48,9 +46,14 @@ object SqlParserCombinator extends StandardTokenParsers {
     //lexical.reserved += ("CREATE", "TABLE", "VIEW", "IF", "NOT", "NULL", "EXISTS",
     //        "AS", "SELECT", "UNIQUE", "KEY", "INDEX", "PRIMARY", "DEFAULT", "NOW", "AUTO_INCREMENT")
    
+    def trueKeyword(chars: String): Parser[String] = {
+        def itIs(elem: Elem) = elem.isInstanceOf[lexical.Identifier] && elem.chars.equalsIgnoreCase(chars)
+        acceptIf(itIs _)(elem => chars.toUpperCase + " expected, got " + elem.chars) ^^ ( _.chars )
+    }
+    
     // XXX: allow ignore case
     implicit override def keyword(chars: String): Parser[String] =
-        (accept(lexical.Keyword(chars)) ^^ (_.chars)) | (accept(lexical.Identifier(chars)) ^^ (_.chars))
+        (accept(lexical.Keyword(chars)) ^^ (_.chars)) | trueKeyword(chars)
     
     // should be NullValue
     def nullValue: Parser[SqlValue] = "NULL" ^^^ NullValue
@@ -65,7 +68,7 @@ object SqlParserCombinator extends StandardTokenParsers {
     def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | nowValue
     
     def dataType: Parser[DataType] = name ~ opt("(" ~> numericLit <~ ")") ^^
-            { case name ~ length => DataType(name, length.map(_.toInt)) }
+            { case name ~ length => DataType(name.toUpperCase, length.map(_.toInt)) }
    
     def nullability: Parser[Nullability] = opt("NOT") <~ "NULL" ^^ { x => Nullability(x.isEmpty) }
     
@@ -204,6 +207,14 @@ object SqlParserCombinatorTests extends org.specs.Specification {
         insert.columns.get.toList must_== List("id", "login")
         insert.data.length must_== 1
         insert.data.first.toList must_== List(NumberValue(15), StringValue("vasya"))
+    }
+    
+    "case insensitive" in {
+        val t = parseCreateTable("CrEaTe TaBlE a (id InT nOt NuLl)")
+        t.name must_== "a"
+        t.columns must haveSize(1)
+        t.columns must exist({ c: CreateTableStatement.Column => c.name == "id" })
+        t.column("id").dataType must_== DataType.int
     }
 }
 
