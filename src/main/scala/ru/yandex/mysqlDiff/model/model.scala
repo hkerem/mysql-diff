@@ -175,6 +175,10 @@ abstract class DatabaseDeclaration(val name: String)
 
 case class DatabaseModel(override val name: String, val declarations: Seq[TableModel])
     extends DatabaseDeclaration(name)
+{
+    def tables: Seq[TableModel] = declarations
+    def table(name: String) = tables.find(_.name == name).get
+}
 
 abstract class ColumnProperty {
     def propertyType: ColumnPropertyType
