@@ -79,6 +79,10 @@ object DiffSerializer {
         })
     }
     
+    def serializeToScriptStrings(diff: DatabaseDiff, oldModel: DatabaseModel, newModel: DatabaseModel)
+            : Seq[String] =
+        serializeToScript(diff, oldModel, newModel).map(ScriptSerializer.serialize(_))
+    
     // XXX: rename to serializeToText
     def serialize(oldModel: DatabaseModel, newModel: DatabaseModel, diff: DatabaseDiff): String = {
         val options = ScriptSerializer.Options.multiline
