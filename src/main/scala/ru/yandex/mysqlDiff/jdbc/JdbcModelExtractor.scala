@@ -102,7 +102,7 @@ object JdbcModelExtractor {
         }
         
         def extractPrimaryKey(tableName: String, conn: Connection): Option[PrimaryKey] = {
-            val rs = conn.getMetaData.getPrimaryKeys(null, null, tableName)
+            val rs = conn.getMetaData.getPrimaryKeys(null, currentSchema, tableName)
             
             case class R(pkName: String, columnName: String, keySeq: int)
             
@@ -156,18 +156,13 @@ object JdbcModelExtractor {
         }
 
         protected def findTableNames() = {
-            val data: DatabaseMetaData = conn.getMetaData
+            val data = conn.getMetaData
 
-            val rs: ResultSet = data.getTables(null, "%", "%", List("TABLE").toArray)
+            val rs = data.getTables(null, currentSchema, "%", List("TABLE").toArray)
 
-            var names = List[String]()
-
-            while (rs.next) {
-                val tableName = rs.getString("TABLE_NAME")
-                names = names ++ List(tableName)
+            read(rs) { rs =>
+                rs.getString("TABLE_NAME")
             }
-            
-            names
         }
         
         def mapTableOptions(rs: ResultSet) =
