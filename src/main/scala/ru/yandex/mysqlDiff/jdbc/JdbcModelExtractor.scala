@@ -59,6 +59,7 @@ object JdbcModelExtractor {
         }
         
         private val cachedTableNames = new Lazy(findTableNames())
+        def tableNames = cachedTableNames.get
         
         def mapTableOptions(rs: ResultSet) =
             (rs.getString("TABLE_NAME"), List(TableOption("ENGINE", rs.getString("ENGINE"))))
@@ -90,36 +91,60 @@ object JdbcModelExtractor {
                 findTableOptions(tableName)
         
     
-        def tableNames = cachedTableNames.get
-    
-        def extractTables(): Seq[TableModel] = {
-            cachedTablesOptions.get
-            tableNames.map(extractTable _)
+        def findMysqlTablesColumnDefaultValues(): Seq[(String, Seq[(String, String)])] = {
+            val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ?"
+            val ps = conn.prepareStatement(q)
+            ps.setString(1, currentSchema)
+            val rs = ps.executeQuery()
+            
+            val triples = read(rs) { rs =>
+                val tableName = rs.getString("table_name")
+                val columnName = rs.getString("column_name")
+                val defaultValue = rs.getString("column_default")
+                (tableName, columnName, defaultValue)
+            }
+            
+            val tables = new scala.collection.mutable.HashMap[String, ArrayBuffer[(String, String)]]
+            for ((tableName, columnName, defaultValue) <- triples) {
+                tables.getOrElseUpdate(tableName, new ArrayBuffer[(String, String)]) += ((columnName, defaultValue))
+            }
+            
+            tables.toList
         }
         
-        def extractMysqlColumnDefaultValues(tableName: String) = {
+        def findMysqlColumnDefaultValues(tableName: String) = {
             val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? AND table_name = ?"
             val ps = conn.prepareStatement(q)
             ps.setString(1, currentSchema)
             ps.setString(2, tableName)
-            
-            val values = new ArrayBuffer[(String, String)]
-            
             val rs = ps.executeQuery()
-            while (rs.next()) {
+            
+            read(rs) { rs =>
                 val columnName = rs.getString("column_name")
                 val defaultValue = rs.getString("column_default")
-                values += (columnName, defaultValue)
+                (columnName, defaultValue)
             }
-            
-            values.toList
+        }
+        
+        val cachedMysqlColumnDefaultValues = new Lazy(findMysqlTablesColumnDefaultValues())
+        
+        def getMysqlColumnDefaultValues(tableName: String) =
+            if (cachedMysqlColumnDefaultValues.isCreated)
+                cachedMysqlColumnDefaultValues.get.find(_._1 == tableName).get._2
+            else
+                findMysqlColumnDefaultValues(tableName)
+    
+        def extractTables(): Seq[TableModel] = {
+            cachedTablesOptions.get
+            cachedMysqlColumnDefaultValues.get
+            tableNames.map(extractTable _)
         }
     
         def extractTable(tableName: String): TableModel = {
             val data = conn.getMetaData
             val columns = data.getColumns(null, currentSchema, tableName, "%")
             
-            val defaultValuesFromMysql = extractMysqlColumnDefaultValues(tableName)
+            val defaultValuesFromMysql = getMysqlColumnDefaultValues(tableName)
             
             val columnsList = read(columns) { columns =>
                 val colName = columns.getString("COLUMN_NAME")
