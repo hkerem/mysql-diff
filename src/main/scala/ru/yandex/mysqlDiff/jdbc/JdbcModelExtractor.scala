@@ -24,7 +24,7 @@ object JdbcModelExtractor {
     // http://bugs.mysql.com/36699
     private val PROPER_COLUMN_DEF_MIN_MYSQL_VERSION = MysqlServerVersion.parse("5.0.51")
     
-    class Lazy[T](create: T) {
+    class Lazy[T](create: => T) {
         var value: Option[T] = None
         def get = {
             if (value.isEmpty) value = Some(create)
@@ -58,12 +58,44 @@ object JdbcModelExtractor {
             names
         }
         
-        private val cachedTableNames = new Lazy(findTableNames)
+        private val cachedTableNames = new Lazy(findTableNames())
         
+        def mapTableOptions(rs: ResultSet) =
+            (rs.getString("TABLE_NAME"), List(TableOption("ENGINE", rs.getString("ENGINE"))))
+        
+        private def findTablesOptions(): Seq[(String, Seq[TableOption])] = {
+            val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ?"
+            val ps = conn.prepareStatement(q)
+            ps.setString(1, currentSchema)
+            val rs = ps.executeQuery()
+            read(rs)(mapTableOptions _)
+        }
+        
+        private def findTableOptions(tableName: String): Seq[TableOption] = {
+            val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ? AND table_name = ?"
+            val ps = conn.prepareStatement(q)
+            ps.setString(1, currentSchema)
+            ps.setString(2, tableName)
+            val rs = ps.executeQuery()
+            rs.next()
+            mapTableOptions(rs)._2
+        }
+        
+        private val cachedTablesOptions = new Lazy(findTablesOptions())
+        
+        def getTableOptions(tableName: String): Seq[TableOption] =
+            if (cachedTablesOptions.isCreated)
+                cachedTablesOptions.get.find(_._1 == tableName).get._2
+            else
+                findTableOptions(tableName)
+        
+    
         def tableNames = cachedTableNames.get
     
-        def extractTables(): Seq[TableModel] =
+        def extractTables(): Seq[TableModel] = {
+            cachedTablesOptions.get
             tableNames.map(extractTable _)
+        }
         
         def extractMysqlColumnDefaultValues(tableName: String) = {
             val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? AND table_name = ?"
@@ -81,17 +113,6 @@ object JdbcModelExtractor {
             }
             
             values.toList
-        }
-    
-        def extractTableOptions(tableName: String): Seq[TableOption] = {
-            val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ? AND table_name = ?"
-            val ps = conn.prepareStatement(q)
-            ps.setString(1, currentSchema)
-            ps.setString(2, tableName)
-            val rs = ps.executeQuery()
-            rs.next()
-            val engine = rs.getString("ENGINE")
-            List(TableOption("ENGINE", engine))
         }
     
         def extractTable(tableName: String): TableModel = {
@@ -156,7 +177,7 @@ object JdbcModelExtractor {
             val indexes = extractIndexes(tableName, conn)
                     .filter(pk.isEmpty || _.columns.toList != pk.get.columns.toList)
             
-            new TableModel(tableName, columnsList.toList, pk, indexes, extractTableOptions(tableName))
+            new TableModel(tableName, columnsList.toList, pk, indexes, getTableOptions(tableName))
         }
         
         def extractPrimaryKey(tableName: String, conn: Connection): Option[PrimaryKey] = {
