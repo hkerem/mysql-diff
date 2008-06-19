@@ -117,12 +117,11 @@ object JdbcModelExtractor {
     
         def extractTable(tableName: String): TableModel = {
             val data = conn.getMetaData
-            val columns = data.getColumns(null, null, tableName, "%")
-            var columnsList = List[ColumnModel]()
+            val columns = data.getColumns(null, currentSchema, tableName, "%")
             
             val defaultValuesFromMysql = extractMysqlColumnDefaultValues(tableName)
             
-            while (columns.next) {
+            val columnsList = read(columns) { columns =>
                 val colName = columns.getString("COLUMN_NAME")
                 
                 val colType = columns.getString("TYPE_NAME")
@@ -162,10 +161,7 @@ object JdbcModelExtractor {
                 val collate: Option[String] = None
 
                 val props = new ColumnProperties(List[ColumnProperty]() ++ nullable ++ defaultValue ++ autoIncrement)
-
-                val cm = new ColumnModel(colName, dataType, props)
-
-                columnsList = (columnsList ++ List(cm)).toList
+                new ColumnModel(colName, dataType, props)
             }
             
             val pk = extractPrimaryKey(tableName, conn)
