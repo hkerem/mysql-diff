@@ -33,113 +33,13 @@ object JdbcModelExtractor {
         def isCreated = value.isDefined
     }
     
-    class SchemaExtractor(conn: Connection) {
+    abstract class SchemaExtractor(conn: Connection) {
         lazy val currentSchema = {
             val schema = conn.getMetaData.getURL.replaceFirst("\\?.*", "").replaceFirst(".*/", "")
             require(schema.length > 0)
             schema
         }
-    
-        def extract(): DatabaseModel =
-            new DatabaseModel("xx", extractTables())
         
-        private def findTableNames() = {
-            val data: DatabaseMetaData = conn.getMetaData
-
-            val rs: ResultSet = data.getTables(null, "%", "%", List("TABLE").toArray)
-
-            var names = List[String]()
-
-            while (rs.next) {
-                val tableName = rs.getString("TABLE_NAME")
-                names = names ++ List(tableName)
-            }
-            
-            names
-        }
-        
-        private val cachedTableNames = new Lazy(findTableNames())
-        def tableNames = cachedTableNames.get
-        
-        def mapTableOptions(rs: ResultSet) =
-            (rs.getString("TABLE_NAME"), List(TableOption("ENGINE", rs.getString("ENGINE"))))
-        
-        private def findTablesOptions(): Seq[(String, Seq[TableOption])] = {
-            val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ?"
-            val ps = conn.prepareStatement(q)
-            ps.setString(1, currentSchema)
-            val rs = ps.executeQuery()
-            read(rs)(mapTableOptions _)
-        }
-        
-        private def findTableOptions(tableName: String): Seq[TableOption] = {
-            val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ? AND table_name = ?"
-            val ps = conn.prepareStatement(q)
-            ps.setString(1, currentSchema)
-            ps.setString(2, tableName)
-            val rs = ps.executeQuery()
-            rs.next()
-            mapTableOptions(rs)._2
-        }
-        
-        private val cachedTablesOptions = new Lazy(findTablesOptions())
-        
-        def getTableOptions(tableName: String): Seq[TableOption] =
-            if (cachedTablesOptions.isCreated)
-                cachedTablesOptions.get.find(_._1 == tableName).get._2
-            else
-                findTableOptions(tableName)
-        
-    
-        def findMysqlTablesColumnDefaultValues(): Seq[(String, Seq[(String, String)])] = {
-            val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ?"
-            val ps = conn.prepareStatement(q)
-            ps.setString(1, currentSchema)
-            val rs = ps.executeQuery()
-            
-            val triples = read(rs) { rs =>
-                val tableName = rs.getString("table_name")
-                val columnName = rs.getString("column_name")
-                val defaultValue = rs.getString("column_default")
-                (tableName, columnName, defaultValue)
-            }
-            
-            val tables = new scala.collection.mutable.HashMap[String, ArrayBuffer[(String, String)]]
-            for ((tableName, columnName, defaultValue) <- triples) {
-                tables.getOrElseUpdate(tableName, new ArrayBuffer[(String, String)]) += ((columnName, defaultValue))
-            }
-            
-            tables.toList
-        }
-        
-        def findMysqlColumnDefaultValues(tableName: String) = {
-            val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? AND table_name = ?"
-            val ps = conn.prepareStatement(q)
-            ps.setString(1, currentSchema)
-            ps.setString(2, tableName)
-            val rs = ps.executeQuery()
-            
-            read(rs) { rs =>
-                val columnName = rs.getString("column_name")
-                val defaultValue = rs.getString("column_default")
-                (columnName, defaultValue)
-            }
-        }
-        
-        val cachedMysqlColumnDefaultValues = new Lazy(findMysqlTablesColumnDefaultValues())
-        
-        def getMysqlColumnDefaultValues(tableName: String) =
-            if (cachedMysqlColumnDefaultValues.isCreated)
-                cachedMysqlColumnDefaultValues.get.find(_._1 == tableName).get._2
-            else
-                findMysqlColumnDefaultValues(tableName)
-    
-        def extractTables(): Seq[TableModel] = {
-            cachedTablesOptions.get
-            cachedMysqlColumnDefaultValues.get
-            tableNames.map(extractTable _)
-        }
-    
         def extractTable(tableName: String): TableModel = {
             val data = conn.getMetaData
             val columns = data.getColumns(null, currentSchema, tableName, "%")
@@ -255,6 +155,110 @@ object JdbcModelExtractor {
             }
         }
 
+        protected def findTableNames() = {
+            val data: DatabaseMetaData = conn.getMetaData
+
+            val rs: ResultSet = data.getTables(null, "%", "%", List("TABLE").toArray)
+
+            var names = List[String]()
+
+            while (rs.next) {
+                val tableName = rs.getString("TABLE_NAME")
+                names = names ++ List(tableName)
+            }
+            
+            names
+        }
+        
+        def mapTableOptions(rs: ResultSet) =
+            (rs.getString("TABLE_NAME"), List(TableOption("ENGINE", rs.getString("ENGINE"))))
+        
+        protected def findTablesOptions(): Seq[(String, Seq[TableOption])] = {
+            val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ?"
+            val ps = conn.prepareStatement(q)
+            ps.setString(1, currentSchema)
+            val rs = ps.executeQuery()
+            read(rs)(mapTableOptions _)
+        }
+        
+        protected def findTableOptions(tableName: String): Seq[TableOption] = {
+            val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ? AND table_name = ?"
+            val ps = conn.prepareStatement(q)
+            ps.setString(1, currentSchema)
+            ps.setString(2, tableName)
+            val rs = ps.executeQuery()
+            rs.next()
+            mapTableOptions(rs)._2
+        }
+        
+        def getTableOptions(tableName: String): Seq[TableOption]
+        
+        def findMysqlTablesColumnDefaultValues(): Seq[(String, Seq[(String, String)])] = {
+            val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ?"
+            val ps = conn.prepareStatement(q)
+            ps.setString(1, currentSchema)
+            val rs = ps.executeQuery()
+            
+            val triples = read(rs) { rs =>
+                val tableName = rs.getString("table_name")
+                val columnName = rs.getString("column_name")
+                val defaultValue = rs.getString("column_default")
+                (tableName, columnName, defaultValue)
+            }
+            
+            val tables = new scala.collection.mutable.HashMap[String, ArrayBuffer[(String, String)]]
+            for ((tableName, columnName, defaultValue) <- triples) {
+                tables.getOrElseUpdate(tableName, new ArrayBuffer[(String, String)]) += ((columnName, defaultValue))
+            }
+            
+            tables.toList
+        }
+        
+        def findMysqlColumnDefaultValues(tableName: String) = {
+            val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? AND table_name = ?"
+            val ps = conn.prepareStatement(q)
+            ps.setString(1, currentSchema)
+            ps.setString(2, tableName)
+            val rs = ps.executeQuery()
+            
+            read(rs) { rs =>
+                val columnName = rs.getString("column_name")
+                val defaultValue = rs.getString("column_default")
+                (columnName, defaultValue)
+            }
+        }
+        
+        def getMysqlColumnDefaultValues(tableName: String): Seq[(String, String)]
+    }
+    
+    class SingleTableSchemaExtractor(conn: Connection) extends SchemaExtractor(conn) {
+        override def getTableOptions(tableName: String) = findTableOptions(tableName)
+        
+        override def getMysqlColumnDefaultValues(tableName: String) = findMysqlColumnDefaultValues(tableName)
+    }
+    
+    class AllTablesSchemaExtractor(conn: Connection) extends SchemaExtractor(conn) {
+    
+        def extract(): DatabaseModel =
+            new DatabaseModel("xx", extractTables())
+        
+        private val cachedTableNames = new Lazy(findTableNames())
+        def tableNames = cachedTableNames.get
+        
+        private val cachedTablesOptions = new Lazy(findTablesOptions())
+        
+        def getTableOptions(tableName: String): Seq[TableOption] =
+            cachedTablesOptions.get.find(_._1 == tableName).get._2
+        
+        val cachedMysqlColumnDefaultValues = new Lazy(findMysqlTablesColumnDefaultValues())
+        
+        def getMysqlColumnDefaultValues(tableName: String) =
+            cachedMysqlColumnDefaultValues.get.find(_._1 == tableName).get._2
+    
+        def extractTables(): Seq[TableModel] = {
+            tableNames.map(extractTable _)
+        }
+    
     }
     
     protected def parseDefaultValueFromDb(s: String, dataType: DataType): Option[SqlValue] = {
@@ -283,10 +287,10 @@ object JdbcModelExtractor {
     }
     
     def extractTables(conn: ManagedResource[Connection]): Seq[TableModel] =
-        for (c <- conn) yield new SchemaExtractor(c).extractTables()
+        for (c <- conn) yield new AllTablesSchemaExtractor(c).extractTables()
     
     def extract(conn: ManagedResource[Connection]): DatabaseModel =
-        for (c <- conn) yield new SchemaExtractor(c).extract()
+        for (c <- conn) yield new AllTablesSchemaExtractor(c).extract()
     
     def search(url: String): Seq[TableModel] = {
         extractTables(connection(url))
@@ -296,7 +300,7 @@ object JdbcModelExtractor {
     def parse(jdbcUrl: String): DatabaseModel = new DatabaseModel("database", search(jdbcUrl))
     
     def parseTable(tableName: String, jdbcUrl: String) =
-        for (c <- connection(jdbcUrl)) yield new SchemaExtractor(c).extractTable(tableName)
+        for (c <- connection(jdbcUrl)) yield new SingleTableSchemaExtractor(c).extractTable(tableName)
     
     def main(args: scala.Array[String]) {
     	def usage() {
@@ -337,7 +341,7 @@ object JdbcModelExtractorTests extends org.specs.Specification {
     }
     
     def extractTable(name: String) =
-        for (c <- conn) yield new JdbcModelExtractor.SchemaExtractor(c).extractTable(name)
+        for (c <- conn) yield new JdbcModelExtractor.SingleTableSchemaExtractor(c).extractTable(name)
     
     "Simple Table" in {
         dropTable("bananas")
