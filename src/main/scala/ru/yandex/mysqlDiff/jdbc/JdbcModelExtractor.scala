@@ -89,19 +89,19 @@ object JdbcModelExtractor {
                 new ColumnModel(colName, dataType, props)
             }
             
-            val pk = extractPrimaryKey(tableName, conn)
+            val pk = getPrimaryKey(tableName)
             
             def columnExistsInPk(name: String) =
                 pk.exists(_.columns.exists(_ == name))
             
             // MySQL adds PK to indexes, so exclude
-            val indexes = extractIndexes(tableName, conn)
+            val indexes = getIndexes(tableName)
                     .filter(pk.isEmpty || _.columns.toList != pk.get.columns.toList)
             
             new TableModel(tableName, columnsList.toList, pk, indexes, getTableOptions(tableName))
         }
         
-        def extractPrimaryKey(tableName: String, conn: Connection): Option[PrimaryKey] = {
+        protected def findPrimaryKey(tableName: String): Option[PrimaryKey] = {
             val rs = conn.getMetaData.getPrimaryKeys(null, currentSchema, tableName)
             
             case class R(pkName: String, columnName: String, keySeq: int)
@@ -128,8 +128,11 @@ object JdbcModelExtractor {
             }
         }
         
+        def getPrimaryKey(tableName: String): Option[PrimaryKey] =
+            findPrimaryKey(tableName)
+        
         // regular indexes
-        def extractIndexes(tableName: String, conn: Connection): Seq[IndexModel] = {
+        protected def findIndexes(tableName: String): Seq[IndexModel] = {
             val rs = conn.getMetaData.getIndexInfo(null, null, tableName, false, false)
             
             case class R(indexName: String, nonUnique: Boolean, ordinalPosition: Int,
@@ -154,6 +157,9 @@ object JdbcModelExtractor {
                 IndexModel(Some(indexName), rows.map(_.columnName), unique)
             }
         }
+        
+        def getIndexes(tableName: String): Seq[IndexModel] =
+            findIndexes(tableName)
 
         protected def findTableNames() = {
             val data = conn.getMetaData
