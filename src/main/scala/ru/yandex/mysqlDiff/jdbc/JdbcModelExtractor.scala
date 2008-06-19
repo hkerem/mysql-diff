@@ -188,8 +188,22 @@ object JdbcModelExtractor {
         
         def getTableOptions(tableName: String): Seq[TableOption]
         
+        private def groupBy[A, B](seq: Seq[A])(f: A => B): Seq[(B, Seq[A])] = {
+            def g(seq: Seq[(B, A)]): Seq[(B, Seq[A])] = seq match {
+                case Seq() => List()
+                case Seq((b, a)) => List((b, List(a)))
+                case Seq((b1, a1), rest @ _*) =>
+                    g(rest) match {
+                        case Seq((`b1`, l), rest @ _*) => (b1, a1 :: l.toList) :: rest.toList
+                        case r => (b1, List(a1)) :: r.toList
+                    }
+            }
+                
+            g(seq.map(a => (f(a), a)))
+        }
+        
         def findMysqlTablesColumnDefaultValues(): Seq[(String, Seq[(String, String)])] = {
-            val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ?"
+            val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? ORDER BY table_name"
             val ps = conn.prepareStatement(q)
             ps.setString(1, currentSchema)
             val rs = ps.executeQuery()
@@ -201,12 +215,11 @@ object JdbcModelExtractor {
                 (tableName, columnName, defaultValue)
             }
             
-            val tables = new scala.collection.mutable.HashMap[String, ArrayBuffer[(String, String)]]
-            for ((tableName, columnName, defaultValue) <- triples) {
-                tables.getOrElseUpdate(tableName, new ArrayBuffer[(String, String)]) += ((columnName, defaultValue))
+            groupBy(triples)(_._1).map {
+                case (tableName, seq) => (tableName, seq map {
+                    case (tableName, columnName, columnDefault) => (columnName, columnDefault)
+                })
             }
-            
-            tables.toList
         }
         
         def findMysqlColumnDefaultValues(tableName: String) = {
