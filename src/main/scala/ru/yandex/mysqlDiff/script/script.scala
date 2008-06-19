@@ -102,7 +102,8 @@ case class InsertStatement(table: String, ignore: Boolean,
 {
     require(table.length > 0)
     
-    require(columns.isDefined || !data.isEmpty)
+    require(columns.isEmpty || !columns.get.isEmpty)
+    require(!data.isEmpty)
     
     val columnsCount = columns.map(_.length).getOrElse(data.first.length)
     

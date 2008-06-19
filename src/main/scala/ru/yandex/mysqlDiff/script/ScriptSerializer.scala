@@ -49,6 +49,7 @@ object ScriptSerializer {
         case st: CreateTableStatement => serializeCreateTable(st, options)
         case DropTableStatement(n) => serializeDropTable(n)
         case st: AlterTableStatement => serializeChangeTable(st)
+        case is: InsertStatement => serializeInsert(is)
     }
     
     def serializeValue(value: SqlValue): String = value match {
@@ -89,6 +90,20 @@ object ScriptSerializer {
     
     def serializeTableOption(opt: TableOption) =
         opt.name + "=" + opt.value
+    
+    def serializeInsert(is: InsertStatement) = {
+        val r = new ArrayBuffer[String]
+        r += "INSERT"
+        if (is.ignore) r += "IGNORE"
+        r += "INTO"
+        r += is.table
+        if (is.columns.isDefined)
+            r += ("(" + is.columns.get.mkString(", ") + ")")
+        r += "VALUES"
+        r += is.data.map(row => "(" + row.map(serializeValue _).mkString(", ") + ")").mkString(", ")
+        r.mkString(" ")
+        // XXX: untested
+    }
     
     def serializeDropTable(tableName: String) =
         "DROP TABLE " + tableName
