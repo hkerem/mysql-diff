@@ -33,7 +33,146 @@ object JdbcModelExtractor {
         def isCreated = value.isDefined
     }
     
+    private def groupBy[A, B](seq: Seq[A])(f: A => B): Seq[(B, Seq[A])] = {
+        def g(seq: Seq[(B, A)]): Seq[(B, Seq[A])] = seq match {
+            case Seq() => List()
+            case Seq((b, a)) => List((b, List(a)))
+            case Seq((b1, a1), rest @ _*) =>
+                g(rest) match {
+                    case Seq((`b1`, l), rest @ _*) => (b1, a1 :: l.toList) :: rest.toList
+                    case r => (b1, List(a1)) :: r.toList
+                }
+        }
+            
+        g(seq.map(a => (f(a), a)))
+    }
+        
+    class MetaDao(conn: Connection) {
+
+        def findPrimaryKey(schema: String, tableName: String): Option[PrimaryKey] = {
+            val rs = conn.getMetaData.getPrimaryKeys(null, schema, tableName)
+            
+            case class R(pkName: String, columnName: String, keySeq: int)
+            
+            val r0 = read(rs) { rs =>
+                R(rs.getString("PK_NAME"), rs.getString("COLUMN_NAME"), rs.getInt("KEY_SEQ"))
+            }
+            
+            val r = stableSort(r0, (r: R) => r.keySeq)
+            
+            if (r.isEmpty) None
+            else {
+                val pkName = r.first.pkName
+                
+                // check all rows have the same name
+                for (R(p, _, _) <- r)
+                    if (p != pkName)
+                        throw new IllegalStateException("got different names for pk: " + p + ", " + pkName)
+                
+                // MySQL names primary key PRIMARY
+                val pkNameO = if (pkName != null && pkName != "PRIMARY") Some(pkName) else None
+                
+                Some(new PrimaryKey(pkNameO, r.map(_.columnName)))
+            }
+        }
+        
+        def findTableNames(schema: String) = {
+            val data = conn.getMetaData
+
+            val rs = data.getTables(null, schema, "%", List("TABLE").toArray)
+
+            read(rs) { rs =>
+                rs.getString("TABLE_NAME")
+            }
+        }
+        
+        // regular indexes
+        def findIndexes(schema: String, tableName: String): Seq[IndexModel] = {
+            val rs = conn.getMetaData.getIndexInfo(null, schema, tableName, false, false)
+            
+            case class R(indexName: String, nonUnique: Boolean, ordinalPosition: Int,
+                    columnName: String, ascOrDesc: String)
+            {
+                def unique = !nonUnique
+            }
+            
+            val r = read(rs) { rs =>
+                R(rs.getString("INDEX_NAME"), rs.getBoolean("NON_UNIQUE"), rs.getInt("ORDINAL_POSITION"),
+                        rs.getString("COLUMN_NAME"), rs.getString("ASC_OR_DESC"))
+            }
+            
+            val indexNames = Set(r.map(_.indexName): _*).toSeq
+            
+            indexNames.map { indexName =>
+                val rowsWithName = r.filter(_.indexName == indexName)
+                val rows = stableSort(rowsWithName, (r: R) => r.ordinalPosition)
+                
+                val unique = rows.first.unique
+                
+                IndexModel(Some(indexName), rows.map(_.columnName), unique)
+            }
+        }
+        
+        def mapTableOptions(rs: ResultSet) =
+            (rs.getString("TABLE_NAME"), List(TableOption("ENGINE", rs.getString("ENGINE"))))
+        
+        def findTablesOptions(schema: String): Seq[(String, Seq[TableOption])] = {
+            val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ?"
+            val ps = conn.prepareStatement(q)
+            ps.setString(1, schema)
+            val rs = ps.executeQuery()
+            read(rs)(mapTableOptions _)
+        }
+        
+        def findTableOptions(schema: String, tableName: String): Seq[TableOption] = {
+            val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ? AND table_name = ?"
+            val ps = conn.prepareStatement(q)
+            ps.setString(1, schema)
+            ps.setString(2, tableName)
+            val rs = ps.executeQuery()
+            rs.next()
+            mapTableOptions(rs)._2
+        }
+        
+        def findMysqlTablesColumnDefaultValues(schema: String): Seq[(String, Seq[(String, String)])] = {
+            val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? ORDER BY table_name"
+            val ps = conn.prepareStatement(q)
+            ps.setString(1, schema)
+            val rs = ps.executeQuery()
+            
+            val triples = read(rs) { rs =>
+                val tableName = rs.getString("table_name")
+                val columnName = rs.getString("column_name")
+                val defaultValue = rs.getString("column_default")
+                (tableName, columnName, defaultValue)
+            }
+            
+            groupBy(triples)(_._1).map {
+                case (tableName, seq) => (tableName, seq map {
+                    case (tableName, columnName, columnDefault) => (columnName, columnDefault)
+                })
+            }
+        }
+        
+        def findMysqlColumnDefaultValues(schema: String, tableName: String) = {
+            val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? AND table_name = ?"
+            val ps = conn.prepareStatement(q)
+            ps.setString(1, schema)
+            ps.setString(2, tableName)
+            val rs = ps.executeQuery()
+            
+            read(rs) { rs =>
+                val columnName = rs.getString("column_name")
+                val defaultValue = rs.getString("column_default")
+                (columnName, defaultValue)
+            }
+        }
+        
+    }
+    
     abstract class SchemaExtractor(conn: Connection) {
+        protected val dao = new MetaDao(conn)
+        
         lazy val currentSchema = {
             val schema = conn.getMetaData.getURL.replaceFirst("\\?.*", "").replaceFirst(".*/", "")
             require(schema.length > 0)
@@ -101,154 +240,24 @@ object JdbcModelExtractor {
             new TableModel(tableName, columnsList.toList, pk, indexes, getTableOptions(tableName))
         }
         
-        protected def findPrimaryKey(tableName: String): Option[PrimaryKey] = {
-            val rs = conn.getMetaData.getPrimaryKeys(null, currentSchema, tableName)
-            
-            case class R(pkName: String, columnName: String, keySeq: int)
-            
-            val r0 = read(rs) { rs =>
-                R(rs.getString("PK_NAME"), rs.getString("COLUMN_NAME"), rs.getInt("KEY_SEQ"))
-            }
-            
-            val r = stableSort(r0, (r: R) => r.keySeq)
-            
-            if (r.isEmpty) None
-            else {
-                val pkName = r.first.pkName
-                
-                // check all rows have the same name
-                for (R(p, _, _) <- r)
-                    if (p != pkName)
-                        throw new IllegalStateException("got different names for pk: " + p + ", " + pkName)
-                
-                // MySQL names primary key PRIMARY
-                val pkNameO = if (pkName != null && pkName != "PRIMARY") Some(pkName) else None
-                
-                Some(new PrimaryKey(pkNameO, r.map(_.columnName)))
-            }
-        }
-        
         def getPrimaryKey(tableName: String): Option[PrimaryKey] =
-            findPrimaryKey(tableName)
+            dao.findPrimaryKey(currentSchema, tableName)
         
-        // regular indexes
-        protected def findIndexes(tableName: String): Seq[IndexModel] = {
-            val rs = conn.getMetaData.getIndexInfo(null, null, tableName, false, false)
-            
-            case class R(indexName: String, nonUnique: Boolean, ordinalPosition: Int,
-                    columnName: String, ascOrDesc: String)
-            {
-                def unique = !nonUnique
-            }
-            
-            val r = read(rs) { rs =>
-                R(rs.getString("INDEX_NAME"), rs.getBoolean("NON_UNIQUE"), rs.getInt("ORDINAL_POSITION"),
-                        rs.getString("COLUMN_NAME"), rs.getString("ASC_OR_DESC"))
-            }
-            
-            val indexNames = Set(r.map(_.indexName): _*).toSeq
-            
-            indexNames.map { indexName =>
-                val rowsWithName = r.filter(_.indexName == indexName)
-                val rows = stableSort(rowsWithName, (r: R) => r.ordinalPosition)
-                
-                val unique = rows.first.unique
-                
-                IndexModel(Some(indexName), rows.map(_.columnName), unique)
-            }
-        }
         
         def getIndexes(tableName: String): Seq[IndexModel] =
-            findIndexes(tableName)
+            dao.findIndexes(currentSchema, tableName)
 
-        protected def findTableNames() = {
-            val data = conn.getMetaData
-
-            val rs = data.getTables(null, currentSchema, "%", List("TABLE").toArray)
-
-            read(rs) { rs =>
-                rs.getString("TABLE_NAME")
-            }
-        }
-        
-        def mapTableOptions(rs: ResultSet) =
-            (rs.getString("TABLE_NAME"), List(TableOption("ENGINE", rs.getString("ENGINE"))))
-        
-        protected def findTablesOptions(): Seq[(String, Seq[TableOption])] = {
-            val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ?"
-            val ps = conn.prepareStatement(q)
-            ps.setString(1, currentSchema)
-            val rs = ps.executeQuery()
-            read(rs)(mapTableOptions _)
-        }
-        
-        protected def findTableOptions(tableName: String): Seq[TableOption] = {
-            val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ? AND table_name = ?"
-            val ps = conn.prepareStatement(q)
-            ps.setString(1, currentSchema)
-            ps.setString(2, tableName)
-            val rs = ps.executeQuery()
-            rs.next()
-            mapTableOptions(rs)._2
-        }
-        
         def getTableOptions(tableName: String): Seq[TableOption]
-        
-        private def groupBy[A, B](seq: Seq[A])(f: A => B): Seq[(B, Seq[A])] = {
-            def g(seq: Seq[(B, A)]): Seq[(B, Seq[A])] = seq match {
-                case Seq() => List()
-                case Seq((b, a)) => List((b, List(a)))
-                case Seq((b1, a1), rest @ _*) =>
-                    g(rest) match {
-                        case Seq((`b1`, l), rest @ _*) => (b1, a1 :: l.toList) :: rest.toList
-                        case r => (b1, List(a1)) :: r.toList
-                    }
-            }
-                
-            g(seq.map(a => (f(a), a)))
-        }
-        
-        def findMysqlTablesColumnDefaultValues(): Seq[(String, Seq[(String, String)])] = {
-            val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? ORDER BY table_name"
-            val ps = conn.prepareStatement(q)
-            ps.setString(1, currentSchema)
-            val rs = ps.executeQuery()
-            
-            val triples = read(rs) { rs =>
-                val tableName = rs.getString("table_name")
-                val columnName = rs.getString("column_name")
-                val defaultValue = rs.getString("column_default")
-                (tableName, columnName, defaultValue)
-            }
-            
-            groupBy(triples)(_._1).map {
-                case (tableName, seq) => (tableName, seq map {
-                    case (tableName, columnName, columnDefault) => (columnName, columnDefault)
-                })
-            }
-        }
-        
-        def findMysqlColumnDefaultValues(tableName: String) = {
-            val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? AND table_name = ?"
-            val ps = conn.prepareStatement(q)
-            ps.setString(1, currentSchema)
-            ps.setString(2, tableName)
-            val rs = ps.executeQuery()
-            
-            read(rs) { rs =>
-                val columnName = rs.getString("column_name")
-                val defaultValue = rs.getString("column_default")
-                (columnName, defaultValue)
-            }
-        }
         
         def getMysqlColumnDefaultValues(tableName: String): Seq[(String, String)]
     }
     
     class SingleTableSchemaExtractor(conn: Connection) extends SchemaExtractor(conn) {
-        override def getTableOptions(tableName: String) = findTableOptions(tableName)
+        override def getTableOptions(tableName: String) =
+            dao.findTableOptions(currentSchema, tableName)
         
-        override def getMysqlColumnDefaultValues(tableName: String) = findMysqlColumnDefaultValues(tableName)
+        override def getMysqlColumnDefaultValues(tableName: String) =
+            dao.findMysqlColumnDefaultValues(currentSchema, tableName)
     }
     
     class AllTablesSchemaExtractor(conn: Connection) extends SchemaExtractor(conn) {
@@ -256,15 +265,15 @@ object JdbcModelExtractor {
         def extract(): DatabaseModel =
             new DatabaseModel("xx", extractTables())
         
-        private val cachedTableNames = new Lazy(findTableNames())
+        private val cachedTableNames = new Lazy(dao.findTableNames(currentSchema))
         def tableNames = cachedTableNames.get
         
-        private val cachedTablesOptions = new Lazy(findTablesOptions())
+        private val cachedTablesOptions = new Lazy(dao.findTablesOptions(currentSchema))
         
         def getTableOptions(tableName: String): Seq[TableOption] =
             cachedTablesOptions.get.find(_._1 == tableName).get._2
         
-        val cachedMysqlColumnDefaultValues = new Lazy(findMysqlTablesColumnDefaultValues())
+        val cachedMysqlColumnDefaultValues = new Lazy(dao.findMysqlTablesColumnDefaultValues(currentSchema))
         
         def getMysqlColumnDefaultValues(tableName: String) =
             cachedMysqlColumnDefaultValues.get.find(_._1 == tableName).get._2
