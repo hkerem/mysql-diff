@@ -173,8 +173,7 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel],
 
 abstract class DatabaseDeclaration(val name: String) 
 
-case class DatabaseModel(override val name: String, val declarations: Seq[TableModel])
-    extends DatabaseDeclaration(name)
+case class DatabaseModel(declarations: Seq[TableModel])
 {
     def tables: Seq[TableModel] = declarations
     def table(name: String) = tables.find(_.name == name).get

@@ -11,7 +11,7 @@ object ModelParser {
         parseModel(parser.Parser.parse(text))
     
     def parseModel(script: Script): DatabaseModel =
-        new DatabaseModel("db", script.ddlStatements.map(parseScriptElement _))
+        new DatabaseModel(script.ddlStatements.map(parseScriptElement _))
     
     def parseScriptElement(stmt: DdlStatement): TableModel = stmt match {
         case ct: CreateTableStatement => parseCreateTable(ct)

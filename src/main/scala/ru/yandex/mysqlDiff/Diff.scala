@@ -48,11 +48,11 @@ object Diff {
     
     def getModelFromArgsLine(arg: String, table: String) = {
         if (arg.startsWith("jdbc:"))
-            new DatabaseModel("xx", List(JdbcModelExtractor.parseTable(table, arg)))
+            new DatabaseModel(List(JdbcModelExtractor.parseTable(table, arg)))
         else {
             var str = ReaderResource.file(arg).slurp
             val tableModel = model.ModelParser.parseModel(str).declarations.filter(_.name == table).first
-            new DatabaseModel("xx", List(tableModel))
+            new DatabaseModel(List(tableModel))
         }
     }
 }

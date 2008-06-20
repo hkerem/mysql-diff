@@ -263,7 +263,7 @@ object JdbcModelExtractor {
     class AllTablesSchemaExtractor(conn: Connection) extends SchemaExtractor(conn) {
     
         def extract(): DatabaseModel =
-            new DatabaseModel("xx", extractTables())
+            new DatabaseModel(extractTables())
         
         private val cachedTableNames = new Lazy(dao.findTableNames(currentSchema))
         def tableNames = cachedTableNames.get
@@ -320,7 +320,7 @@ object JdbcModelExtractor {
     }
 
 
-    def parse(jdbcUrl: String): DatabaseModel = new DatabaseModel("database", search(jdbcUrl))
+    def parse(jdbcUrl: String): DatabaseModel = new DatabaseModel(search(jdbcUrl))
     
     def parseTable(tableName: String, jdbcUrl: String) =
         for (c <- connection(jdbcUrl)) yield new SingleTableSchemaExtractor(c).extractTable(tableName)
@@ -334,7 +334,7 @@ object JdbcModelExtractor {
     	    case Seq(jdbcUrl) =>
                 parse(jdbcUrl)
     	    case Seq(jdbcUrl, tableName) =>
-                new DatabaseModel("xx", List(parseTable(tableName, jdbcUrl)))
+                new DatabaseModel(List(parseTable(tableName, jdbcUrl)))
             case _ =>
                 usage(); exit(1)
     	}
