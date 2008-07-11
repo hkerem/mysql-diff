@@ -137,12 +137,13 @@ case class IndexModel(override val name: Option[String], override val columns: S
 case class PrimaryKey(override val name: Option[String], override val columns: Seq[String])
     extends IndexModel(name, columns, true)
 
-case class ForeighKey(override val name: Option[String],
+case class ForeignKey(override val name: Option[String],
         val localColumns: Seq[String],
         val externalTableName: String,
         val externalColumns: Seq[String])
     extends ConstraintModel(name, localColumns)
 {
+    require(!localColumns.isEmpty)
     require(localColumns.length == externalColumns.length)
 }
 
