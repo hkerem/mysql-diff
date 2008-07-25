@@ -401,13 +401,6 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         ageLastK.isUnique must_== false
     }
     
-    "table options" in {
-        dropTable("dogs")
-        execute("CREATE TABLE dogs (id INT) ENGINE=InnoDB")
-        val table = extractTable("dogs")
-        table.options must contain(TableOption("ENGINE", "InnoDB"))
-    }
-    
     "PK is not in indexes list" in {
         dropTable("files")
         execute("CREATE TABLE files (id INT, PRIMARY KEY(id))")
@@ -415,6 +408,23 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         val table = extractTable("files")
         table.indexes.length must_== 0
         table.primaryKey.get.columns.toList must_== List("id")
+    }
+    
+    "Foreign keys" in {
+        dropTable("citizen")
+        dropTable("city")
+        
+        execute("CREATE TABLE city (id INT PRIMARY KEY, name VARCHAR(10))")
+        execute("CREATE TABLE citizen (id INT PRIMARY KEY, city_id INT REFERENCES city(id))")
+        
+        val table = extractTable("citizen")
+    }
+    
+    "table options" in {
+        dropTable("dogs")
+        execute("CREATE TABLE dogs (id INT) ENGINE=InnoDB")
+        val table = extractTable("dogs")
+        table.options must contain(TableOption("ENGINE", "InnoDB"))
     }
     
     "DEFAULT NOW()" in {
