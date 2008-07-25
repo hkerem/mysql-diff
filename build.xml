@@ -72,6 +72,9 @@
                 classpath="lib/jarjar-1.0rc7.jar"/>
         
         <jarjar jarfile="target/yandex-mysql-diff-standalone${jar.suffix}.jar" index="true">
+            <manifest>
+                <attribute name="Main-Class" value="ru.yandex.mysqlDiff.Diff"/>
+            </manifest>
             <fileset dir="target/classes"/>
             <zipgroupfileset dir="./lib">
                 <include name="mysql*.jar"/>
