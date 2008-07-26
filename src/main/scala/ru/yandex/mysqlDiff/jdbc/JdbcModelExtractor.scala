@@ -418,6 +418,8 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         execute("CREATE TABLE citizen (id INT PRIMARY KEY, city_id INT REFERENCES city(id))")
         
         val table = extractTable("citizen")
+        // XXX: complete test
+        false
     }
     
     "table options" in {
