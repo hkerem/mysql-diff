@@ -50,9 +50,19 @@ case class CreateTableStatement(name: String, ifNotExists: Boolean,
 object CreateTableStatement {
     abstract class Entry
     
-    case class Column(name: String, dataType: DataType, properties: ColumnProperties) extends Entry {
-        def defaultValue = properties.defaultValue
-        def isNotNull = properties.isNotNull
+    abstract class ColumnPropertyDecl
+    
+    case class ModelColumnProperty(columnProperty: ColumnProperty) extends ColumnPropertyDecl
+    
+    case object InlinePrimaryKey extends ColumnPropertyDecl
+    case object InlineUnique extends ColumnPropertyDecl
+    case class InlineReferences(tableName: String, columnName: String) extends ColumnPropertyDecl
+    
+    case class Column(name: String, dataType: DataType, properties: Seq[ColumnPropertyDecl]) extends Entry {
+        def modelProperties =
+            ColumnProperties(properties.flatMap { case ModelColumnProperty(p) => Some(p); case _ => None })
+        def defaultValue = modelProperties.defaultValue
+        def isNotNull = modelProperties.isNotNull
     }
     
     case class Index(index: model.IndexModel) extends Entry
@@ -113,6 +123,14 @@ case class InsertStatement(table: String, ignore: Boolean,
 }
 
 object ScriptTests extends org.specs.Specification {
+}
+
+object Implicits {
+    implicit def toDecls(ps: ColumnProperties) =
+        ps.properties.map(CreateTableStatement.ModelColumnProperty(_))
+    
+    implicit def modelCpToCpDecl(cp: ColumnProperty) =
+        CreateTableStatement.ModelColumnProperty(cp)
 }
 
 // vim: set ts=4 sw=4 et:

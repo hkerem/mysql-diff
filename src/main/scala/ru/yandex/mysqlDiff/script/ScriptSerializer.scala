@@ -5,6 +5,8 @@ import model._
 import scala.collection.mutable.ArrayBuffer
 
 object ScriptSerializer {
+    import script.{CreateTableStatement => CTS}
+    
     /** Serializer options */
     abstract class Options {
         def stmtJoin: String
@@ -59,7 +61,7 @@ object ScriptSerializer {
         case NowValue => "NOW()"
     }
     
-    def serializeColumnProperty(cp: ColumnProperty): Option[String] = cp match {
+    def serializeModelColumnProperty(cp: ColumnProperty): Option[String] = cp match {
         case Nullability(true) => Some("NULL")
         case Nullability(false) => Some("NOT NULL")
         case DefaultValue(value) => Some("DEFAULT " + serializeValue(value))
@@ -67,18 +69,26 @@ object ScriptSerializer {
         case AutoIncrement(false) => None
     }
     
-    def serializeColumnProperty(cp: ColumnProperty, c: CreateTableStatement.Column): Option[String] = cp match {
-        // MySQL does not support NOT NULL DEFAULT NULL
-        case DefaultValue(NullValue) if c.isNotNull => None
-        case _ => serializeColumnProperty(cp)
+    def serializeColumnProperty(cp: CTS.ColumnPropertyDecl): Option[String] = cp match {
+        case CTS.ModelColumnProperty(cp) => serializeModelColumnProperty(cp)
+        case CTS.InlineUnique => Some("UNIQUE")
+        case CTS.InlinePrimaryKey => Some("PRIMARY KEY")
+        case CTS.InlineReferences(table, columns) => Some("REFERENCES " + table + "(" + columns.mkString(", ") + ")")
     }
+    
+    def serializeColumnProperty(cp: CTS.ColumnPropertyDecl, c: CreateTableStatement.Column): Option[String] =
+        cp match {
+            // MySQL does not support NOT NULL DEFAULT NULL
+            case CTS.ModelColumnProperty(DefaultValue(NullValue)) if c.isNotNull => None
+            case _ => serializeColumnProperty(cp)
+        }
         
     
     def serializeTableEntry(e: CreateTableStatement.Entry): String = e match {
         case c @ CreateTableStatement.Column(name, dataType, attrs) =>
             name + " " + serializeDataType(dataType) +
                     (if (attrs.isEmpty) ""
-                    else " " + attrs.properties.flatMap(cp => serializeColumnProperty(cp, c)).mkString(" "))
+                    else " " + attrs.flatMap(cp => serializeColumnProperty(cp, c)).mkString(" "))
         case CreateTableStatement.PrimaryKey(pk) => serializePrimaryKey(pk)
         case CreateTableStatement.Index(index) => serializeIndex(index)
     }
@@ -192,7 +202,7 @@ object ScriptSerializerTests extends org.specs.Specification {
     }
     
     "serialize default value" in {
-        serializeColumnProperty(DefaultValue(NumberValue(15))).get must_== "DEFAULT 15"
+        serializeModelColumnProperty(DefaultValue(NumberValue(15))).get must_== "DEFAULT 15"
     }
     
     "serialize value" in {

@@ -13,6 +13,8 @@ import scalax.io._
 
 import model._
 
+import script.Implicits._
+
 class CombinatorParserException(msg: String) extends Exception(msg)
 
 class SqlLexical extends StdLexical {
@@ -77,10 +79,11 @@ object SqlParserCombinator extends StandardTokenParsers {
     def autoIncrementability: Parser[AutoIncrement] =
         "AUTO_INCREMENT" ^^^ AutoIncrement(true)
     
-    def columnAttr = nullability | defaultValue | autoIncrementability
+    def columnAttr: Parser[ColumnPropertyDecl] =
+        (nullability | defaultValue | autoIncrementability) ^^ { p => ModelColumnProperty(p) }
     
     def column: Parser[Column] = name ~ dataType ~ rep(columnAttr) ^^
-            { case name ~ dataType ~ attrs => Column(name, dataType, new ColumnProperties(attrs)) }
+            { case name ~ dataType ~ attrs => Column(name, dataType, attrs) }
     
     def name: Parser[String] = ident
     
@@ -215,6 +218,12 @@ object SqlParserCombinatorTests extends org.specs.Specification {
         t.columns must haveSize(1)
         t.columns must exist({ c: CreateTableStatement.Column => c.name == "id" })
         t.column("id").dataType must_== DataType.int
+    }
+    
+    "parse references from column" in {
+        //val t = parseCreateTable("CREATE TABLE a (id INT, city_id INT REFERENCES city(id))")
+        // XXX
+        false
     }
 }
 

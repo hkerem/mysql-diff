@@ -187,6 +187,7 @@ case class DatabaseModel(declarations: Seq[TableModel])
 abstract class ColumnProperty {
     def propertyType: ColumnPropertyType
     
+    /** @deprecated */
     final def isModelProperty = propertyType.isModelProperty
 }
 

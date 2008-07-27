@@ -8,6 +8,8 @@ import script._
  * Serialize model to create statements (except for methods with toText or toString methods).
  */
 object ModelSerializer {
+    import script.Implicits._
+    
     def serializeColumn(column: ColumnModel) =
         new CreateTableStatement.Column(column.name, column.dataType, column.properties)
     

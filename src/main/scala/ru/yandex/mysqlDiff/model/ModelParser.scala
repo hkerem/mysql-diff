@@ -3,6 +3,7 @@ package ru.yandex.mysqlDiff.model
 import scala.collection.mutable.ArrayBuffer
 
 import script._
+import script.Implicits._
 
 import scalax.io._
 
@@ -26,11 +27,11 @@ object ModelParser {
         val pks = new ArrayBuffer[PrimaryKey]
         val indexes = new ArrayBuffer[IndexModel]
         ct.entries.map {
-            case c.Column(name, dataType, attrs) =>
-                if (dataType.name == "TIMESTAMP" && attrs.defaultValue.isEmpty)
+            case column @ c.Column(name, dataType, attrs) =>
+                if (dataType.name == "TIMESTAMP" && column.modelProperties.defaultValue.isEmpty)
                     // because of MySQL-specifc features that are hard to deal with
                     throw new Exception("TIMESTAMP without DEFAULT value is prohibited")
-                columns += ColumnModel(name, dataType, attrs)
+                columns += ColumnModel(name, dataType, column.modelProperties)
             case c.PrimaryKey(pk) => pks += pk
             case c.Index(index) => indexes += index
         }
