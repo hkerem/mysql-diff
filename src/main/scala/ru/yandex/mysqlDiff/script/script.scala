@@ -41,6 +41,7 @@ case class CreateTableStatement(name: String, ifNotExists: Boolean,
     
     def columns: Seq[Column] = entries.flatMap { case c: Column => Some(c); case _ => None }
     def indexes: Seq[Index] = entries.flatMap { case c: Index => Some(c); case _=> None }
+    def fks: Seq[ForeignKey] = entries.flatMap { case c: ForeignKey => Some(c); case _ => None }
     
     def column(name: String) = columns.find(_.name == name).get
 }

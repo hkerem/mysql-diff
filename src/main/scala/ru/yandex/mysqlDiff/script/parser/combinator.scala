@@ -107,12 +107,15 @@ object SqlParserCombinator extends StandardTokenParsers {
         ("UNIQUE" ^^^ true)
     
     def index: Parser[Index] = indexUniquality ~ opt(name) ~ nameList ^^
-            { case unique ~ name ~ columnNames => Index(IndexModel(name, columnNames, unique)) }
+            { case unique ~ name ~ columnNames => Index(model.IndexModel(name, columnNames, unique)) }
+    
+    def fk: Parser[ForeignKey] = ("FOREIGN" ~> "KEY" ~> opt(name)) ~ nameList ~ ("REFERENCES" ~> name) ~ nameList ^^
+            { case k ~ lcs ~ et ~ ecs => ForeignKey(model.ForeignKeyModel(k, lcs, et, ecs)) }
     
     def pk: Parser[PrimaryKey] =
         "PRIMARY" ~> "KEY" ~> nameList ^^ { nameList => PrimaryKey(model.PrimaryKey(None, nameList)) }
     
-    def tableEntry: Parser[Entry] = pk | index | column
+    def tableEntry: Parser[Entry] = pk | fk | index | column
     
     def ifNotExists: Parser[Any] = "IF" ~ "NOT" ~ "EXISTS"
     
@@ -245,6 +248,18 @@ object SqlParserCombinatorTests extends org.specs.Specification {
         t.indexes(0).index must beLike { case IndexModel(None, Seq("a"), true) => true; case _ => false }
         t.indexes(1).index must beLike { case IndexModel(Some("i2"), Seq("b", "c"), false) => true; case _ => false }
         t.indexes(2).index must beLike { case IndexModel(None, Seq("d", "e"), true) => true; case _ => false }
+    }
+    
+    "parse FK" in {
+        val t = parseCreateTable(
+                "CREATE TABLE a (id INT, " +
+                "FOREIGN KEY (x, y) REFERENCES b (x1, y1), " +
+                "FOREIGN KEY fk1 (z) REFERENCES c (z1))")
+        t.fks must haveSize(2)
+        t.fks(0).fk must beLike {
+            case ForeignKeyModel(None, Seq("x", "y"), "b", Seq("x1", "y1")) => true; case _ => false }
+        t.fks(1).fk must beLike {
+            case ForeignKeyModel(Some("fk1"), Seq("z"), "c", Seq("z1")) => true; case _ => false }
     }
     
 }
