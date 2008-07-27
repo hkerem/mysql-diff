@@ -102,8 +102,13 @@ object SqlParserCombinator extends StandardTokenParsers {
     //def select: Parser[Any] = "SELECT" ~> rep(not(";" | lexical.EOF))
     def select: Parser[Any] = "SELECT" ~> rep(name)
     
-    def index: Parser[Index] = (opt("UNIQUE") <~ ("INDEX" | "KEY")) ~ opt(name) ~ nameList ^^
-            { case unique ~ name ~ columnNames => Index(IndexModel(name, columnNames, unique.isDefined)) }
+    /** True iff unique */
+    def indexUniquality: Parser[Boolean] =
+        (opt("UNIQUE") <~ ("INDEX" | "KEY") ^^ { x => x.isDefined }) |
+        ("UNIQUE" ^^^ true)
+    
+    def index: Parser[Index] = indexUniquality ~ opt(name) ~ nameList ^^
+            { case unique ~ name ~ columnNames => Index(IndexModel(name, columnNames, unique)) }
     
     def pk: Parser[PrimaryKey] =
         "PRIMARY" ~> "KEY" ~> nameList ^^ { nameList => PrimaryKey(model.PrimaryKey(None, nameList)) }
@@ -235,6 +240,15 @@ object SqlParserCombinatorTests extends org.specs.Specification {
         t.column("id").properties must beSameSeqAs(List(InlinePrimaryKey))
         t.column("name").properties must beSameSeqAs(List(InlineUnique))
     }
+    
+    "parse indexes" in {
+        val t = parseCreateTable("CREATE TABLE a(id INT, UNIQUE(a), INDEX i2(b, c), UNIQUE KEY(d, e))")
+        t.indexes must haveSize(3)
+        t.indexes(0).index must beLike { case IndexModel(None, Seq("a"), true) => true; case _ => false }
+        t.indexes(1).index must beLike { case IndexModel(Some("i2"), Seq("b", "c"), false) => true; case _ => false }
+        t.indexes(2).index must beLike { case IndexModel(None, Seq("d", "e"), true) => true; case _ => false }
+    }
+    
 }
 
 object Parser {

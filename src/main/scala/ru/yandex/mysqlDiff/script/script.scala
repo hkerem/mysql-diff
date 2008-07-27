@@ -39,10 +39,8 @@ case class CreateTableStatement(name: String, ifNotExists: Boolean,
 
     import CreateTableStatement._
     
-    def columns: Seq[Column] = entries.flatMap {
-        case c: Column => Some(c)
-        case _ => None
-    }
+    def columns: Seq[Column] = entries.flatMap { case c: Column => Some(c); case _ => None }
+    def indexes: Seq[Index] = entries.flatMap { case c: Index => Some(c); case _=> None }
     
     def column(name: String) = columns.find(_.name == name).get
 }
