@@ -1,0 +1,54 @@
+#!/usr/bin/make -f
+
+package=mysql-diff
+
+build:
+	dh_testdir
+	
+	# XXX: my script
+	
+	touch build
+
+clean:
+	dh_testdir
+	-rm -rf build
+	
+	# my clean
+	
+	dh_clean
+
+install:
+	dh_testdir
+	dh_clean -k -i
+	
+	./install-for-debian.sh
+
+binary: install
+	dh_testdir
+	dh_testdir
+	dh_installchangelogs
+	dh_installdocs
+#	dh_installexamples
+#	dh_installmenu
+#	dh_installdebconf
+#	dh_installlogrotate
+#	dh_installemacsen
+#	dh_installpam
+#	dh_installmime
+#	dh_python
+#	dh_installinit
+#	dh_installcron
+#	dh_installinfo
+	dh_installman
+	dh_link
+	dh_compress
+	dh_fixperms
+#	dh_perl
+	dh_makeshlibs
+	dh_installdeb
+#	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+.PHONY: build clean binary-indep binary-arch binary install install-indep install-arch configure

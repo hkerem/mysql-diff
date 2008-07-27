@@ -1,0 +1,12 @@
+Source: mysql-diff
+Section: yandex
+Priority: optional
+Maintainer: Stepan Koltsov <stepancheg@yandex-team.ru>
+Build-Depends: yandex-ant, yandex-jdk6, yandex-scala
+Standards-Version: 1.0
+
+Package: yandex-scala
+Architecture: all
+Depends: yandex-jdk6, yandex-scala
+Description: mysql-diff
+ $HeadURL: https://svn.yandex.ru/capital/mysql-diff/trunk/debian/control $

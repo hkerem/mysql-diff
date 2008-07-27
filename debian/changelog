@@ -1,0 +1,5 @@
+mysql-diff (0.1.0) unstable; urgency=low
+
+  * Initial release.
+
+ -- Stepan Koltsov <stepancheg@yandex-team.ru>  Sun, 27 Jul 2008 21:38:51 +0400
