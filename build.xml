@@ -94,9 +94,21 @@
         <mkdir dir="target/dist/mysql-diff"/>
         <mkdir dir="target/dist/mysql-diff/bin"/>
         <mkdir dir="target/dist/mysql-diff/lib"/>
-        <copy file="target/yandex-mysql-diff${jar.suffix}.jar" todir="target/dist/mysql-diff/lib"/>
+        <mkdir dir="target/dist/mysql-diff/single-jar"/>
+        
+        <copy file="target/yandex-mysql-diff-standalone${jar.suffix}.jar" todir="target/dist/mysql-diff/single-jar"/>
+        
+        <copy todir="target/dist/mysql-diff/lib">
+            <fileset dir="lib">
+                <include name="mysql*.jar"/>
+                <include name="scalax*.jar"/>
+            </fileset>
+        </copy>
+        
+        <copy todir="target/dist/mysql-diff/lib" file="${scala-library.jar}"/>
+        <copy todir="target/dist/mysql-diff/lib" file="target/yandex-mysql-diff${jar.suffix}.jar"/>
+        
         <copy file="src/main/bin/mysql-diff" todir="target/dist/mysql-diff/bin"/>
-
         <chmod file="target/dist/mysql-diff/bin/mysql-diff" perm="ugo+rx"/>
 
         <tar destfile="target/mysql-diff.tar.gz" compression="gzip">
