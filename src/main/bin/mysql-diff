@@ -1,4 +1,8 @@
 #!/bin/sh
-scriptPath=`dirname ${0}`
-java -classpath $scriptPath/lib/mysqlDiff*.jar ru.yandex.mysqlDiff.Diff "$@"
+
+: ${JAVA_HOME:=/usr/local/java6}
+
+MYSQL_DIFF_HOME=$(cd `dirname $0`/..; pwd)
+
+exec $JAVA_HOME/bin/java -classpath "$MYSQL_DIFF_HOME/lib/*" ru.yandex.mysqlDiff.Diff "$@"
 
