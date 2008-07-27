@@ -79,8 +79,16 @@ object SqlParserCombinator extends StandardTokenParsers {
     def autoIncrementability: Parser[AutoIncrement] =
         "AUTO_INCREMENT" ^^^ AutoIncrement(true)
     
+    def uniqueAttr = "UNIQUE" ^^^ InlineUnique
+    def pkAttr = "PRIMARY" ~ "KEY" ^^^ InlinePrimaryKey
+    
+    def referencesAttr: Parser[InlineReferences] = ("REFERENCES" ~> name <~ "(") ~ name <~ ")" ^^
+        { case t ~ c => InlineReferences(t, c) }
+    
     def columnAttr: Parser[ColumnPropertyDecl] =
-        (nullability | defaultValue | autoIncrementability) ^^ { p => ModelColumnProperty(p) }
+        ((nullability | defaultValue | autoIncrementability) ^^ { p => ModelColumnProperty(p) }) |
+        uniqueAttr | pkAttr | referencesAttr
+        
     
     def column: Parser[Column] = name ~ dataType ~ rep(columnAttr) ^^
             { case name ~ dataType ~ attrs => Column(name, dataType, attrs) }
@@ -174,13 +182,13 @@ object SqlParserCombinator extends StandardTokenParsers {
 
 object SqlParserCombinatorTests extends org.specs.Specification {
     import SqlParserCombinator._
+    import CreateTableStatement._
     
     "parseScript" in {
         parse("CREATE TABLE a (id INT); CREATE TABLE b (name VARCHAR(10))")
     }
     
     "parseCreateTable simple" in {
-        import CreateTableStatement._
         
         parseCreateTable("CREATE TABLE a (id INT)") must beLike {
             case t @ CreateTableStatement("a", _, _, _) =>
@@ -221,9 +229,11 @@ object SqlParserCombinatorTests extends org.specs.Specification {
     }
     
     "parse references from column" in {
-        //val t = parseCreateTable("CREATE TABLE a (id INT, city_id INT REFERENCES city(id))")
-        // XXX
-        false
+        val t = parseCreateTable(
+                "CREATE TABLE a (id INT PRIMARY KEY, city_id INT REFERENCES city(id), name VARCHAR(10) UNIQUE)")
+        t.column("city_id").properties must beSameSeqAs(List(InlineReferences("city", "id")))
+        t.column("id").properties must beSameSeqAs(List(InlinePrimaryKey))
+        t.column("name").properties must beSameSeqAs(List(InlineUnique))
     }
 }
 
