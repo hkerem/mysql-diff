@@ -58,6 +58,8 @@ object CreateTableStatement {
     case class Index(index: model.IndexModel) extends Entry
     
     case class PrimaryKey(pk: model.PrimaryKey) extends Entry
+    
+    case class ForeignKey(fk: model.ForeignKeyModel) extends Entry
 }
 
 case class DropTableStatement(name: String) extends DdlStatement

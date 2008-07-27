@@ -49,8 +49,8 @@ object JdbcModelExtractor {
         
     class MetaDao(conn: Connection) {
 
-        def findPrimaryKey(schema: String, tableName: String): Option[PrimaryKey] = {
-            val rs = conn.getMetaData.getPrimaryKeys(null, schema, tableName)
+        def findPrimaryKey(catalog: String, schema: String, tableName: String): Option[PrimaryKey] = {
+            val rs = conn.getMetaData.getPrimaryKeys(catalog, schema, tableName)
             
             case class R(pkName: String, columnName: String, keySeq: int)
             
@@ -76,10 +76,10 @@ object JdbcModelExtractor {
             }
         }
         
-        def findTableNames(schema: String) = {
+        def findTableNames(catalog: String, schema: String) = {
             val data = conn.getMetaData
 
-            val rs = data.getTables(null, schema, "%", List("TABLE").toArray)
+            val rs = data.getTables(catalog, schema, "%", List("TABLE").toArray)
 
             read(rs) { rs =>
                 rs.getString("TABLE_NAME")
@@ -87,8 +87,8 @@ object JdbcModelExtractor {
         }
         
         // regular indexes
-        def findIndexes(schema: String, tableName: String): Seq[IndexModel] = {
-            val rs = conn.getMetaData.getIndexInfo(null, schema, tableName, false, false)
+        def findIndexes(catalog: String, schema: String, tableName: String): Seq[IndexModel] = {
+            val rs = conn.getMetaData.getIndexInfo(catalog, schema, tableName, false, false)
             
             case class R(indexName: String, nonUnique: Boolean, ordinalPosition: Int,
                     columnName: String, ascOrDesc: String)
@@ -110,6 +110,33 @@ object JdbcModelExtractor {
                 val unique = rows.first.unique
                 
                 IndexModel(Some(indexName), rows.map(_.columnName), unique)
+            }
+        }
+        
+        def findImportedKeys(catalog: String, schema: String, tableName: String): Seq[ForeignKeyModel] = {
+            val rs = conn.getMetaData.getImportedKeys(catalog, schema, tableName)
+            
+            case class R(keyName: String, externalTableName: String,
+                    localColumnName: String, externalColumnName: String)
+            
+            val r = read(rs) { rs =>
+                R(rs.getString("FK_NAME"), rs.getString("PKTABLE_NAME"),
+                        rs.getString("FKCOLUMN_NAME"), rs.getString("PKCOLUMN_NAME"))
+            }
+            
+            // key name can be null
+            val keys = Set(r.map(x => (x.keyName, x.externalTableName)): _*).toSeq
+            
+            keys.map { case (keyName, _) =>
+                val rows = r.filter(_.keyName == keyName)
+                val externalTableNames = Set(rows.map(_.externalTableName): _*)
+                if (externalTableNames.size != 1) {
+                    val m = "internal error, got external table names: " + externalTableNames +
+                            " for key " + keyName
+                    throw new IllegalStateException(m)
+                }
+                ForeignKeyModel(Some(keyName), rows.map(_.localColumnName),
+                        externalTableNames.elements.next, rows.map(_.externalColumnName))
             }
         }
         
@@ -173,15 +200,18 @@ object JdbcModelExtractor {
     abstract class SchemaExtractor(conn: Connection) {
         protected val dao = new MetaDao(conn)
         
-        lazy val currentSchema = {
-            val schema = conn.getMetaData.getURL.replaceFirst("\\?.*", "").replaceFirst(".*/", "")
-            require(schema.length > 0)
-            schema
+        lazy val currentDb = {
+            val db = conn.getMetaData.getURL.replaceFirst("\\?.*", "").replaceFirst(".*/", "")
+            require(db.length > 0)
+            db
         }
+        
+        def currentCatalog = currentDb
+        def currentSchema: String = null
         
         def extractTable(tableName: String): TableModel = {
             val data = conn.getMetaData
-            val columns = data.getColumns(null, currentSchema, tableName, "%")
+            val columns = data.getColumns(currentCatalog, currentSchema, tableName, "%")
             
             val defaultValuesFromMysql = getMysqlColumnDefaultValues(tableName)
             
@@ -233,19 +263,28 @@ object JdbcModelExtractor {
             def columnExistsInPk(name: String) =
                 pk.exists(_.columns.exists(_ == name))
             
+            val fks = getFks(tableName)
+            
             // MySQL adds PK to indexes, so exclude
             val indexes = getIndexes(tableName)
                     .filter(pk.isEmpty || _.columns.toList != pk.get.columns.toList)
+                    .filter(i => !(fks.map(_.localColumns.toList) contains i.columns.toList))
             
-            new TableModel(tableName, columnsList.toList, pk, indexes, getTableOptions(tableName))
+            new TableModel(tableName, columnsList.toList, pk, indexes ++ fks, getTableOptions(tableName))
         }
         
         def getPrimaryKey(tableName: String): Option[PrimaryKey] =
-            dao.findPrimaryKey(currentSchema, tableName)
-        
+            dao.findPrimaryKey(currentCatalog, currentSchema, tableName)
         
         def getIndexes(tableName: String): Seq[IndexModel] =
-            dao.findIndexes(currentSchema, tableName)
+            dao.findIndexes(currentCatalog, currentSchema, tableName)
+
+        def getFks(tableName: String): Seq[ForeignKeyModel] =
+            dao.findImportedKeys(currentCatalog, currentSchema, tableName)
+        
+        /** Not including PK */
+        def getKeys(tableName: String): Seq[KeyModel] =
+            getIndexes(tableName) ++ getFks(tableName)
 
         def getTableOptions(tableName: String): Seq[TableOption]
         
@@ -254,10 +293,10 @@ object JdbcModelExtractor {
     
     class SingleTableSchemaExtractor(conn: Connection) extends SchemaExtractor(conn) {
         override def getTableOptions(tableName: String) =
-            dao.findTableOptions(currentSchema, tableName)
+            dao.findTableOptions(currentDb, tableName)
         
         override def getMysqlColumnDefaultValues(tableName: String) =
-            dao.findMysqlColumnDefaultValues(currentSchema, tableName)
+            dao.findMysqlColumnDefaultValues(currentDb, tableName)
     }
     
     class AllTablesSchemaExtractor(conn: Connection) extends SchemaExtractor(conn) {
@@ -265,15 +304,15 @@ object JdbcModelExtractor {
         def extract(): DatabaseModel =
             new DatabaseModel(extractTables())
         
-        private val cachedTableNames = new Lazy(dao.findTableNames(currentSchema))
+        private val cachedTableNames = new Lazy(dao.findTableNames(currentCatalog, currentSchema))
         def tableNames = cachedTableNames.get
         
-        private val cachedTablesOptions = new Lazy(dao.findTablesOptions(currentSchema))
+        private val cachedTablesOptions = new Lazy(dao.findTablesOptions(currentDb))
         
         def getTableOptions(tableName: String): Seq[TableOption] =
             cachedTablesOptions.get.find(_._1 == tableName).get._2
         
-        val cachedMysqlColumnDefaultValues = new Lazy(dao.findMysqlTablesColumnDefaultValues(currentSchema))
+        val cachedMysqlColumnDefaultValues = new Lazy(dao.findMysqlTablesColumnDefaultValues(currentDb))
         
         def getMysqlColumnDefaultValues(tableName: String) =
             cachedMysqlColumnDefaultValues.get.find(_._1 == tableName).get._2
@@ -343,7 +382,6 @@ object JdbcModelExtractor {
     }
 }
 
-import scalax.testing._
 object JdbcModelExtractorTests extends org.specs.Specification {
     Class.forName("com.mysql.jdbc.Driver")
         
@@ -413,13 +451,36 @@ object JdbcModelExtractorTests extends org.specs.Specification {
     "Foreign keys" in {
         dropTable("citizen")
         dropTable("city")
+        dropTable("person")
         
-        execute("CREATE TABLE city (id INT PRIMARY KEY, name VARCHAR(10))")
-        execute("CREATE TABLE citizen (id INT PRIMARY KEY, city_id INT REFERENCES city(id))")
+        execute("CREATE TABLE city (id INT PRIMARY KEY, name VARCHAR(10)) ENGINE=InnoDB")
+        execute("CREATE TABLE person(id1 INT, id2 INT, PRIMARY KEY(id1, id2)) ENGINE=InnoDB")
+        // http://community.livejournal.com/levin_matveev/20802.html
+        execute("CREATE TABLE citizen (id INT PRIMARY KEY, city_id INT, pid1 INT, pid2 INT, " +
+                "FOREIGN KEY (city_id) REFERENCES city(id), " +
+                "FOREIGN KEY (pid1, pid2) REFERENCES person(id1, id2)" +
+                ") ENGINE=InnoDB")
         
-        val table = extractTable("citizen")
-        // XXX: complete test
-        false
+        val citizen = extractTable("citizen")
+        val city = extractTable("city")
+        val person = extractTable("person")
+        
+        citizen.fks must haveSize(2)
+        
+        val fkc = citizen.fks.find(_.localColumns.toList == List("city_id")).get
+        fkc.localColumns must beLike { case Seq("city_id") => true }
+        fkc.externalColumns must beLike { case Seq("id") => true }
+        fkc.externalTableName must_== "city"
+        
+        val fkp = citizen.fks.find(_.localColumns.toList == List("pid1", "pid2")).get
+        fkp.localColumns must beLike { case Seq("pid1", "pid2") => true }
+        fkp.externalColumns must beLike { case Seq("id1", "id2") => true }
+        fkp.externalTableName must_== "person"
+        
+        citizen.indexes must haveSize(0)
+        
+        city.fks must haveSize(0)
+        person.fks must haveSize(0)
     }
     
     "table options" in {

@@ -9,7 +9,7 @@ import script._
  */
 object ModelSerializer {
     def serializeColumn(column: ColumnModel) =
-        CreateTableStatement.Column(column.name, column.dataType, column.properties)
+        new CreateTableStatement.Column(column.name, column.dataType, column.properties)
     
     def serializePk(pk: PrimaryKey) =
         new CreateTableStatement.PrimaryKey(pk)
@@ -17,14 +17,18 @@ object ModelSerializer {
     def serializeRegularIndex(index: IndexModel) =
         new CreateTableStatement.Index(index)
     
-    def serializeIndex(index: IndexModel) = index match {
+    def serializeForeignKey(fk: ForeignKeyModel) =
+        new CreateTableStatement.ForeignKey(fk)
+    
+    def serializeKey(index: KeyModel) = index match {
         case pk: PrimaryKey => serializePk(pk)
         case i: IndexModel => serializeRegularIndex(i)
+        case fk: ForeignKeyModel => serializeForeignKey(fk)
     }
     
     def serializeTable(table: TableModel) =
         CreateTableStatement(table.name, false,
-            table.columns.map(serializeColumn _) ++ table.allIndexes.map(serializeIndex _), table.options)
+            table.columns.map(serializeColumn _) ++ table.allKeys.map(serializeKey _), table.options)
     
     def serializeDatabase(db: DatabaseModel) = db.declarations.map(serializeTable _)
     

@@ -126,22 +126,22 @@ case class ColumnModel(val name: String, val dataType: DataType, properties: Col
     def comment = properties.comment
 }
 
-abstract class ConstraintModel(val name: Option[String], val columns: Seq[String]) extends TableEntry
+abstract class KeyModel(val name: Option[String], val columns: Seq[String]) extends TableEntry
 
 case class IndexModel(override val name: Option[String], override val columns: Seq[String], isUnique: Boolean)
-    extends ConstraintModel(name, columns)
+    extends KeyModel(name, columns)
 {
     require(columns.length > 0)
 }
 
 case class PrimaryKey(override val name: Option[String], override val columns: Seq[String])
-    extends IndexModel(name, columns, true)
+    extends KeyModel(name, columns)
 
-case class ForeignKey(override val name: Option[String],
+case class ForeignKeyModel(override val name: Option[String],
         val localColumns: Seq[String],
         val externalTableName: String,
         val externalColumns: Seq[String])
-    extends ConstraintModel(name, localColumns)
+    extends KeyModel(name, localColumns)
 {
     require(!localColumns.isEmpty)
     require(localColumns.length == externalColumns.length)
@@ -150,11 +150,11 @@ case class ForeignKey(override val name: Option[String],
 case class TableOption(name: String, value: String)
 
 case class TableModel(override val name: String, columns: Seq[ColumnModel],
-        primaryKey: Option[PrimaryKey], indexes: Seq[IndexModel], options: Seq[TableOption])
+        primaryKey: Option[PrimaryKey], keys: Seq[KeyModel], options: Seq[TableOption])
     extends DatabaseDeclaration(name: String)
 {
-    def this(name: String, columns: Seq[ColumnModel], pk: Option[PrimaryKey], indexes: Seq[IndexModel]) =
-        this(name, columns, pk, indexes, Nil)
+    def this(name: String, columns: Seq[ColumnModel], pk: Option[PrimaryKey], keys: Seq[KeyModel]) =
+        this(name, columns, pk, keys, Nil)
     
     def this(name: String, columns: Seq[ColumnModel]) =
         this(name, columns, None, Nil)
@@ -163,13 +163,17 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel],
     
     def column(name: String) = columns.find(_.name == name).get
     
-    /** PK then regular indexes */
-    def allIndexes = primaryKey.toList ++ indexes
+    /** Regular indexes */
+    def indexes = keys.flatMap { case i: IndexModel => Some(i); case _ => None }
+    def fks = keys.flatMap { case f: ForeignKeyModel => Some(f); case _ => None }
+    
+    /** PK then regular indexes then foreign keys */
+    def allKeys = primaryKey.toList ++ keys
     
     def indexWithColumns(columns: String*) = indexes.find(_.columns.toList == columns.toList).get
     
     def createLikeThis(newName: String) =
-        TableModel(newName, columns, primaryKey, indexes, options)
+        TableModel(newName, columns, primaryKey, keys, options)
 }
 
 abstract class DatabaseDeclaration(val name: String) 

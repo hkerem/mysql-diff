@@ -105,6 +105,11 @@ object DiffMaker {
         (a.columns.toList == b.columns.toList) && (a.isUnique == b.isUnique) &&
             (a.name == b.name || a.name == None || b.name == None)
     
+    def fksEquivalent(a: ForeignKeyModel, b: ForeignKeyModel) =
+        (a.localColumns.toList == b.columns.toList) &&
+                (a.externalTableName == b.externalTableName) && (a.externalColumns == b.externalColumns) &&
+                (a.name == b.name || a.name == None || b.name == None)
+    
     def compareTables(from: TableModel, to: TableModel): Option[ChangeTableDiff] = {
 
         val (fromColumns, toColumns, changeColumnPairs) = compareSeqs(from.columns, to.columns, (x: ColumnModel, y: ColumnModel) => x.name == y.name)
@@ -118,6 +123,8 @@ object DiffMaker {
         val primaryKeyDiff: Seq[IndexDiff] = comparePrimaryKeys(from.primaryKey, to.primaryKey).toList
 
         val (fromIndexes, toIndexes, changeIndexPairs) = compareSeqs(from.indexes, to.indexes, indexesEquivalent _)
+        // XXX: ignored yet
+        val (fromFks, toFks, changeFkPairs) = compareSeqs(from.fks, to.fks, fksEquivalent _)
 
         val dropIndexesDiff = fromIndexes.map(idx => DropIndexDiff(idx))
         val createIndexesDiff = toIndexes.map(idx => CreateIndexDiff(idx))
