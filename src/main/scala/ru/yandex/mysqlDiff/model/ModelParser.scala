@@ -24,8 +24,8 @@ object ModelParser {
         
         val name = ct.name
         val columns = new ArrayBuffer[ColumnModel]
-        val pks = new ArrayBuffer[PrimaryKey]
-        val indexes = new ArrayBuffer[IndexModel]
+        val pks = new ArrayBuffer[PrimaryKeyModel]
+        val keys = new ArrayBuffer[KeyModel]
         ct.entries.map {
             case column @ c.Column(name, dataType, attrs) =>
                 if (dataType.name == "TIMESTAMP" && column.modelProperties.defaultValue.isEmpty)
@@ -33,7 +33,8 @@ object ModelParser {
                     throw new Exception("TIMESTAMP without DEFAULT value is prohibited")
                 columns += ColumnModel(name, dataType, column.modelProperties)
             case c.PrimaryKey(pk) => pks += pk
-            case c.Index(index) => indexes += index
+            case c.Index(index) => keys += index
+            case c.ForeignKey(fk) => keys += fk
         }
         
         require(pks.length <= 1)
@@ -56,7 +57,7 @@ object ModelParser {
                 ColumnModel(c.name, c.dataType, properties)
         }
         
-        TableModel(name, columns2.toList, pk, indexes.toList, ct.options)
+        TableModel(name, columns2.toList, pk, keys.toList, ct.options)
     }
     
     def main(args: Array[String]) {

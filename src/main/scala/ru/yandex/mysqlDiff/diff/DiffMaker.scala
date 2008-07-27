@@ -92,12 +92,12 @@ object DiffMaker {
         else None
     }
     
-    def comparePrimaryKeys(fromO: Option[PrimaryKey], toO: Option[PrimaryKey]): Option[IndexDiff] =
+    def comparePrimaryKeys(fromO: Option[PrimaryKeyModel], toO: Option[PrimaryKeyModel]): Option[KeyDiff] =
         (fromO, toO) match {
-            case (Some(from), None) => Some(DropPrimaryKeyDiff(from))
-            case (None, Some(to)) => Some(CreatePrimaryKeyDiff(to))
+            case (Some(from), None) => Some(DropKeyDiff(from))
+            case (None, Some(to)) => Some(CreateKeyDiff(to))
             case (Some(from), Some(to)) if from.columns.toList != to.columns.toList =>
-                Some(new ChangePrimaryKeyDiff(from, to))
+                Some(new ChangeKeyDiff(from, to))
             case _ => None
         }
     
@@ -110,6 +110,13 @@ object DiffMaker {
                 (a.externalTableName == b.externalTableName) && (a.externalColumns == b.externalColumns) &&
                 (a.name == b.name || a.name == None || b.name == None)
     
+    def keysEquivalent(a: KeyModel, b: KeyModel) = (a, b) match {
+        case (a: IndexModel, b: IndexModel) => indexesEquivalent(a, b)
+        case (a: ForeignKeyModel, b: ForeignKeyModel) => fksEquivalent(a, b)
+        case _ => false
+    }
+        
+    
     def compareTables(from: TableModel, to: TableModel): Option[ChangeTableDiff] = {
 
         val (fromColumns, toColumns, changeColumnPairs) = compareSeqs(from.columns, to.columns, (x: ColumnModel, y: ColumnModel) => x.name == y.name)
@@ -120,22 +127,20 @@ object DiffMaker {
 
         val alterColumnDiff = dropColumnDiff ++ createColumnDiff ++ alterOnlyColumnDiff
 
-        val primaryKeyDiff: Seq[IndexDiff] = comparePrimaryKeys(from.primaryKey, to.primaryKey).toList
+        val primaryKeyDiff: Seq[KeyDiff] = comparePrimaryKeys(from.primaryKey, to.primaryKey).toList
 
-        val (fromIndexes, toIndexes, changeIndexPairs) = compareSeqs(from.indexes, to.indexes, indexesEquivalent _)
-        // XXX: ignored yet
-        val (fromFks, toFks, changeFkPairs) = compareSeqs(from.fks, to.fks, fksEquivalent _)
+        val (fromKeys, toKeys, changeIndexPairs) = compareSeqs(from.keys, to.keys, keysEquivalent _)
 
-        val dropIndexesDiff = fromIndexes.map(idx => DropIndexDiff(idx))
-        val createIndexesDiff = toIndexes.map(idx => CreateIndexDiff(idx))
-        val alterIndexesDiff = Nil // we have no alter index
+        val dropKeysDiff = fromKeys.map(k => DropKeyDiff(k))
+        val createKeysDiff = toKeys.map(k => CreateKeyDiff(k))
+        val alterKeysDiff = Nil // we have no alter index
 
-        val alterIndexDiff = primaryKeyDiff ++ createIndexesDiff ++ dropIndexesDiff ++ alterIndexesDiff
+        val alterKeyDiff = primaryKeyDiff ++ createKeysDiff ++ dropKeysDiff ++ alterKeysDiff
 
         if (from.name != to.name)
-            Some(new ChangeTableDiff(from.name, Some(to.name), alterColumnDiff, alterIndexDiff))
-        else if (alterColumnDiff.size > 0 || alterIndexDiff.size > 0)
-            Some(new ChangeTableDiff(from.name, None, alterColumnDiff, alterIndexDiff))
+            Some(new ChangeTableDiff(from.name, Some(to.name), alterColumnDiff, alterKeyDiff))
+        else if (alterColumnDiff.size > 0 || alterKeyDiff.size > 0)
+            Some(new ChangeTableDiff(from.name, None, alterColumnDiff, alterKeyDiff))
         else
             None
     }

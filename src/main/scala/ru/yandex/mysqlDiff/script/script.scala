@@ -66,7 +66,7 @@ object CreateTableStatement {
     
     case class Index(index: model.IndexModel) extends Entry
     
-    case class PrimaryKey(pk: model.PrimaryKey) extends Entry
+    case class PrimaryKey(pk: model.PrimaryKeyModel) extends Entry
     
     case class ForeignKey(fk: model.ForeignKeyModel) extends Entry
 }
@@ -96,13 +96,17 @@ object AlterTableStatement {
     
     case class DropColumn(name: String) extends Operation
     
-    case class AddPrimaryKey(pk: PrimaryKey) extends Operation
+    case class AddPrimaryKey(pk: PrimaryKeyModel) extends Operation
     
     case object DropPrimaryKey extends Operation
     
     case class AddIndex(id: IndexModel) extends Operation
     
     case class DropIndex(name: String) extends Operation
+    
+    case class DropForeignKey(name: String) extends Operation
+    
+    case class AddForeignKey(fk: ForeignKeyModel) extends Operation
 }
 
 abstract class DmlStatement extends ScriptStatement

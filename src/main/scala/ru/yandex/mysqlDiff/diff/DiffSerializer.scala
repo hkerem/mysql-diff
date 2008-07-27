@@ -4,6 +4,7 @@ import model._
 import script._
 
 object TableScriptBuilder {
+    import script.{AlterTableStatement => ats}
 
     def alterColumnScript(cd: ColumnDiff, table: TableModel) = {
         import AlterTableStatement._
@@ -18,45 +19,33 @@ object TableScriptBuilder {
         AlterTableStatement(table.name, List(op))
     }
     
-    // XXX: unused
-    def alterPrimaryKeyScript(pd: PrimaryKeyDiff, table: TableModel) = {
-        import AlterTableStatement._
-        val ops = pd match {
-            case DropPrimaryKeyDiff(_) =>
-                List(DropPrimaryKey)
-            case CreatePrimaryKeyDiff(pk) =>
-                List(AddPrimaryKey(pk))
-            case ChangePrimaryKeyDiff(oldPk, newPk) =>
-                List(DropPrimaryKey, AddPrimaryKey(newPk))
-        }
-        AlterTableStatement(table.name, ops)
+    def dropKeyStmt(k: KeyModel) = k match {
+        case _: PrimaryKeyModel => ats.DropPrimaryKey
+        case i: IndexModel => ats.DropIndex(i.name.get)
+        case f: ForeignKeyModel => ats.DropForeignKey(f.name.get)
     }
     
-    def alterRegularIndexScript(id: IndexDiff, table: TableModel) = {
-        import AlterTableStatement._
-        val ops = id match {
-            case DropIndexDiff(index) =>
-                List(DropIndex(index.name.get))
-            case CreateIndexDiff(index) =>
-                List(AddIndex(index))
-            case ChangeIndexDiff(oldIndex, newIndex) =>
-                List(DropIndex(oldIndex.name.get), AddIndex(newIndex))
-        }
-        AlterTableStatement(table.name, ops)
+    def createKeyStmt(k: KeyModel) = k match {
+        case p: PrimaryKeyModel => ats.AddPrimaryKey(p)
+        case i: IndexModel => ats.AddIndex(i)
+        case f: ForeignKeyModel => ats.AddForeignKey(f)
     }
     
-    def alterIndexScript(id: IndexDiff, table: TableModel) = id match {
-        case pd: PrimaryKeyDiff => alterPrimaryKeyScript(pd, table)
-        case _ => alterRegularIndexScript(id, table)
+    def alterKeyStmts(d: KeyDiff) = d match {
+        case DropKeyDiff(k) => List(dropKeyStmt(k))
+        case CreateKeyDiff(k) => List(createKeyStmt(k))
+        case ChangeKeyDiff(ok, nk) => List(dropKeyStmt(ok), createKeyStmt(nk))
     }
+    
+    def alterKeyScript(d: KeyDiff, table: TableModel) =
+        AlterTableStatement(table.name, alterKeyStmts(d))
     
     def alterScript(diff: ChangeTableDiff, model: TableModel): Seq[ScriptElement] = {
 
         List[ScriptElement]() ++
         List(CommentElement("-- " + diff.toString)) ++
         diff.columnDiff.map(alterColumnScript(_, model)) ++
-        diff.indexDiff.map(alterIndexScript(_, model)) ++
-        //List(CommentElement("-- End modify Table \"" + model.name + "\""))
+        diff.keyDiff.map(alterKeyScript(_, model)) ++
         List[ScriptElement]()
         
         // XXX: sort: drop, then change, then create

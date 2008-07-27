@@ -141,6 +141,9 @@ object ScriptSerializer {
             
             case DropIndex(name) => "DROP INDEX " + name
             case AddIndex(index) => "ADD " + serializeIndex(index)
+            
+            case DropForeignKey(name) => "DROP FOREIGN KEY " + name
+            case AddForeignKey(fk) => "ADD " + serializeForeignKey(fk)
         }
     }
    
@@ -165,7 +168,7 @@ object ScriptSerializer {
     def serializeColumn(model: ColumnModel) =
         serializeTableEntry(ModelSerializer.serializeColumn(model))
     
-    def serializePrimaryKey(pk: PrimaryKey) = {
+    def serializePrimaryKey(pk: PrimaryKeyModel) = {
         val words = new ArrayBuffer[String]
         words += "PRIMARY KEY"
         words ++= pk.name
@@ -179,6 +182,17 @@ object ScriptSerializer {
         words += "INDEX"
         words ++= index.name
         words += ("(" + index.columns.mkString(", ") + ")")
+        words.mkString(" ")
+    }
+    
+    def serializeForeignKey(fk: ForeignKeyModel) = {
+        val words = new ArrayBuffer[String]
+        words += "FOREIGN KEY"
+        words ++= fk.name
+        words += ("(" + fk.localColumns.mkString(", ") + ")")
+        words += "REFERENCES"
+        words += fk.externalTableName
+        words += ("(" + fk.externalColumns.mkString(", ") + ")")
         words.mkString(" ")
     }
         

@@ -13,7 +13,7 @@ object ModelSerializer {
     def serializeColumn(column: ColumnModel) =
         new CreateTableStatement.Column(column.name, column.dataType, column.properties)
     
-    def serializePk(pk: PrimaryKey) =
+    def serializePk(pk: PrimaryKeyModel) =
         new CreateTableStatement.PrimaryKey(pk)
     
     def serializeRegularIndex(index: IndexModel) =
@@ -23,7 +23,7 @@ object ModelSerializer {
         new CreateTableStatement.ForeignKey(fk)
     
     def serializeKey(index: KeyModel) = index match {
-        case pk: PrimaryKey => serializePk(pk)
+        case pk: PrimaryKeyModel => serializePk(pk)
         case i: IndexModel => serializeRegularIndex(i)
         case fk: ForeignKeyModel => serializeForeignKey(fk)
     }

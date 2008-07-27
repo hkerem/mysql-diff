@@ -126,6 +126,13 @@ case class ColumnModel(val name: String, val dataType: DataType, properties: Col
     def comment = properties.comment
 }
 
+/*
+abstract class KeyType
+case object PrimaryKey extends KeyType
+case object Index extends KeyType
+case object ForeignKey extends KeyType
+*/
+
 abstract class KeyModel(val name: Option[String], val columns: Seq[String]) extends TableEntry
 
 case class IndexModel(override val name: Option[String], override val columns: Seq[String], isUnique: Boolean)
@@ -134,7 +141,7 @@ case class IndexModel(override val name: Option[String], override val columns: S
     require(columns.length > 0)
 }
 
-case class PrimaryKey(override val name: Option[String], override val columns: Seq[String])
+case class PrimaryKeyModel(override val name: Option[String], override val columns: Seq[String])
     extends KeyModel(name, columns)
 
 case class ForeignKeyModel(override val name: Option[String],
@@ -150,10 +157,10 @@ case class ForeignKeyModel(override val name: Option[String],
 case class TableOption(name: String, value: String)
 
 case class TableModel(override val name: String, columns: Seq[ColumnModel],
-        primaryKey: Option[PrimaryKey], keys: Seq[KeyModel], options: Seq[TableOption])
+        primaryKey: Option[PrimaryKeyModel], keys: Seq[KeyModel], options: Seq[TableOption])
     extends DatabaseDeclaration(name: String)
 {
-    def this(name: String, columns: Seq[ColumnModel], pk: Option[PrimaryKey], keys: Seq[KeyModel]) =
+    def this(name: String, columns: Seq[ColumnModel], pk: Option[PrimaryKeyModel], keys: Seq[KeyModel]) =
         this(name, columns, pk, keys, Nil)
     
     def this(name: String, columns: Seq[ColumnModel]) =

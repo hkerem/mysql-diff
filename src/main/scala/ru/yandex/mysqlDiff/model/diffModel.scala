@@ -26,26 +26,19 @@ case class ChangeColumnDiff(override val name: String, override val renameTo: Op
     def changeDiff = diff.flatMap { case c: ChangeColumnPropertyDiff => Some(c); case _ => None }
 }
 
-abstract class IndexDiff
+abstract class KeyDiff
 
-case class CreateIndexDiff(index: IndexModel) extends IndexDiff
-case class DropIndexDiff(index: IndexModel) extends IndexDiff
-case class ChangeIndexDiff(oldIndex: IndexModel, newIndex: IndexModel)
-    extends IndexDiff
-
-abstract class PrimaryKeyDiff extends IndexDiff
-
-case class CreatePrimaryKeyDiff(pk: PrimaryKey) extends PrimaryKeyDiff
-case class DropPrimaryKeyDiff(pk: PrimaryKey) extends PrimaryKeyDiff
-case class ChangePrimaryKeyDiff(oldPk: PrimaryKey, newPk: PrimaryKey) extends PrimaryKeyDiff
-
+case class CreateKeyDiff(index: KeyModel) extends KeyDiff
+case class DropKeyDiff(index: KeyModel) extends KeyDiff
+case class ChangeKeyDiff(oldKey: KeyModel, newKey: KeyModel)
+    extends KeyDiff
 
 abstract class TableDiff
 
 case class CreateTableDiff(table: TableModel) extends TableDiff
 case class DropTableDiff(name: String) extends TableDiff
 case class ChangeTableDiff(override val name: String, override val renameTo: Option[String],
-        columnDiff: Seq[ColumnDiff], indexDiff: Seq[IndexDiff])
+        columnDiff: Seq[ColumnDiff], keyDiff: Seq[KeyDiff])
     extends TableDiff with ChangeSomethingDiff
 
 
