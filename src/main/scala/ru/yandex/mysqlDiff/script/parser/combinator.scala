@@ -53,7 +53,6 @@ object SqlParserCombinator extends StandardTokenParsers {
         acceptIf(itIs _)(elem => chars.toUpperCase + " expected, got " + elem.chars) ^^ ( _.chars )
     }
     
-    // XXX: allow ignore case
     implicit override def keyword(chars: String): Parser[String] =
         (accept(lexical.Keyword(chars)) ^^ (_.chars)) | trueKeyword(chars)
     
