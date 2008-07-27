@@ -133,7 +133,6 @@ object SqlParserCombinator extends StandardTokenParsers {
       | tableCollate
     )
     
-    // XXX: parse table options
     def createTable: Parser[CreateTableStatement] = "CREATE" ~> "TABLE" ~> opt(ifNotExists) ~ name ~
             ("(" ~> repsep(tableEntry, ",") <~ ")") ~ rep(tableOption) ^^
                     { case ifne ~ name ~ entries ~ options => CreateTableStatement(name, ifne.isDefined, entries, options) }
