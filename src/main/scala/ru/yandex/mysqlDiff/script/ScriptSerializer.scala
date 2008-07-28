@@ -5,7 +5,7 @@ import model._
 import scala.collection.mutable.ArrayBuffer
 
 object ScriptSerializer {
-    import script.{CreateTableStatement => CTS}
+    import script.{CreateTableStatement => cts}
     
     /** Serializer options */
     abstract class Options {
@@ -69,28 +69,29 @@ object ScriptSerializer {
         case AutoIncrement(false) => None
     }
     
-    def serializeColumnProperty(cp: CTS.ColumnPropertyDecl): Option[String] = cp match {
-        case CTS.ModelColumnProperty(cp) => serializeModelColumnProperty(cp)
-        case CTS.InlineUnique => Some("UNIQUE")
-        case CTS.InlinePrimaryKey => Some("PRIMARY KEY")
-        case CTS.InlineReferences(table, columns) => Some("REFERENCES " + table + "(" + columns.mkString(", ") + ")")
+    def serializeColumnProperty(cp: cts.ColumnPropertyDecl): Option[String] = cp match {
+        case cts.ModelColumnProperty(cp) => serializeModelColumnProperty(cp)
+        case cts.InlineUnique => Some("UNIQUE")
+        case cts.InlinePrimaryKey => Some("PRIMARY KEY")
+        case cts.InlineReferences(table, columns) => Some("REFERENCES " + table + "(" + columns.mkString(", ") + ")")
     }
     
-    def serializeColumnProperty(cp: CTS.ColumnPropertyDecl, c: CreateTableStatement.Column): Option[String] =
+    def serializeColumnProperty(cp: cts.ColumnPropertyDecl, c: CreateTableStatement.Column): Option[String] =
         cp match {
             // MySQL does not support NOT NULL DEFAULT NULL
-            case CTS.ModelColumnProperty(DefaultValue(NullValue)) if c.isNotNull => None
+            case cts.ModelColumnProperty(DefaultValue(NullValue)) if c.isNotNull => None
             case _ => serializeColumnProperty(cp)
         }
         
     
     def serializeTableEntry(e: CreateTableStatement.Entry): String = e match {
-        case c @ CreateTableStatement.Column(name, dataType, attrs) =>
+        case c @ cts.Column(name, dataType, attrs) =>
             name + " " + serializeDataType(dataType) +
                     (if (attrs.isEmpty) ""
                     else " " + attrs.flatMap(cp => serializeColumnProperty(cp, c)).mkString(" "))
-        case CreateTableStatement.PrimaryKey(pk) => serializePrimaryKey(pk)
-        case CreateTableStatement.Index(index) => serializeIndex(index)
+        case cts.PrimaryKey(pk) => serializePrimaryKey(pk)
+        case cts.Index(index) => serializeIndex(index)
+        case cts.ForeignKey(fk) => serializeForeignKey(fk)
     }
     
     def serializeCreateTable(t: CreateTableStatement, options: Options): String = {
@@ -176,23 +177,23 @@ object ScriptSerializer {
         words.mkString(" ")
     }
     
+    def serializeForeignKey(fk: ForeignKeyModel) = {
+        val words = new ArrayBuffer[String]
+        words += "FOREIGN KEY"
+        words ++= fk.name // XXX: don't mix constraint name and index name
+        words += ("(" + fk.localColumns.mkString(", ") + ")")
+        words += "REFERENCES"
+        words += fk.externalTableName
+        words += ("(" + fk.externalColumns.mkString(", ") + ")")
+        words.mkString(" ")
+    }
+    
     def serializeIndex(index: IndexModel) = {
         val words = new ArrayBuffer[String]
         if (index.isUnique) words += "UNIQUE"
         words += "INDEX"
         words ++= index.name
         words += ("(" + index.columns.mkString(", ") + ")")
-        words.mkString(" ")
-    }
-    
-    def serializeForeignKey(fk: ForeignKeyModel) = {
-        val words = new ArrayBuffer[String]
-        words += "FOREIGN KEY"
-        words ++= fk.name
-        words += ("(" + fk.localColumns.mkString(", ") + ")")
-        words += "REFERENCES"
-        words += fk.externalTableName
-        words += ("(" + fk.externalColumns.mkString(", ") + ")")
         words.mkString(" ")
     }
         
