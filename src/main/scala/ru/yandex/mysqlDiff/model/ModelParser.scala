@@ -30,7 +30,8 @@ object ModelParser {
             case column @ c.Column(name, dataType, attrs) =>
                 if (dataType.name == "TIMESTAMP" && column.modelProperties.defaultValue.isEmpty)
                     // because of MySQL-specifc features that are hard to deal with
-                    throw new Exception("TIMESTAMP without DEFAULT value is prohibited")
+                    throw new Exception(
+                            "TIMESTAMP without DEFAULT value is prohibited, column " + name + ", table " + ct.name)
                 columns += ColumnModel(name, dataType, column.modelProperties)
             case c.PrimaryKey(pk) => pks += pk
             case c.Index(index) => keys += index
