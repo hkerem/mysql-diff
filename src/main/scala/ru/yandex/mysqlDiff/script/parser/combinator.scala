@@ -15,7 +15,9 @@ import model._
 
 import script.Implicits._
 
-class CombinatorParserException(msg: String) extends Exception(msg)
+class CombinatorParserException(msg: String, cause: Throwable) extends Exception(msg, cause) {
+    def this(msg: String) = this(msg, null)
+}
 
 class SqlLexical extends StdLexical {
     // ?
@@ -187,7 +189,12 @@ object SqlParserCombinator extends StandardTokenParsers {
     
     def parseValue(text: String) = {
         require(text != null && text.length >= 0, "value must be not empty string")
-        parse(sqlValue)(text)
+        try {
+            parse(sqlValue)(text)
+        } catch {
+            case e: CombinatorParserException =>
+                throw new CombinatorParserException("cannot parse '" + text + "' as SQL value", e)
+        }
     }
    
     def parseInsert(text: String) =
