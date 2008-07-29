@@ -229,6 +229,14 @@ case object AutoIncrementPropertyType extends ColumnPropertyType {
     override type ValueType = AutoIncrement
 }
 
+case class Collate(collate: String) extends ColumnProperty {
+    override def propertyType = CollatePropertyType
+}
+
+case object CollatePropertyType extends ColumnPropertyType {
+    override type ValueType = Collate
+}
+
 case class CommentProperty(comment: String) extends ColumnProperty {
     override def propertyType = CommentPropertyType
 }

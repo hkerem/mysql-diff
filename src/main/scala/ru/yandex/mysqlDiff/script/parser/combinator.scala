@@ -78,6 +78,8 @@ object SqlParserCombinator extends StandardTokenParsers {
     def autoIncrementability: Parser[AutoIncrement] =
         "AUTO_INCREMENT" ^^^ AutoIncrement(true)
     
+    def collate: Parser[Collate] = "COLLATE" ~> name ^^ { value => Collate(value) }
+    
     def uniqueAttr = "UNIQUE" ^^^ InlineUnique
     def pkAttr = "PRIMARY" ~ "KEY" ^^^ InlinePrimaryKey
     
@@ -85,7 +87,7 @@ object SqlParserCombinator extends StandardTokenParsers {
         { case t ~ c => InlineReferences(t, c) }
     
     def columnAttr: Parser[ColumnPropertyDecl] =
-        ((nullability | defaultValue | autoIncrementability) ^^ { p => ModelColumnProperty(p) }) |
+        ((nullability | defaultValue | autoIncrementability | collate) ^^ { p => ModelColumnProperty(p) }) |
         uniqueAttr | pkAttr | referencesAttr
         
     
