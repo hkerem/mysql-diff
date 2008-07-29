@@ -67,6 +67,10 @@ object ScriptSerializer {
         case DefaultValue(value) => Some("DEFAULT " + serializeValue(value))
         case AutoIncrement(true) => Some("AUTO_INCREMENT")
         case AutoIncrement(false) => None
+        case Collate(name) => Some("COLLATE " + name)
+        case CharacterSet(name) => Some("CHARACTER SET " + name)
+        case OnUpdateCurrentTimestamp(true) => Some("ON UPDATE CURRENT_TIMESTAMP")
+        case OnUpdateCurrentTimestamp(false) => None
     }
     
     def serializeColumnProperty(cp: cts.ColumnPropertyDecl): Option[String] = cp match {
