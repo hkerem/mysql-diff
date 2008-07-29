@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-package=mysql-diff
+package=yandex-mysql-diff
 
 build:
 	dh_testdir
@@ -12,6 +12,7 @@ build:
 clean:
 	dh_testdir
 	-rm -rf build
+	-rm -rf target
 	
 	# my clean
 	
@@ -21,7 +22,7 @@ install:
 	dh_testdir
 	dh_clean -k -i
 	
-	./install-for-debian.sh
+	./install-for-debian.sh debian/yandex-mysql-diff
 
 binary: install
 	dh_testdir
