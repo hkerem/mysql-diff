@@ -80,6 +80,9 @@ object SqlParserCombinator extends StandardTokenParsers {
     
     def collate: Parser[Collate] = "COLLATE" ~> name ^^ { value => Collate(value) }
     
+    def onUpdateCurrentTimestamp: Parser[OnUpdateCurrentTimestamp] = "ON" ~ "UPDATE" ~ "CURRENT_TIMESTAMP" ^^^
+        OnUpdateCurrentTimestamp(true)
+    
     def uniqueAttr = "UNIQUE" ^^^ InlineUnique
     def pkAttr = "PRIMARY" ~ "KEY" ^^^ InlinePrimaryKey
     
@@ -87,7 +90,8 @@ object SqlParserCombinator extends StandardTokenParsers {
         { case t ~ c => InlineReferences(t, c) }
     
     def columnAttr: Parser[ColumnPropertyDecl] =
-        ((nullability | defaultValue | autoIncrementability | collate) ^^ { p => ModelColumnProperty(p) }) |
+        ((nullability | defaultValue | autoIncrementability | collate | onUpdateCurrentTimestamp) ^^
+                { p => ModelColumnProperty(p) }) |
         uniqueAttr | pkAttr | referencesAttr
         
     
