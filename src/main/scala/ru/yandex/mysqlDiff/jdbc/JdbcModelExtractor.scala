@@ -356,8 +356,9 @@ object JdbcModelExtractor {
             if (s == "CURRENT_TIMESTAMP") Some(NowValue)
             else Some(StringValue(s))
         }
-        else if (dataType.isAnyNumber)
-            Some(script.parser.SqlParserCombinator.parseValue(s))
+        else if (dataType.isAnyNumber) {
+            else Some(script.parser.SqlParserCombinator.parseValue(s))
+        }
         else Some(StringValue(s))
     }
     
