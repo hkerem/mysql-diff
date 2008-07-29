@@ -46,9 +46,38 @@ object JdbcModelExtractor {
             
         g(seq.map(a => (f(a), a)))
     }
+    
+    object MetaDao {
+        /** INFORMATION_SCHEMA.COLUMNS */
+        case class MysqlColumnInfo(
+            tableCatalog: String, tableSchema: String, tableName: String,
+            columnName: String, ordinalPosition: Int, columnDefault: String,
+            isNullable: Boolean, dataType: String,
+            characterMaximumLength: Int, characterOctetLength: Int,
+            numericPrecision: Int, numericScale: Int,
+            characterSetName: String, collationName: String,
+            columnType: String, /* skipped some columns */ columnComment: String
+        )
+        
+        private def mapColumnsRow(rs: ResultSet) = {
+            import rs._
+            MysqlColumnInfo(
+                getString("table_catalog"), getString("table_schema"), getString("table_name"),
+                getString("column_name"), getInt("ordinal_position"), getString("column_default"),
+                getBoolean("is_nullable"), getString("data_type"),
+                getInt("character_maximum_length"), getInt("character_octet_length"),
+                getInt("numeric_precision"), getInt("numeric_scale"),
+                getString("character_set_name"), getString("collation_name"),
+                getString("column_type"), getString("column_comment")
+            )
+        }
+        
+    }
+    
+    import MetaDao._
         
     class MetaDao(conn: Connection) {
-
+        
         def findPrimaryKey(catalog: String, schema: String, tableName: String): Option[PrimaryKeyModel] = {
             val rs = conn.getMetaData.getPrimaryKeys(catalog, schema, tableName)
             
@@ -161,38 +190,25 @@ object JdbcModelExtractor {
             mapTableOptions(rs)._2
         }
         
-        def findMysqlTablesColumnDefaultValues(schema: String): Seq[(String, Seq[(String, String)])] = {
+        def findMysqlTablesColumns(schema: String): Seq[(String, Seq[MysqlColumnInfo])] = {
             val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? ORDER BY table_name"
             val ps = conn.prepareStatement(q)
             ps.setString(1, schema)
             val rs = ps.executeQuery()
             
-            val triples = read(rs) { rs =>
-                val tableName = rs.getString("table_name")
-                val columnName = rs.getString("column_name")
-                val defaultValue = rs.getString("column_default")
-                (tableName, columnName, defaultValue)
-            }
+            val columns = read(rs)(mapColumnsRow _)
             
-            groupBy(triples)(_._1).map {
-                case (tableName, seq) => (tableName, seq map {
-                    case (tableName, columnName, columnDefault) => (columnName, columnDefault)
-                })
-            }
+            groupBy[MysqlColumnInfo, String](columns)(_.tableName)
         }
         
-        def findMysqlColumnDefaultValues(schema: String, tableName: String) = {
+        def findMysqlColumns(schema: String, tableName: String) = {
             val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? AND table_name = ?"
             val ps = conn.prepareStatement(q)
             ps.setString(1, schema)
             ps.setString(2, tableName)
             val rs = ps.executeQuery()
             
-            read(rs) { rs =>
-                val columnName = rs.getString("column_name")
-                val defaultValue = rs.getString("column_default")
-                (columnName, defaultValue)
-            }
+            read(rs)(mapColumnsRow _)
         }
         
     }
@@ -213,7 +229,7 @@ object JdbcModelExtractor {
             val data = conn.getMetaData
             val columns = data.getColumns(currentCatalog, currentSchema, tableName, "%")
             
-            val defaultValuesFromMysql = getMysqlColumnDefaultValues(tableName)
+            val mysqlColumns = getMysqlColumns(tableName)
             
             val columnsList = read(columns) { columns =>
                 val colName = columns.getString("COLUMN_NAME")
@@ -240,20 +256,26 @@ object JdbcModelExtractor {
                     case "" => None
                 }
                 
-                val dataType = DataType(colType, colTypeSize)
+                val mysqlColumn = mysqlColumns.find(_.columnName == colName).get
 
                 val defaultValueFromDb =
                     // http://bugs.mysql.com/36699
-                    if (true) defaultValuesFromMysql.find(_._1 == colName).get._2
+                    if (true) mysqlColumn.columnDefault
                     else columns.getString("COLUMN_DEF")
                 
-                val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
-
                 val isUnsigned = false
                 val isZerofill = false
-                val characterSet: Option[String] = None
-                val collate: Option[String] = None
-
+                val characterSet = Some(mysqlColumn.characterSetName)
+                    .filter(x => x != null && x != "")
+                    .map(MysqlCharacterSet(_))
+                val collate = Some(mysqlColumn.collationName)
+                    .filter(x => x != null && x != "")
+                    .map(MysqlCollate(_))
+                
+                val dataType = DataType(colType, colTypeSize, Nil ++ characterSet ++ collate)
+                
+                val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
+                
                 val props = new ColumnProperties(List[ColumnProperty]() ++ nullable ++ defaultValue ++ autoIncrement)
                 new ColumnModel(colName, dataType, props)
             }
@@ -288,15 +310,15 @@ object JdbcModelExtractor {
 
         def getTableOptions(tableName: String): Seq[TableOption]
         
-        def getMysqlColumnDefaultValues(tableName: String): Seq[(String, String)]
+        def getMysqlColumns(tableName: String): Seq[MysqlColumnInfo]
     }
     
     class SingleTableSchemaExtractor(conn: Connection) extends SchemaExtractor(conn) {
         override def getTableOptions(tableName: String) =
             dao.findTableOptions(currentDb, tableName)
         
-        override def getMysqlColumnDefaultValues(tableName: String) =
-            dao.findMysqlColumnDefaultValues(currentDb, tableName)
+        override def getMysqlColumns(tableName: String) =
+            dao.findMysqlColumns(currentDb, tableName)
     }
     
     class AllTablesSchemaExtractor(conn: Connection) extends SchemaExtractor(conn) {
@@ -312,9 +334,9 @@ object JdbcModelExtractor {
         def getTableOptions(tableName: String): Seq[TableOption] =
             cachedTablesOptions.get.find(_._1 == tableName).get._2
         
-        val cachedMysqlColumnDefaultValues = new Lazy(dao.findMysqlTablesColumnDefaultValues(currentDb))
+        val cachedMysqlColumnDefaultValues = new Lazy(dao.findMysqlTablesColumns(currentDb))
         
-        def getMysqlColumnDefaultValues(tableName: String) =
+        def getMysqlColumns(tableName: String) =
             cachedMysqlColumnDefaultValues.get.find(_._1 == tableName).get._2
     
         def extractTables(): Seq[TableModel] = {
@@ -523,6 +545,17 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         //t.column("name").properties.autoIncrement must_== None
     }
     
+    "fetches CHARACTER SET and COLLATE" in {
+        dropTable("qwqw")
+        execute("CREATE TABLE qwqw (a VARCHAR(2), b VARCHAR(2) CHARACTER SET utf8 COLLATE utf8_bin)")
+        
+        val table = extractTable("qwqw")
+        val a = table.column("a")
+        val b = table.column("b")
+        
+        b.dataType.options must contain(MysqlCharacterSet("utf8"))
+        b.dataType.options must contain(MysqlCollate("utf8_bin"))
+    }
 }
 
 // vim: set ts=4 sw=4 et:
