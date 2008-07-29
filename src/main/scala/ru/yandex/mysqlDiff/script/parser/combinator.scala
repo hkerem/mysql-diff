@@ -68,9 +68,15 @@ object SqlParserCombinator extends StandardTokenParsers {
     
     def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | nowValue
     
+    def dataTypeOption: Parser[DataTypeOption] =
+        ("UNSIGNED" ^^^ MysqlUnsigned) |
+        ("ZEROFILL" ^^^ MysqlZerofill) |
+        ("CHARACTER" ~> "SET" ~> name ^^ (name => MysqlCharacterSet(name))) |
+        ("COLLATE" ~> name ^^ (name => MysqlCollate(name)))
+    
     // XXX: store unsigned
-    def dataType: Parser[DataType] = name ~ opt("(" ~> numericLit <~ ")") ~ opt("UNSIGNED") ^^
-            { case name ~ length ~ unsigned => DataType(name.toUpperCase, length.map(_.toInt)) }
+    def dataType: Parser[DataType] = name ~ opt("(" ~> numericLit <~ ")") ~ rep(dataTypeOption) ^^
+            { case name ~ length ~ options => DataType(name.toUpperCase, length.map(_.toInt), options) }
    
     def nullability: Parser[Nullability] = opt("NOT") <~ "NULL" ^^ { x => Nullability(x.isEmpty) }
     
@@ -78,10 +84,6 @@ object SqlParserCombinator extends StandardTokenParsers {
     
     def autoIncrementability: Parser[AutoIncrement] =
         "AUTO_INCREMENT" ^^^ AutoIncrement(true)
-    
-    def collate: Parser[Collate] = "COLLATE" ~> name ^^ { value => Collate(value) }
-    
-    def characterSet: Parser[CharacterSet] = "CHARACTER" ~> "SET" ~> name ^^ { value => CharacterSet(value) }
     
     def onUpdateCurrentTimestamp: Parser[OnUpdateCurrentTimestamp] = "ON" ~ "UPDATE" ~ "CURRENT_TIMESTAMP" ^^^
         OnUpdateCurrentTimestamp(true)
@@ -93,7 +95,7 @@ object SqlParserCombinator extends StandardTokenParsers {
         { case t ~ c => InlineReferences(t, c) }
     
     def columnAttr: Parser[ColumnPropertyDecl] =
-        ((nullability | defaultValue | autoIncrementability | collate | characterSet | onUpdateCurrentTimestamp) ^^
+        ((nullability | defaultValue | autoIncrementability | onUpdateCurrentTimestamp) ^^
                 { p => ModelColumnProperty(p) }) |
         uniqueAttr | pkAttr | referencesAttr
         

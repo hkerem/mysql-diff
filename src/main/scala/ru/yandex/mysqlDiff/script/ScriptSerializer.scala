@@ -67,8 +67,6 @@ object ScriptSerializer {
         case DefaultValue(value) => Some("DEFAULT " + serializeValue(value))
         case AutoIncrement(true) => Some("AUTO_INCREMENT")
         case AutoIncrement(false) => None
-        case Collate(name) => Some("COLLATE " + name)
-        case CharacterSet(name) => Some("CHARACTER SET " + name)
         case OnUpdateCurrentTimestamp(true) => Some("ON UPDATE CURRENT_TIMESTAMP")
         case OnUpdateCurrentTimestamp(false) => None
     }
@@ -151,23 +149,22 @@ object ScriptSerializer {
             case AddForeignKey(fk) => "ADD " + serializeForeignKey(fk)
         }
     }
+    
+    def serializeDataTypeOption(o: DataTypeOption) = o match {
+        case MysqlUnsigned => "UNSIGNED"
+        case MysqlZerofill => "ZEROFILL"
+        case MysqlCharacterSet(cs) => "CHARACTER SET " + cs
+        case MysqlCollate(collate) => "COLLATE" + collate
+    }
    
     def serializeDataType(dataType: DataType) = {
-        // XXX: dirty
-        /*
-        var charset = ""
-        if (dataType.characterSet.isDefined) charset = " CHARACTER SET " + dataType.characterSet
-        var collate = ""
-        if (dataType.collate.isDefined) collate = " COLLATE " + dataType.collate
-        var unsigned = ""
-        if (dataType.isUnsigned) unsigned = " UNSIGNED"
-        var zerofill = ""
-        if (dataType.isZerofill) zerofill = " ZEROFILL"
-        val result = dataType.name + size + charset + collate + unsigned + zerofill
-        result.trim
-        */
-        var size = dataType.length.map("(" + _ + ")").getOrElse("")
-        dataType.name + size
+        val words = new ArrayBuffer[String]
+        words += {
+            var size = dataType.length.map("(" + _ + ")").getOrElse("")
+            dataType.name + size
+        }
+        words ++= dataType.options.map(serializeDataTypeOption _)
+        words.mkString(" ")
     }
     
     def serializeColumn(model: ColumnModel) =

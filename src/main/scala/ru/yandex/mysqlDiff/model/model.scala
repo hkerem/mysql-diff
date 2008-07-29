@@ -14,7 +14,7 @@ case class StringValue(value: String) extends SqlValue
 // used as default value
 case object NowValue extends SqlValue
 
-case class DataType(val name: String, val length: Option[Int]) {
+case class DataType(val name: String, val length: Option[Int], val options: Seq[DataTypeOption]) {
     require(name.toUpperCase == name)
     
     def isAnyChar = name.toUpperCase.matches(".*CHAR")
@@ -22,20 +22,20 @@ case class DataType(val name: String, val length: Option[Int]) {
     def isAnyNumber = List("NUMBER", "INT", "TINYINT", "BIGINT") contains name.toUpperCase
 }
 
-case class MysqlDataType(override val name: String, override val length: Option[Int],
-        val isUnsigned: Boolean, val isZerofill: Boolean,
-        val characterSet: Option[String], val collate: Option[String])
-    extends DataType(name, length)
-{
-    // assert not all properties have default values (in this case DataType class must be used)
-}
+abstract class DataTypeOption
+
+case object MysqlZerofill extends DataTypeOption
+case object MysqlUnsigned extends DataTypeOption
+case class MysqlCharacterSet(name: String) extends DataTypeOption
+case class MysqlCollate(name: String) extends DataTypeOption
 
 object DataType {
-    def varchar(length: Int) = new DataType("VARCHAR", Some(length))
+    def varchar(length: Int) = apply("VARCHAR", Some(length))
     
     def int = apply("INT")
     
     def apply(name: String): DataType = apply(name, None)
+    def apply(name: String, length: Option[Int]) = new DataType(name, length, List())
 }
 
 abstract class TableEntry
@@ -227,22 +227,6 @@ case class AutoIncrement(autoIncrement: Boolean) extends ColumnProperty {
 
 case object AutoIncrementPropertyType extends ColumnPropertyType {
     override type ValueType = AutoIncrement
-}
-
-case class Collate(collate: String) extends ColumnProperty {
-    override def propertyType = CollatePropertyType
-}
-
-case object CollatePropertyType extends ColumnPropertyType {
-    override type ValueType = Collate
-}
-
-case class CharacterSet(cs: String) extends ColumnProperty {
-    override def propertyType = CharacterSetPropertyType
-}
-
-case object CharacterSetPropertyType extends ColumnPropertyType {
-    override type ValueType = CharacterSet
 }
 
 case class OnUpdateCurrentTimestamp(set: Boolean) extends ColumnProperty {
