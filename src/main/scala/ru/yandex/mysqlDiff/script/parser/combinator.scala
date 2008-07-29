@@ -185,8 +185,10 @@ object SqlParserCombinator extends StandardTokenParsers {
     def parseColumn(text: String) =
         parse(column)(text)
     
-    def parseValue(text: String) =
+    def parseValue(text: String) = {
+        require(text != null && text.length >= 0, "value must be not empty string")
         parse(sqlValue)(text)
+    }
    
     def parseInsert(text: String) =
         parse(insert)(text)
