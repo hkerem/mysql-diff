@@ -237,6 +237,14 @@ case object CollatePropertyType extends ColumnPropertyType {
     override type ValueType = Collate
 }
 
+case class CharacterSet(cs: String) extends ColumnProperty {
+    override def propertyType = CharacterSetPropertyType
+}
+
+case object CharacterSetPropertyType extends ColumnPropertyType {
+    override type ValueType = CharacterSet
+}
+
 case class OnUpdateCurrentTimestamp(set: Boolean) extends ColumnProperty {
     override def propertyType = OnUpdateCurrentTimestampPropertyType
 }

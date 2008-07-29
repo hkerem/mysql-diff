@@ -81,6 +81,8 @@ object SqlParserCombinator extends StandardTokenParsers {
     
     def collate: Parser[Collate] = "COLLATE" ~> name ^^ { value => Collate(value) }
     
+    def characterSet: Parser[CharacterSet] = "CHARACTER" ~> "SET" ~> name ^^ { value => CharacterSet(value) }
+    
     def onUpdateCurrentTimestamp: Parser[OnUpdateCurrentTimestamp] = "ON" ~ "UPDATE" ~ "CURRENT_TIMESTAMP" ^^^
         OnUpdateCurrentTimestamp(true)
     
