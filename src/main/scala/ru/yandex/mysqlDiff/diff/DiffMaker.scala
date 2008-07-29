@@ -50,7 +50,7 @@ object DiffMaker {
         else if (a.isAnyNumber) true // ignore size change: XXX: should rather know DB defaults
         else if (a.name matches "(TINY|MEDIUM|LONG)(TEXT|BLOB)") true
         else if (a.isAnyDateTime) true // probably
-        else a == b
+        else a.name == b.name && a.length == b.length // ignoring options for a while; should not ignore if options change
     }
     
     def columnPropertiesEquivalent(a: ColumnProperty, b: ColumnProperty) = {
