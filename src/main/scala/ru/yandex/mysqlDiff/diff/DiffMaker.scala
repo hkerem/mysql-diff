@@ -50,7 +50,7 @@ object DiffMaker {
         else if (e1(b, a)) true
         else if (a.name != b.name) false
         else if (a.isAnyNumber) true // ignore size change: XXX: should rather know DB defaults
-        else if (a.name matches "(TINY|MEDIUM|LONG)(TEXT|BLOB)") true
+        else if (a.name matches "(TINY|MEDIUM|LONG|)(TEXT|BLOB)") true
         else if (a.isAnyDateTime) true // probably
         else a.name == b.name && a.length == b.length // ignoring options for a while; should not ignore if options change
     }
