@@ -115,13 +115,18 @@ object SqlParserCombinator extends StandardTokenParsers {
         (opt("UNIQUE") <~ ("INDEX" | "KEY") ^^ { x => x.isDefined }) |
         ("UNIQUE" ^^^ true)
     
-    def index: Parser[Index] = indexUniquality ~ opt(name) ~ nameList ^^
+    // XXX: length ignored
+    def indexColName: Parser[String] = name <~ opt("(" ~> numericLit <~ ")") <~ opt("ASC" | "DESC")
+    
+    def indexColNameList: Parser[Seq[String]] = "(" ~> repsep(indexColName, ",") <~ ")"
+    
+    def index: Parser[Index] = indexUniquality ~ opt(name) ~ indexColNameList ^^
             { case unique ~ name ~ columnNames => Index(model.IndexModel(name, columnNames, unique)) }
     
     def fk: Parser[ForeignKey] = ("FOREIGN" ~> "KEY" ~> opt(name)) ~ nameList ~ ("REFERENCES" ~> name) ~ nameList ^^
             { case k ~ lcs ~ et ~ ecs => ForeignKey(ForeignKeyModel(k, lcs, et, ecs)) }
     
-    def pk: Parser[PrimaryKey] = "PRIMARY" ~> "KEY" ~> opt(name) ~ nameList ^^
+    def pk: Parser[PrimaryKey] = "PRIMARY" ~> "KEY" ~> opt(name) ~ indexColNameList ^^
         { case name ~ nameList => PrimaryKey(PrimaryKeyModel(name, nameList)) }
     
     def tableEntry: Parser[Entry] = pk | fk | index | column
