@@ -357,7 +357,7 @@ object JdbcModelExtractor {
             else Some(StringValue(s))
         }
         else if (dataType.isAnyNumber) {
-            else Some(script.parser.SqlParserCombinator.parseValue(s))
+            Some(script.parser.SqlParserCombinator.parseValue(s))
         }
         else Some(StringValue(s))
     }
