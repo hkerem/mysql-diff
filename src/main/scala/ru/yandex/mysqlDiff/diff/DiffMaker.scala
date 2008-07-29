@@ -32,6 +32,8 @@ object DiffMaker {
     def defaultValuesEquivalent(a: SqlValue, b: SqlValue) = {
         def e1(a: SqlValue, b: SqlValue) = (a, b) match {
             case (NumberValue(x), StringValue(y)) if x.toString == y => true
+            // XXX: should only for date and time types
+            case (StringValue("0000-00-00 00:00:00"), StringValue("0000-00-00")) => true
             case _ => false
         }
 
@@ -259,6 +261,11 @@ object DiffMakerTests extends org.specs.Specification {
     
     "0 equivalent to '0'" in {
         defaultValuesEquivalent(NumberValue(0), StringValue("0")) must beTrue
+    }
+    
+    "0000-00-00 equivalent to 0000-00-00 00:00:00" in {
+        // XXX: should be only for date types
+        defaultValuesEquivalent(StringValue("0000-00-00"), StringValue("0000-00-00 00:00:00")) must beTrue
     }
     
 } //~
