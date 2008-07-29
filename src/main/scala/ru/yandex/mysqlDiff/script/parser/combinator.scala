@@ -45,7 +45,7 @@ object SqlParserCombinator extends StandardTokenParsers {
     
     import CreateTableStatement._
     
-    lexical.delimiters += ("(", ")", "=", ",", ";", "=")
+    lexical.delimiters += ("(", ")", "=", ",", ";", "=", "-") // hack
     
     //lexical.reserved += ("CREATE", "TABLE", "VIEW", "IF", "NOT", "NULL", "EXISTS",
     //        "AS", "SELECT", "UNIQUE", "KEY", "INDEX", "PRIMARY", "DEFAULT", "NOW", "AUTO_INCREMENT")
@@ -61,7 +61,11 @@ object SqlParserCombinator extends StandardTokenParsers {
     // should be NullValue
     def nullValue: Parser[SqlValue] = "NULL" ^^^ NullValue
     
-    def numberValue: Parser[NumberValue] = numericLit ^^ { x => NumberValue(x.toInt) } // silly
+    def naturalNumber: Parser[Int] = numericLit ^^ { x => x.toInt }
+    
+    def intNumber: Parser[Int] = opt("-") ~ naturalNumber ^^ { case sign ~ value => (if (sign.isDefined) -1 else 1) * value }
+    
+    def numberValue: Parser[NumberValue] = intNumber ^^ { x => NumberValue(x) } // silly
     
     def stringValue: Parser[StringValue] = stringLit ^^
             { x => StringValue(x.replaceFirst("^[\"']", "").replaceFirst("[\"']$", "")) }
@@ -77,8 +81,8 @@ object SqlParserCombinator extends StandardTokenParsers {
         ("COLLATE" ~> name ^^ (name => MysqlCollate(name)))
     
     // XXX: store unsigned
-    def dataType: Parser[DataType] = name ~ opt("(" ~> numericLit <~ ")") ~ rep(dataTypeOption) ^^
-            { case name ~ length ~ options => DataType(name.toUpperCase, length.map(_.toInt), options) }
+    def dataType: Parser[DataType] = name ~ opt("(" ~> naturalNumber <~ ")") ~ rep(dataTypeOption) ^^
+            { case name ~ length ~ options => DataType(name.toUpperCase, length, options) }
    
     def nullability: Parser[Nullability] = opt("NOT") <~ "NULL" ^^ { x => Nullability(x.isEmpty) }
     
@@ -120,7 +124,7 @@ object SqlParserCombinator extends StandardTokenParsers {
         ("UNIQUE" ^^^ true)
     
     // XXX: length ignored
-    def indexColName: Parser[String] = name <~ opt("(" ~> numericLit <~ ")") <~ opt("ASC" | "DESC")
+    def indexColName: Parser[String] = name <~ opt("(" ~> naturalNumber <~ ")") <~ opt("ASC" | "DESC")
     
     def indexColNameList: Parser[Seq[String]] = "(" ~> repsep(indexColName, ",") <~ ")"
     
@@ -285,6 +289,10 @@ object SqlParserCombinatorTests extends org.specs.Specification {
             case ForeignKeyModel(None, Seq("x", "y"), "b", Seq("x1", "y1")) => true; case _ => false }
         t.fks(1).fk must beLike {
             case ForeignKeyModel(Some("fk1"), Seq("z"), "c", Seq("z1")) => true; case _ => false }
+    }
+    
+    "parseValue -1" in {
+        parseValue("-1") must_== NumberValue(-1)
     }
     
 }
