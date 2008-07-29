@@ -112,8 +112,8 @@ object SqlParserCombinator extends StandardTokenParsers {
     def fk: Parser[ForeignKey] = ("FOREIGN" ~> "KEY" ~> opt(name)) ~ nameList ~ ("REFERENCES" ~> name) ~ nameList ^^
             { case k ~ lcs ~ et ~ ecs => ForeignKey(ForeignKeyModel(k, lcs, et, ecs)) }
     
-    def pk: Parser[PrimaryKey] =
-        "PRIMARY" ~> "KEY" ~> nameList ^^ { nameList => PrimaryKey(PrimaryKeyModel(None, nameList)) }
+    def pk: Parser[PrimaryKey] = "PRIMARY" ~> "KEY" ~> opt(name) ~ nameList ^^
+        { case name ~ nameList => PrimaryKey(PrimaryKeyModel(name, nameList)) }
     
     def tableEntry: Parser[Entry] = pk | fk | index | column
     
