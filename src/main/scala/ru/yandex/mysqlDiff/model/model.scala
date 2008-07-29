@@ -19,7 +19,8 @@ case class DataTypeBase(name: String) {
     
     def isAnyChar = name.matches(".*CHAR")
     def isAnyDateTime = List("DATE", "TIME", "DATETIME", "TIMESTAMP") contains name
-    def isAnyNumber = List("NUMBER", "INT", "TINYINT", "BIGINT") contains name
+    def isAnyNumber = name.matches("(|TINY|SMALL|BIG)INT") ||
+        (List("NUMBER", "FLOAT", "REAL", "DOUBLE", "DECIMAL", "NUMERIC") contains name)
     
     def isLengthAllowed = !(isAnyDateTime || name.matches("(TINY|MEDIUM|LONG|)(TEXT|BLOB)"))
     
