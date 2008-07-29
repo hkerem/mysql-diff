@@ -154,7 +154,7 @@ object ScriptSerializer {
         case MysqlUnsigned => "UNSIGNED"
         case MysqlZerofill => "ZEROFILL"
         case MysqlCharacterSet(cs) => "CHARACTER SET " + cs
-        case MysqlCollate(collate) => "COLLATE" + collate
+        case MysqlCollate(collate) => "COLLATE " + collate
     }
    
     def serializeDataType(dataType: DataType) = {
