@@ -243,6 +243,7 @@ object JdbcModelExtractor {
                 }
                 
                 val colTypeSize = getIntOption(columns, "COLUMN_SIZE")
+                    .filter(x => !DataType(colType).isAnyDateTime)
 
                 val nullable = columns.getString("IS_NULLABLE") match {
                     case "YES" => Some(Nullability(true))
@@ -556,6 +557,14 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         
         b.dataType.options must contain(MysqlCharacterSet("utf8"))
         b.dataType.options must contain(MysqlCollate("utf8_bin"))
+    }
+    
+    "DATETIME without length" in {
+        dropTable("datetime_test")
+        execute("CREATE TABLE datetime_test (a DATETIME)")
+        val t = extractTable("datetime_test").column("a").dataType
+        t.name must_== "DATETIME"
+        t.length must_== None
     }
 }
 

@@ -18,7 +18,7 @@ case class DataType(val name: String, val length: Option[Int], val options: Seq[
     require(name.toUpperCase == name)
     
     def isAnyChar = name.toUpperCase.matches(".*CHAR")
-    def isAnyDateTime = List("DATE", "TIME", "TIMESTAMP") contains name.toUpperCase
+    def isAnyDateTime = List("DATE", "TIME", "DATETIME", "TIMESTAMP") contains name.toUpperCase
     def isAnyNumber = List("NUMBER", "INT", "TINYINT", "BIGINT") contains name.toUpperCase
 }
 
