@@ -50,7 +50,6 @@ object DiffMaker {
         else if (e1(b, a)) true
         else if (a.name != b.name) false
         else if (a.isAnyNumber) true // ignore size change: XXX: should rather know DB defaults
-        else if (a.name matches "(TINY|MEDIUM|LONG|)(TEXT|BLOB)") true
         else if (a.isAnyDateTime) true // probably
         else a.name == b.name && a.length == b.length // ignoring options for a while; should not ignore if options change
     }
@@ -249,10 +248,6 @@ object DiffMakerTests extends org.specs.Specification {
     
     "TINYINT(1) equivalent to BIT" in {
         dataTypesEquivalent(DataType("BIT"), DataType("TINYINT", Some(1))) must beTrue
-    }
-    
-    "MEDIUMTEXT equivalent to MEDIUMTEXT(100000)" in {
-        dataTypesEquivalent(DataType("MEDIUMTEXT"), DataType("MEDIUMTEXT", Some(100000))) must beTrue
     }
     
     "0 not equivalent to 1" in {

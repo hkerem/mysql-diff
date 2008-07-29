@@ -14,12 +14,16 @@ case class StringValue(value: String) extends SqlValue
 // used as default value
 case object NowValue extends SqlValue
 
-case class DataType(val name: String, val length: Option[Int], val options: Seq[DataTypeOption]) {
+case class DataTypeBase(name: String) {
     require(name.toUpperCase == name)
     
-    def isAnyChar = name.toUpperCase.matches(".*CHAR")
-    def isAnyDateTime = List("DATE", "TIME", "DATETIME", "TIMESTAMP") contains name.toUpperCase
-    def isAnyNumber = List("NUMBER", "INT", "TINYINT", "BIGINT") contains name.toUpperCase
+    def isAnyChar = name.matches(".*CHAR")
+    def isAnyDateTime = List("DATE", "TIME", "DATETIME", "TIMESTAMP") contains name
+    def isAnyNumber = List("NUMBER", "INT", "TINYINT", "BIGINT") contains name
+    
+    def isLengthAllowed = !(isAnyDateTime || name.matches("(TINY|MEDIUM|LONG|)(TEXT|BLOB)"))
+    
+    override def toString = name
 }
 
 abstract class DataTypeOption
@@ -29,13 +33,35 @@ case object MysqlUnsigned extends DataTypeOption
 case class MysqlCharacterSet(name: String) extends DataTypeOption
 case class MysqlCollate(name: String) extends DataTypeOption
 
+case class DataType(base: DataTypeBase, val length: Option[Int], val options: Seq[DataTypeOption]) {
+    require(length.isEmpty || base.isLengthAllowed, "length is not allowed for " + base)
+    
+    def name = base.name
+    
+    // deprecated
+    def isAnyChar = base.isAnyChar
+    def isAnyDateTime = base.isAnyDateTime
+    def isAnyNumber = base.isAnyNumber
+}
+
 object DataType {
+    def base(name: String) = new DataTypeBase(name.toUpperCase)
+    
     def varchar(length: Int) = apply("VARCHAR", Some(length))
     
     def int = apply("INT")
     
-    def apply(name: String): DataType = apply(name, None)
-    def apply(name: String, length: Option[Int]) = new DataType(name, length, List())
+    def apply(base: DataTypeBase, length: Option[Int]): DataType =
+        apply(base, length, Nil)
+    
+    def apply(name: String): DataType =
+        apply(name, None)
+    
+    def apply(name: String, length: Option[Int]): DataType =
+        apply(base(name), length)
+    
+    def apply(name: String, length: Option[Int], options: Seq[DataTypeOption]): DataType =
+        new DataType(base(name), length, options)
 }
 
 abstract class TableEntry

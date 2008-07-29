@@ -243,7 +243,7 @@ object JdbcModelExtractor {
                 }
                 
                 val colTypeSize = getIntOption(columns, "COLUMN_SIZE")
-                    .filter(x => !DataType(colType).isAnyDateTime)
+                    .filter(x => DataType.base(colType).isLengthAllowed)
 
                 val nullable = columns.getString("IS_NULLABLE") match {
                     case "YES" => Some(Nullability(true))
@@ -560,11 +560,13 @@ object JdbcModelExtractorTests extends org.specs.Specification {
     }
     
     "DATETIME without length" in {
-        dropTable("datetime_test")
-        execute("CREATE TABLE datetime_test (a DATETIME)")
-        val t = extractTable("datetime_test").column("a").dataType
-        t.name must_== "DATETIME"
-        t.length must_== None
+        for (t <- List("DATETIME", "TEXT")) {
+            val table = t + "_without_length_test"
+            dropTable(table)
+            execute("CREATE TABLE " + table + "(a " + t + ")")
+            val tp = extractTable(table).column("a").dataType
+            (tp.name, tp.length) must_== (t, None)
+        }
     }
 }
 
