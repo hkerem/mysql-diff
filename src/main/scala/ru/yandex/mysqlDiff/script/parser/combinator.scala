@@ -93,7 +93,7 @@ object SqlParserCombinator extends StandardTokenParsers {
         { case t ~ c => InlineReferences(t, c) }
     
     def columnAttr: Parser[ColumnPropertyDecl] =
-        ((nullability | defaultValue | autoIncrementability | collate | onUpdateCurrentTimestamp) ^^
+        ((nullability | defaultValue | autoIncrementability | collate | characterSet | onUpdateCurrentTimestamp) ^^
                 { p => ModelColumnProperty(p) }) |
         uniqueAttr | pkAttr | referencesAttr
         
