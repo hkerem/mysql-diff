@@ -68,8 +68,9 @@ object SqlParserCombinator extends StandardTokenParsers {
     
     def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | nowValue
     
-    def dataType: Parser[DataType] = name ~ opt("(" ~> numericLit <~ ")") ^^
-            { case name ~ length => DataType(name.toUpperCase, length.map(_.toInt)) }
+    // XXX: store unsigned
+    def dataType: Parser[DataType] = name ~ opt("(" ~> numericLit <~ ")") ~ opt("UNSIGNED") ^^
+            { case name ~ length ~ unsigned => DataType(name.toUpperCase, length.map(_.toInt)) }
    
     def nullability: Parser[Nullability] = opt("NOT") <~ "NULL" ^^ { x => Nullability(x.isEmpty) }
     
