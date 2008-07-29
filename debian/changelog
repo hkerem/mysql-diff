@@ -1,3 +1,9 @@
+yandex-mysql-diff (0.1.1) unstable; urgency=low
+
+  * A lot of minor bugfixes and enhancements
+
+ -- Stepan Koltsov <stepancheg@yandex-team.ru>  Wed, 30 Jul 2008 02:13:26 +0400
+
 yandex-mysql-diff (0.1.0) unstable; urgency=low
 
   * Initial release.
