@@ -33,7 +33,7 @@
         <ivy:retrieve pattern="lib/dep/[organisation]-[artifact]-[revision].[ext]" sync="true"/>
     </target>
 
-    <target name="init">
+    <target name="init" depends="resolve">
         <echo>scala.home=${scala.home}</echo>
         
         <path id="build.classpath">
