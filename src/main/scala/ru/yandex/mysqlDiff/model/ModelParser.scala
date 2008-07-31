@@ -32,7 +32,16 @@ object ModelParser {
                     // because of MySQL-specifc features that are hard to deal with
                     throw new Exception(
                             "TIMESTAMP without DEFAULT value is prohibited, column " + name + ", table " + ct.name)
+                
                 columns += ColumnModel(name, dataType, column.modelProperties)
+                
+                attrs foreach {
+                    case c.InlinePrimaryKey => pks += PrimaryKeyModel(None, List(column.name))
+                    // XXX: other inline properties
+                    
+                    case c.ModelColumnProperty(_) =>
+                }
+                
             case c.PrimaryKey(pk) => pks += pk
             case c.Index(index) => keys += index
             case c.ForeignKey(fk) => keys += fk
@@ -61,6 +70,9 @@ object ModelParser {
         TableModel(name, columns2.toList, pk, keys.toList, ct.options)
     }
     
+    def parseCreateTableScript(text: String) =
+        parseCreateTable(script.parser.SqlParserCombinator.parseCreateTable(text))
+    
     def main(args: Array[String]) {
         val text = InputStreamResource.file(args(0)).reader.slurp()
         val model = parseModel(text)
@@ -81,27 +93,27 @@ object ModelParserTests extends org.specs.Specification {
     }
     
     "unspecified DEFAULT VALUE means NULL" in {
-        val ct = script.parser.SqlParserCombinator.parseCreateTable(
-            "CREATE TABLE users (login VARCHAR(10))")
-        val t = parseCreateTable(ct)
+        val t = parseCreateTableScript("CREATE TABLE users (login VARCHAR(10))")
         val c = t.column("login")
         c.properties.defaultValue must_== Some(NullValue)
     }
     
     "unspecified autoincrement" in {
-        val ct = script.parser.SqlParserCombinator.parseCreateTable(
-            "CREATE TABLE user (id INT, login VARCHAR(10), PRIMARY KEY(id))")
-        val t = parseCreateTable(ct)
+        val t = parseCreateTableScript("CREATE TABLE user (id INT, login VARCHAR(10), PRIMARY KEY(id))")
         t.column("id").properties.autoIncrement must_== Some(false)
         //t.column("login").properties.autoIncrement must_== None
     }
     
     "PK is automatically NOT NULL" in {
-        val ct = script.parser.SqlParserCombinator.parseCreateTable(
-            "CREATE TABLE users (id INT, name VARCHAR(10), PRIMARY KEY(id))")
-        val t = parseCreateTable(ct)
+        val t = parseCreateTableScript("CREATE TABLE users (id INT, name VARCHAR(10), PRIMARY KEY(id))")
         val idColumn = t.column("id")
         idColumn.properties.find(NullabilityPropertyType) must_== Some(Nullability(false))
+    }
+    
+    "inline PK" in {
+        val t = parseCreateTableScript("CREATE TABLE users (id INT PRIMARY KEY, login VARCHAR(10))")
+        t.columns.length must_== 2
+        t.primaryKey.get.columns must beLike { case Seq("id") => true; case _ => false }
     }
     
     /*
