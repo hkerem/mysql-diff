@@ -10,3 +10,5 @@ syntax:glob
 target
 *.jar
 lib
+*.swp
+.DS_Store
