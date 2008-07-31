@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 
-<project name="mysqlDiff" default="dist">
+<project name="mysqlDiff" default="dist" xmlns:ivy="antlib:org.apache.ivy.ant">
     <!-- local properties, scala.home for example -->
     <property file="build.properties"/>
     <property file="${user.home}/build.local.properties"/>
@@ -11,13 +11,34 @@
     <property name="scala-library.jar" value="${scala.home}/lib/scala-library.jar"/>
     
     <property name="jar.suffix" value=""/>
+    
+    <available property="ivy.available" file="lib/ivy/ivy-2.0.0-beta2.jar"/>
+    <target name="download-ivy" unless="ivy.available">
+        <mkdir dir="lib/ivy"/>
+        
+        <echo>Downloading ivy</echo>
+        
+        <get src="http://repo1.maven.org/maven2/org/apache/ivy/ivy/2.0.0-beta2/ivy-2.0.0-beta2.jar"
+                dest="lib/ivy/ivy-2.0.0-beta2.jar"/>
+    </target>
+    
+    <target name="resolve" depends="download-ivy">
+        <taskdef resource="org/apache/ivy/ant/antlib.xml"
+                uri="antlib:org.apache.ivy.ant">
+            <classpath>
+                <fileset dir="lib/ivy" includes="*.jar"/>
+            </classpath>
+        </taskdef>
+        
+        <ivy:retrieve pattern="lib/dep/[organisation]-[artifact]-[revision].[ext]" sync="true"/>
+    </target>
 
     <target name="init">
         <echo>scala.home=${scala.home}</echo>
         
         <path id="build.classpath">
             <pathelement location="${scala-library.jar}"/>
-            <fileset dir="lib" includes="**/*.jar"/>
+            <fileset dir="lib/dep" includes="**/*.jar"/>
         </path>
 
         <taskdef resource="scala/tools/ant/antlib.xml">
@@ -68,8 +89,11 @@
     </target>
     
     <target name="do-jar-jar" depends="do-jar">
-        <taskdef name="jarjar" classname="com.tonicsystems.jarjar.JarJarTask"
-                classpath="lib/jarjar-1.0rc7.jar"/>
+        <taskdef name="jarjar" classname="com.tonicsystems.jarjar.JarJarTask">
+            <classpath>
+                <fileset dir="lib" includes="**/jarjar-*.jar"/>
+            </classpath>
+        </taskdef>
         
         <jarjar jarfile="target/yandex-mysql-diff-standalone${jar.suffix}.jar" index="true">
             <manifest>

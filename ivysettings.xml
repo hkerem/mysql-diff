@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<ivysettings>
+    <settings defaultResolver="default"/>
+    
+    <resolvers>
+        <chain name="default">
+            <ibiblio name="ibiblio" m2compatible="true"/>
+            <ibiblio name="scala-tools" root="http://scala-tools.org/repo-releases/" m2compatible="true"/>
+        </chain>
+    </resolvers>
+</ivysettings>
+
+<!-- vim: set ts=4 sw=4 et: -->

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<ivy-module version="2.0">
+    <info organisation="ru.mx1" module="colorizer"/>
+
+    <dependencies>
+        <dependency org="org.specs" name="specs" rev="1.2.9" conf="*->master"/>
+        
+        <!-- not used yet -->
+        <dependency org="org.slf4j" name="slf4j-api" rev="1.5.0"/>
+        
+        <dependency org="mysql" name="mysql-connector-java" rev="5.1.6"/>
+        
+        <dependency org="scalax" name="scalax" rev="2008-05-31">
+            <artifact name="scalax" type="jar" url="http://mx1.ru/~stepancheg/scalax-2008-05-31.jar"/>
+        </dependency>
+        
+        <dependency org="jarjar" name="jarjar" rev="1.0rc7">
+            <artifact name="jarjar" type="jar" url="http://jarjar.googlecode.com/files/jarjar-1.0rc7.jar"/>
+        </dependency>
+    </dependencies>
+        
+</ivy-module>
+
+<!-- vim: set ts=4 sw=4 et: -->
