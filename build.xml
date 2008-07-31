@@ -100,9 +100,9 @@
                 <attribute name="Main-Class" value="ru.yandex.mysqlDiff.Diff"/>
             </manifest>
             <fileset dir="target/classes"/>
-            <zipgroupfileset dir="./lib">
-                <include name="mysql*.jar"/>
-                <include name="scalax*.jar"/>
+            <zipgroupfileset dir="lib/dep">
+                <exclude name="jarjar-*"/>
+                <exclude name="org.specs-*"/>
             </zipgroupfileset>
             <zipfileset src="${scala-library.jar}"/>
             <rule pattern="scalax.**" result="ru.yandex.mysqlDiff.dep.@0"/>
@@ -123,9 +123,9 @@
         <copy file="target/yandex-mysql-diff-standalone${jar.suffix}.jar" todir="target/dist/mysql-diff/single-jar"/>
         
         <copy todir="target/dist/mysql-diff/lib">
-            <fileset dir="lib">
-                <include name="mysql*.jar"/>
-                <include name="scalax*.jar"/>
+            <fileset dir="lib/dep">
+                <exclude name="jarjar-*.jar"/>
+                <exclude name="org.specs-*.jar"/>
             </fileset>
         </copy>
         
@@ -141,6 +141,9 @@
             </tarfileset>
             <tarfileset dir="target/dist/mysql-diff/lib/../.." mode="444">
                 <include name="mysql-diff/lib/*"/>
+            </tarfileset>
+            <tarfileset dir="target/dist/mysql-diff/single-jar/../.." mode="444">
+                <include name="mysql-diff/single-jar/*"/>
             </tarfileset>
         </tar>
     </target>
