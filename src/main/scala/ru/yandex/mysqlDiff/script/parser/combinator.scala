@@ -25,6 +25,11 @@ class SqlLexical extends StdLexical {
     
     override def letter = elem("letter", x => x.isLetter || x == '_' || x == '%') // ?
     
+    override def token: Parser[Token] =
+        ( '`' ~ rep( chrExcept('`', '\n', EofCh) ) ~ '`' ^^ { case '`' ~ chars ~ '`' => Identifier(chars mkString "") }
+        | '"' ~ rep( chrExcept('"', '\n', EofCh) ) ~ '"' ^^ { case '"' ~ chars ~ '"' => Identifier(chars mkString "") }
+        | super.token )
+    
     //override def token: Parser[Token] =
     //    letter ~ rep(letter | digit)
     
@@ -224,7 +229,6 @@ object SqlParserCombinatorTests extends org.specs.Specification {
     }
     
     "parseCreateTable simple" in {
-        
         parseCreateTable("CREATE TABLE a (id INT)") must beLike {
             case t @ CreateTableStatement("a", _, _, _) =>
                 t.columns.length must_== 1
@@ -232,6 +236,12 @@ object SqlParserCombinatorTests extends org.specs.Specification {
                 t.column("id") must beLike { case Column("id", _, attrs) if attrs.isEmpty => true }
                 true
         }
+    }
+    
+    "quotes in identifiers" in {
+        val t = parseCreateTable("""CREATE TABLE `a` (`id` INT, "login" VARCHAR(100))""")
+        t.name must_== "a"
+        t.columns must beLike { case Seq(Column("id", _, _), Column("login", _, _)) => true }
     }
     
     "parseColumn default value" in {
