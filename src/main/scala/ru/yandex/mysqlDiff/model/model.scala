@@ -194,8 +194,10 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel],
         this(name, columns, None, Nil)
 
     require(columns.length > 0)
+    require(Set(columnNames: _*).size == columns.size, "repeating column names in table " + name + " model")
     
     def column(name: String) = columns.find(_.name == name).get
+    def columnNames = columns.map(_.name)
     
     /** Regular indexes */
     def indexes = keys.flatMap { case i: IndexModel => Some(i); case _ => None }
@@ -282,6 +284,15 @@ case object DataTypePropertyType extends ColumnPropertyType {
 
 object ModelTests extends org.specs.Specification {
     include(ColumnPropertiesTests)
+    
+    "model with repeating column names are not allowed" in {
+        try {
+            new TableModel("users", List(new ColumnModel("id", DataType.int), new ColumnModel("id", DataType.varchar(9))))
+            fail("two id columns should not be allowed")
+        } catch {
+            case e: IllegalArgumentException =>
+        }
+    }
 }
 
 // vim: set ts=4 sw=4 et:
