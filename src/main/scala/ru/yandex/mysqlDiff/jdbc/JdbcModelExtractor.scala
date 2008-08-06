@@ -53,7 +53,7 @@ object JdbcModelExtractor {
             tableCatalog: String, tableSchema: String, tableName: String,
             columnName: String, ordinalPosition: Int, columnDefault: String,
             isNullable: Boolean, dataType: String,
-            characterMaximumLength: Int, characterOctetLength: Int,
+            characterMaximumLength: Double, characterOctetLength: Double,
             numericPrecision: Int, numericScale: Int,
             characterSetName: String, collationName: String,
             columnType: String, /* skipped some columns */ columnComment: String
@@ -65,7 +65,7 @@ object JdbcModelExtractor {
                 getString("table_catalog"), getString("table_schema"), getString("table_name"),
                 getString("column_name"), getInt("ordinal_position"), getString("column_default"),
                 getBoolean("is_nullable"), getString("data_type"),
-                getInt("character_maximum_length"), getInt("character_octet_length"),
+                getDouble("character_maximum_length"), getDouble("character_octet_length"),
                 getInt("numeric_precision"), getInt("numeric_scale"),
                 getString("character_set_name"), getString("collation_name"),
                 getString("column_type"), getString("column_comment")
