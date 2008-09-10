@@ -4,6 +4,7 @@
     <!-- local properties, scala.home for example -->
     <property file="build.properties"/>
     <property file="${user.home}/build.local.properties"/>
+    <property file="${user.home}/build.properties"/>
     
     <!-- better then nothing -->
     <property name="scala.home" value="/usr/local/scala"/>
@@ -11,6 +12,9 @@
     <property name="scala-library.jar" value="${scala.home}/lib/scala-library.jar"/>
     
     <property name="jar.suffix" value=""/>
+    
+    <echo>java.home=${java.home}</echo>
+    <echo>scala.home=${scala.home}</echo>
     
     <available property="ivy.available" file="lib/ivy/ivy-2.0.0-beta2.jar"/>
     <target name="download-ivy" unless="ivy.available">
