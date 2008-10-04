@@ -75,6 +75,17 @@
         </java>
     </target>
     
+    <target name="run-tests-offline" depends="compile">
+        <java classname="ru.yandex.mysqlDiff.OfflineTests" failonerror="true">
+            <sysproperty key="java.awt.headless" value="true"/>
+            <classpath refid="build.classpath"/>
+            <classpath>
+                <pathelement location="target/classes"/>
+                <pathelement location="${scala-library.jar}"/>
+            </classpath>
+        </java>
+    </target>
+    
     <target name="do-jar">
         <jar jarfile="target/yandex-mysql-diff${jar.suffix}.jar" index="true">
             <fileset dir="target/classes"/>
