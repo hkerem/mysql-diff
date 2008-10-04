@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+Try with  ant -f sample-build.xml
+-->
+
+<project name="mysql-diff-test" default="run">
+    <taskdef name="diff" classname="ru.yandex.mysqlDiff.ant.DiffTask">
+        <classpath>
+            <pathelement location="../../../target/yandex-mysql-diff-standalone.jar"/>
+        </classpath>
+    </taskdef>
+    
+    <target name="run">
+        <mkdir dir="../../../tmp"/>
+        <diff from="../sql/simple_from.sql" to="../sql/simple_to.sql" output="../../../tmp/output.sql"/>
+    </target>
+</project>
+
+<!-- vim: set ts=4 sw=4 et: -->

@@ -13,9 +13,13 @@
         
         <dependency org="org.scalaforge" name="scalax" rev="0.1"/>
         
-        <dependency org="jarjar" name="jarjar" rev="1.0rc7">
-            <artifact name="jarjar" type="jar" url="http://jarjar.googlecode.com/files/jarjar-1.0rc7.jar"/>
+        <dependency org="jarjar" name="jarjar" rev="1.0rc8">
+            <artifact name="jarjar" type="jar" url="http://jarjar.googlecode.com/files/jarjar-1.0rc8.jar"/>
         </dependency>
+        
+        <dependency org="org.apache.ant" name="ant" rev="1.7.0"/>
+        
+        <exclude org="org.scala-lang"/>
     </dependencies>
         
 </ivy-module>
