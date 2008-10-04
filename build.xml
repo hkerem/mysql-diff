@@ -64,17 +64,6 @@
                 -->
     </target>
 
-    <target name="run-tests-old" depends="compile">
-        <java classname="ru.yandex.mysqlDiff.MysqlDiffTest" failonerror="true">
-            <sysproperty key="java.awt.headless" value="true"/>
-            <classpath refid="build.classpath"/>
-            <classpath>
-                <pathelement location="target/classes"/>
-                <pathelement location="${scala-library.jar}"/>
-            </classpath>
-        </java>
-    </target>
-    
     <target name="run-tests" depends="compile">
         <java classname="ru.yandex.mysqlDiff.Tests" failonerror="true">
             <sysproperty key="java.awt.headless" value="true"/>
