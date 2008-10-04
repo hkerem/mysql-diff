@@ -19,7 +19,11 @@ class Script(val stmts: Seq[ScriptElement]) {
     }
 }
 
-abstract class ScriptElement
+abstract class ScriptElement {
+    /** Shortcut */
+    def serialize = ScriptSerializer.serialize(this)
+    def toText = serialize
+}
 
 /** Comment including comment markers */
 case class CommentElement(comment: String) extends ScriptElement

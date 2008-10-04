@@ -214,6 +214,10 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel],
 }
 
 abstract class DatabaseDeclaration(val name: String) 
+{
+    def toScript = ModelSerializer.serializeDatabaseDeclaration(this)
+    def toText = toScript.toText
+}
 
 case class DatabaseModel(declarations: Seq[TableModel])
 {
