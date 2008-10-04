@@ -10,9 +10,13 @@ case class ChangeColumnPropertyDiff(oldProperty: ColumnProperty, newProperty: Co
     val propertyType = oldProperty.propertyType
 }
 
+/** Change some object (table or column) */
 trait ChangeSomethingDiff {
+    /** Name of object to be changed */
     def name: String
+    /** Optional new name, if should be renamed */
     def renameTo: Option[String]
+    /** New name of object */
     def newName = renameTo getOrElse name
 }
 
