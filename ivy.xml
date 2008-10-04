@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <ivy-module version="2.0">
-    <info organisation="ru.mx1" module="colorizer"/>
+    <info organisation="ru.yandex" module="mysql-diff"/>
 
     <dependencies>
         <dependency org="org.specs" name="specs" rev="1.2.9" conf="*->master"/>
