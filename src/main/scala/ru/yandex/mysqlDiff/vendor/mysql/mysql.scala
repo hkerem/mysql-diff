@@ -33,6 +33,7 @@ object MysqlServerVersionTests extends org.specs.Specification {
 
 object MysqlTests extends org.specs.Specification {
     include(MysqlServerVersionTests)
+    include(MysqlOnlineTests)
 }
 
 // vim: set ts=4 sw=4 et:

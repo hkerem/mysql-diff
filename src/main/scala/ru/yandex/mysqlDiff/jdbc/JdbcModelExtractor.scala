@@ -375,6 +375,9 @@ object JdbcModelExtractor {
     def extractTables(conn: ManagedResource[Connection]): Seq[TableModel] =
         for (c <- conn) yield new AllTablesSchemaExtractor(c).extractTables()
     
+    def extractTable(tableName: String, conn: ManagedResource[Connection]): TableModel =
+        for (c <- conn) yield new SingleTableSchemaExtractor(c).extractTable(tableName)
+    
     def extract(conn: ManagedResource[Connection]): DatabaseModel =
         for (c <- conn) yield new AllTablesSchemaExtractor(c).extract()
     
@@ -407,18 +410,10 @@ object JdbcModelExtractor {
 }
 
 object JdbcModelExtractorTests extends org.specs.Specification {
-    Class.forName("com.mysql.jdbc.Driver")
-        
-    val testDsUrl = "jdbc:mysql://fastshot:3306/mysql_diff_test"
-    val testDsUser = "test"
-    val testDsPassword = "test"
-    
-    val conn = ManagedResource(DriverManager.getConnection(testDsUrl, testDsUser, testDsPassword))
+    import vendor.mysql.MysqlTestDataSourceParameters._
     
     private def execute(q: String) {
-        for (c <- conn) {
-            c.createStatement().execute(q)
-        }
+        jdbcTemplate.execute(q)
     }
     
     private def dropTable(tableName: String) {
