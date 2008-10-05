@@ -62,10 +62,15 @@ object CreateTableStatement {
     case class InlineReferences(tableName: String, columnName: String) extends ColumnPropertyDecl
     
     case class Column(name: String, dataType: DataType, properties: Seq[ColumnPropertyDecl]) extends Entry {
+        def this(model: ColumnModel) =
+            this(model.name, model.dataType, model.properties.properties.map(new ModelColumnProperty(_)))
+        
         def modelProperties =
             ColumnProperties(properties.flatMap { case ModelColumnProperty(p) => Some(p); case _ => None })
         def defaultValue = modelProperties.defaultValue
         def isNotNull = modelProperties.isNotNull
+        
+        def addProperty(c: ColumnPropertyDecl) = new Column(name, dataType, properties ++ List(c))
     }
     
     case class Index(index: model.IndexModel) extends Entry
@@ -90,6 +95,8 @@ case class AlterTableStatement(tableName: String, ops: Seq[AlterTableStatement.O
 }
 
 object AlterTableStatement {
+    import script.{CreateTableStatement => cts}
+    
     trait Operation
     
     trait DropOperation extends Operation
@@ -99,7 +106,9 @@ object AlterTableStatement {
     trait ColumnOperation extends Operation
     trait KeyOperation extends Operation
     
-    case class AddColumn(model: ColumnModel) extends AddOperation with ColumnOperation
+    case class AddColumn(column: cts.Column) extends AddOperation with ColumnOperation {
+        def this(model: ColumnModel) = this(new cts.Column(model))
+    }
     
     case class ChangeColumn(oldName: String, model: ColumnModel) extends ModifyOperation with ColumnOperation
     

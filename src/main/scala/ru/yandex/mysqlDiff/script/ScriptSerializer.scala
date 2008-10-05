@@ -134,7 +134,7 @@ object ScriptSerializer {
     def serializeAlterTableOperation(op: AlterTableStatement.Operation) = {
         import AlterTableStatement._
         op match {
-            case AddColumn(column) => "ADD COLUMN " + serializeColumn(column)
+            case AddColumn(column) => "ADD COLUMN " + serializeTableEntry(column)
             case ChangeColumn(oldName, column) => "CHANGE COLUMN " + oldName + " " + serializeColumn(column)
             case ModifyColumn(column) => "MODIFY COLUMN " + serializeColumn(column)
             case DropColumn(name) => "DROP COLUMN " + name

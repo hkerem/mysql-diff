@@ -26,7 +26,6 @@ object MysqlOnlineTests extends org.specs.Specification {
     import MysqlTestDataSourceParameters._
     
     "CAP-101" in {
-        if (false) {
         jdbcTemplate.execute("DROP TABLE IF EXISTS a")
         
         jdbcTemplate.execute("CREATE TABLE a (kk INT)")
@@ -35,12 +34,11 @@ object MysqlOnlineTests extends org.specs.Specification {
         val newModel = ModelParser.parseCreateTableScript(nk)
         val diff = DiffMaker.compareTables(oldModel, newModel).get
         val script = new Script(TableScriptBuilder.alterScript(diff, newModel)).statements
-        script.foreach((s: ScriptStatement) => println(s.serialize))
+        //script.foreach((s: ScriptStatement) => println(s.serialize))
         script.foreach((s: ScriptStatement) => jdbcTemplate.execute(s.serialize))
         val gotModel = JdbcModelExtractor.extractTable("a", conn)
         // XXX: check model
         ()
-        }
     }
 }
 

@@ -5,12 +5,13 @@ import script._
 
 object TableScriptBuilder {
     import script.{AlterTableStatement => ats}
+    import script.{CreateTableStatement => cts}
 
     def alterColumnScript(cd: ColumnDiff, table: TableModel) =
         AlterTableStatement(table.name, List(alterColumnStmt(cd, table)))
     
     def alterColumnStmt(cd: ColumnDiff, table: TableModel) = cd match {
-        case CreateColumnDiff(c) => ats.AddColumn(c)
+        case CreateColumnDiff(c) => new ats.AddColumn(c)
         case DropColumnDiff(name) => ats.DropColumn(name)
         case ChangeColumnDiff(name, Some(newName), diff) =>
                 ats.ChangeColumn(name, table.column(newName))
@@ -65,8 +66,32 @@ object TableScriptBuilder {
 
         List[ScriptElement](CommentElement("-- " + diff.toString)) ++
         {
+            // for CAP-101
+            // XXX: simplify
+            val (addPks, rest) = diff.entriesDiff.partition {
+                case CreateKeyDiff(_: PrimaryKeyModel) => true
+                case _ => false
+            }
+            
+            require(addPks.length <= 1)
+            
+            val addPk = addPks.firstOption.map(_.asInstanceOf[CreateKeyDiff])
+            val addPkSingleColumn = addPk.filter(_.index.columns.length == 1).map(_.index.columns.first)
+            
+            val (addPkSingleColumnDiffs, rest2) = rest.partition {
+                case CreateColumnDiff(c) if Some(c.name) == addPkSingleColumn => true
+                case _ => false
+            }
+            
+            require(addPkSingleColumnDiffs.length <= 1)
+            
+            val addPkSingleColumnDiffProper = addPkSingleColumnDiffs.firstOption
+                    .map(x => new ats.AddColumn(new cts.Column(x.asInstanceOf[CreateColumnDiff].column) addProperty cts.InlinePrimaryKey))
+            
+            // end of CAP-101
+            
             import ats._
-            val ops = diff.entriesDiff.flatMap(alterTableEntryStmts(_, table))
+            val ops = rest2.flatMap(alterTableEntryStmts(_, table)) ++ addPkSingleColumnDiffProper
             val sorted = scala.util.Sorting.stableSort(ops, operationOrder _)
             sorted.map { op: ats.Operation => AlterTableStatement(table.name, List(op)) }
         }
@@ -79,6 +104,7 @@ object TableScriptBuilder {
 object TableScriptBuilderTests extends org.specs.Specification {
     import TableScriptBuilder._
     import AlterTableStatement._
+    import CreateTableStatement._
     
     /** Partial function to predicate */
     private def pftp[T](f: PartialFunction[T, Any]) =
@@ -92,7 +118,7 @@ object TableScriptBuilderTests extends org.specs.Specification {
         //println(script.filter(!_.isInstanceOf[CommentElement]))
         val dropNameI = script.findIndexOf(pftp { case AlterTableStatement(_, Seq(DropColumn("name"))) => true })
         val dropNiI = script.findIndexOf(pftp { case AlterTableStatement(_, Seq(DropIndex("ni"))) => true })
-        val addLoginI = script.findIndexOf(pftp { case AlterTableStatement(_, Seq(AddColumn(c: ColumnModel))) if c.name == "login" => true })
+        val addLoginI = script.findIndexOf(pftp { case AlterTableStatement(_, Seq(AddColumn(c: Column))) if c.name == "login" => true })
         val addLiI = script.findIndexOf(pftp { case AlterTableStatement(_, Seq(AddIndex(c: IndexModel))) if c.name == Some("li") => true })
         
         dropNiI must be_>=(0)
