@@ -145,7 +145,13 @@ object DiffMaker {
         else
             None
     }
-        
+    
+    def compareTablesFromScript(from: String, to: String) = {
+        val fromModel = ModelParser.parseCreateTableScript(from)
+        val toModel = ModelParser.parseCreateTableScript(to)
+        compareTables(fromModel, toModel)
+    }
+
     def compareDatabases(from: DatabaseModel, to: DatabaseModel): DatabaseDiff = {
         val (toIsEmpty, fromIsEmpty, tablesForCompare) = compareSeqs(from.declarations, to.declarations, (x: TableModel, y: TableModel) => x.name == y.name)
         val dropTables = toIsEmpty.map(tbl => new DropTableDiff(tbl.name))

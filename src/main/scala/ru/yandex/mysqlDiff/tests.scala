@@ -8,6 +8,7 @@ object Tests extends org.specs.Specification {
     include(script.ScriptSerializerTests)
     include(script.ScriptTests)
     include(diff.DiffMakerTests)
+    include(diff.DiffSerializerTests)
     include(vendor.VendorTests)
 }
 

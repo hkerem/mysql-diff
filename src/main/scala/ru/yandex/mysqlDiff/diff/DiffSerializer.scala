@@ -6,17 +6,16 @@ import script._
 object TableScriptBuilder {
     import script.{AlterTableStatement => ats}
 
-    def alterColumnScript(cd: ColumnDiff, table: TableModel) = {
-        import AlterTableStatement._
-        val op = cd match {
-            case CreateColumnDiff(c) => AddColumn(c)
-            case DropColumnDiff(name) => DropColumn(name)
-            case ChangeColumnDiff(name, Some(newName), diff) =>
-                    ChangeColumn(name, table.column(newName))
-            case ChangeColumnDiff(name, None, diff) =>
-                    ModifyColumn(table.column(name))
-        }
-        AlterTableStatement(table.name, List(op))
+    def alterColumnScript(cd: ColumnDiff, table: TableModel) =
+        AlterTableStatement(table.name, List(alterColumnStmt(cd, table)))
+    
+    def alterColumnStmt(cd: ColumnDiff, table: TableModel) = cd match {
+        case CreateColumnDiff(c) => ats.AddColumn(c)
+        case DropColumnDiff(name) => ats.DropColumn(name)
+        case ChangeColumnDiff(name, Some(newName), diff) =>
+                ats.ChangeColumn(name, table.column(newName))
+        case ChangeColumnDiff(name, None, diff) =>
+                ats.ModifyColumn(table.column(name))
     }
     
     def dropKeyStmt(k: KeyModel) = k match {
@@ -40,15 +39,71 @@ object TableScriptBuilder {
     def alterKeyScript(d: KeyDiff, table: TableModel) =
         AlterTableStatement(table.name, alterKeyStmts(d))
     
-    def alterScript(diff: ChangeTableDiff, model: TableModel): Seq[ScriptElement] = {
+    def alterTableEntryStmts(d: TableEntryDiff, table: TableModel) = d match {
+        case kd: KeyDiff => alterKeyStmts(kd)
+        case cd: ColumnDiff => List(alterColumnStmt(cd, table))
+    }
+    
+    private def operationOrder(op: ats.Operation) = op match {
+        case _: ats.DropOperation => op match {
+            case _: ats.KeyOperation => 11
+            case _: ats.ColumnOperation => 12
+            case _ => 13
+        }
+        case _: ats.ModifyOperation => 20
+        case _: ats.AddOperation => op match {
+            case _: ats.ColumnOperation => 31
+            case _: ats.KeyOperation => 32
+        }
+        case _ => 99
+    }
+    
+    /**
+     * @param model new model
+     */
+    def alterScript(diff: ChangeTableDiff, table: TableModel): Seq[ScriptElement] = {
 
-        List[ScriptElement]() ++
-        List(CommentElement("-- " + diff.toString)) ++
-        diff.columnDiff.map(alterColumnScript(_, model)) ++
-        diff.keyDiff.map(alterKeyScript(_, model)) ++
-        List[ScriptElement]()
+        List[ScriptElement](CommentElement("-- " + diff.toString)) ++
+        {
+            import ats._
+            val ops = diff.entriesDiff.flatMap(alterTableEntryStmts(_, table))
+            val sorted = scala.util.Sorting.stableSort(ops, operationOrder _)
+            sorted.map { op: ats.Operation => AlterTableStatement(table.name, List(op)) }
+        }
         
         // XXX: sort: drop, then change, then create
+    }
+    
+}
+
+object TableScriptBuilderTests extends org.specs.Specification {
+    import TableScriptBuilder._
+    import AlterTableStatement._
+    
+    /** Partial function to predicate */
+    private def pftp[T](f: PartialFunction[T, Any]) =
+        (t: T) => f.isDefinedAt(t)
+    
+    "DROP before ADD" in {
+        val oldTable = ModelParser.parseCreateTableScript("CREATE TABLE users (id INT, name VARCHAR(100), dep_id INT, INDEX ni(name))")
+        val newTable = ModelParser.parseCreateTableScript("CREATE TABLE users (id INT, login VARCHAR(10), dep_id BIGINT, INDEX li(login))")
+        val diff = DiffMaker.compareTables(oldTable, newTable).get
+        val script = alterScript(diff, newTable)
+        //println(script.filter(!_.isInstanceOf[CommentElement]))
+        val dropNameI = script.findIndexOf(pftp { case AlterTableStatement(_, Seq(DropColumn("name"))) => true })
+        val dropNiI = script.findIndexOf(pftp { case AlterTableStatement(_, Seq(DropIndex("ni"))) => true })
+        val addLoginI = script.findIndexOf(pftp { case AlterTableStatement(_, Seq(AddColumn(c: ColumnModel))) if c.name == "login" => true })
+        val addLiI = script.findIndexOf(pftp { case AlterTableStatement(_, Seq(AddIndex(c: IndexModel))) if c.name == Some("li") => true })
+        
+        dropNiI must be_>=(0)
+        dropNameI must be_>=(0)
+        addLoginI must be_>=(0)
+        addLiI must be_>=(0)
+        
+        // drop index .. drop column .. add column .. add index
+        dropNiI must be_<(dropNameI)
+        dropNameI must be_<(addLoginI)
+        addLoginI must be_<(addLiI)
     }
 }
 
@@ -77,6 +132,10 @@ object DiffSerializer {
         val options = ScriptSerializer.Options.multiline
         ScriptSerializer.serialize(serializeToScript(diff, oldModel, newModel), options)
     }
+}
+
+object DiffSerializerTests extends org.specs.Specification {
+    include(TableScriptBuilderTests)
 }
 
 // vim: set ts=4 sw=4 et:

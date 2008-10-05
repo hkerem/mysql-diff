@@ -86,27 +86,34 @@ case class AlterTableStatement(tableName: String, ops: Seq[AlterTableStatement.O
 }
 
 object AlterTableStatement {
-    abstract class Operation
+    trait Operation
     
-    case class AddColumn(model: ColumnModel) extends Operation
+    trait DropOperation extends Operation
+    trait AddOperation extends Operation
+    trait ModifyOperation extends Operation
     
-    case class ChangeColumn(oldName: String, model: ColumnModel) extends Operation
+    trait ColumnOperation extends Operation
+    trait KeyOperation extends Operation
     
-    case class ModifyColumn(model: ColumnModel) extends Operation
+    case class AddColumn(model: ColumnModel) extends AddOperation with ColumnOperation
     
-    case class DropColumn(name: String) extends Operation
+    case class ChangeColumn(oldName: String, model: ColumnModel) extends ModifyOperation with ColumnOperation
     
-    case class AddPrimaryKey(pk: PrimaryKeyModel) extends Operation
+    case class ModifyColumn(model: ColumnModel) extends ModifyOperation with ColumnOperation
     
-    case object DropPrimaryKey extends Operation
+    case class DropColumn(name: String) extends DropOperation with ColumnOperation
     
-    case class AddIndex(id: IndexModel) extends Operation
+    case class AddPrimaryKey(pk: PrimaryKeyModel) extends AddOperation with KeyOperation
     
-    case class DropIndex(name: String) extends Operation
+    case object DropPrimaryKey extends DropOperation with KeyOperation
     
-    case class DropForeignKey(name: String) extends Operation
+    case class AddIndex(id: IndexModel) extends AddOperation with KeyOperation
     
-    case class AddForeignKey(fk: ForeignKeyModel) extends Operation
+    case class DropIndex(name: String) extends DropOperation with KeyOperation
+    
+    case class DropForeignKey(name: String) extends DropOperation with KeyOperation
+    
+    case class AddForeignKey(fk: ForeignKeyModel) extends AddOperation with KeyOperation
 }
 
 abstract class DmlStatement extends ScriptStatement

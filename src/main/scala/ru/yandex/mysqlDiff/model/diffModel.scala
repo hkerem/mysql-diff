@@ -16,7 +16,9 @@ trait ChangeSomethingDiff {
     def newName = renameTo getOrElse name
 }
 
-abstract class ColumnDiff
+abstract class TableEntryDiff
+
+abstract class ColumnDiff extends TableEntryDiff
 case class CreateColumnDiff(column: ColumnModel) extends ColumnDiff
 case class DropColumnDiff(name: String) extends ColumnDiff
 case class ChangeColumnDiff(override val name: String, override val renameTo: Option[String],
@@ -26,7 +28,7 @@ case class ChangeColumnDiff(override val name: String, override val renameTo: Op
     def changeDiff = diff.flatMap { case c: ChangeColumnPropertyDiff => Some(c); case _ => None }
 }
 
-abstract class KeyDiff
+abstract class KeyDiff extends TableEntryDiff
 
 case class CreateKeyDiff(index: KeyModel) extends KeyDiff
 case class DropKeyDiff(index: KeyModel) extends KeyDiff
@@ -40,6 +42,9 @@ case class DropTableDiff(name: String) extends TableDiff
 case class ChangeTableDiff(override val name: String, override val renameTo: Option[String],
         columnDiff: Seq[ColumnDiff], keyDiff: Seq[KeyDiff])
     extends TableDiff with ChangeSomethingDiff
+{
+    def entriesDiff = List[TableEntryDiff]() ++ columnDiff ++ keyDiff
+}
 
 
 case class DatabaseDiff(tableDiff: Seq[TableDiff])
