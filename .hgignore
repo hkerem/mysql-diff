@@ -12,3 +12,4 @@ target
 lib
 *.swp
 .DS_Store
+tmp

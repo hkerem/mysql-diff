@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <ivy-module version="2.0">
-    <info organisation="ru.mx1" module="colorizer"/>
+    <info organisation="ru.yandex" module="mysql-diff"/>
 
     <dependencies>
         <dependency org="org.specs" name="specs" rev="1.3.1" conf="*->master"/>
@@ -11,13 +11,15 @@
         
         <dependency org="mysql" name="mysql-connector-java" rev="5.1.6"/>
         
-        <dependency org="scalax" name="scalax" rev="2008-05-31">
-            <artifact name="scalax" type="jar" url="http://mx1.ru/~stepancheg/scalax-2008-05-31.jar"/>
+        <dependency org="org.scalaforge" name="scalax" rev="0.1"/>
+        
+        <dependency org="jarjar" name="jarjar" rev="1.0rc8">
+            <artifact name="jarjar" type="jar" url="http://jarjar.googlecode.com/files/jarjar-1.0rc8.jar"/>
         </dependency>
         
-        <dependency org="jarjar" name="jarjar" rev="1.0rc7">
-            <artifact name="jarjar" type="jar" url="http://jarjar.googlecode.com/files/jarjar-1.0rc7.jar"/>
-        </dependency>
+        <dependency org="org.apache.ant" name="ant" rev="1.7.0"/>
+        
+        <exclude org="org.scala-lang"/>
     </dependencies>
         
 </ivy-module>

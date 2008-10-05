@@ -161,12 +161,13 @@ case object ForeignKey extends KeyType
 */
 
 abstract class KeyModel(val name: Option[String], val columns: Seq[String]) extends TableEntry
+{
+    require(columns.length > 0)
+    require(Set(columns: _*).size == columns.length)
+}
 
 case class IndexModel(override val name: Option[String], override val columns: Seq[String], isUnique: Boolean)
     extends KeyModel(name, columns)
-{
-    require(columns.length > 0)
-}
 
 case class PrimaryKeyModel(override val name: Option[String], override val columns: Seq[String])
     extends KeyModel(name, columns)
@@ -213,6 +214,10 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel],
 }
 
 abstract class DatabaseDeclaration(val name: String) 
+{
+    def toScript = ModelSerializer.serializeDatabaseDeclaration(this)
+    def toText = toScript.toText
+}
 
 case class DatabaseModel(declarations: Seq[TableModel])
 {
@@ -289,6 +294,15 @@ object ModelTests extends org.specs.Specification {
         try {
             new TableModel("users", List(new ColumnModel("id", DataType.int), new ColumnModel("id", DataType.varchar(9))))
             fail("two id columns should not be allowed")
+        } catch {
+            case e: IllegalArgumentException =>
+        }
+    }
+    
+    "keys with repeating column names must not be allowed" in {
+        try {
+            new IndexModel(None, List("a", "b", "a"), false)
+            fail("two columns with same name should not be allowed in key")
         } catch {
             case e: IllegalArgumentException =>
         }
