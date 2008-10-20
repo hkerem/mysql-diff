@@ -45,7 +45,9 @@ class SqlLexical extends StdLexical {
 /*
  * Note to readers: ~ operator has higher priority then ~> or <~
  */
-object SqlParserCombinator extends StandardTokenParsers {
+case class SqlParserCombinator(val context: Context) extends StandardTokenParsers {
+    import context._
+
     override val lexical = new SqlLexical
     
     import CreateTableStatement._
@@ -87,7 +89,7 @@ object SqlParserCombinator extends StandardTokenParsers {
     
     // XXX: store unsigned
     def dataType: Parser[DataType] = name ~ opt("(" ~> naturalNumber <~ ")") ~ rep(dataTypeOption) ^^
-            { case name ~ length ~ options => DataType(name.toUpperCase, length, options) }
+            { case name ~ length ~ options => dataTypes.make(name.toUpperCase, length, options) }
    
     def nullability: Parser[Nullability] = opt("NOT") <~ "NULL" ^^ { x => Nullability(x.isEmpty) }
     
@@ -221,7 +223,9 @@ object SqlParserCombinator extends StandardTokenParsers {
 }
 
 object SqlParserCombinatorTests extends org.specs.Specification {
-    import SqlParserCombinator._
+    import Environment.defaultContext._
+
+    import sqlParserCombinator._
     import CreateTableStatement._
     
     "parseScript" in {
@@ -247,7 +251,7 @@ object SqlParserCombinatorTests extends org.specs.Specification {
     "parseColumn default value" in {
         val column = parseColumn("friend_files_count INT NOT NULL DEFAULT 17")
         column.name must_== "friend_files_count"
-        column.dataType must_== DataType.int
+        column.dataType must_== dataTypes.int
         column.defaultValue must_== Some(NumberValue(17))
     }
     
@@ -270,7 +274,7 @@ object SqlParserCombinatorTests extends org.specs.Specification {
         t.name must_== "a"
         t.columns must haveSize(1)
         t.columns must exist({ c: CreateTableStatement.Column => c.name == "id" })
-        t.column("id").dataType must_== DataType.int
+        t.column("id").dataType must_== dataTypes.int
     }
     
     "parse references from column" in {
@@ -308,9 +312,11 @@ object SqlParserCombinatorTests extends org.specs.Specification {
 }
 
 object Parser {
+    import Environment.defaultContext._
+
     def parse(text: String): Script = {
         val c = SqlParserCombinator
-        new Script(SqlParserCombinator.parse(text).map(_.asInstanceOf[ScriptElement]))
+        new Script(sqlParserCombinator.parse(text).map(_.asInstanceOf[ScriptElement]))
     }
     
     def main(args: Array[String]) {

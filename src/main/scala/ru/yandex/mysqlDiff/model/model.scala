@@ -14,19 +14,6 @@ case class StringValue(value: String) extends SqlValue
 // used as default value
 case object NowValue extends SqlValue
 
-case class DataTypeBase(name: String) {
-    require(name.toUpperCase == name)
-    
-    def isAnyChar = name.matches(".*CHAR")
-    def isAnyDateTime = List("DATE", "TIME", "DATETIME", "TIMESTAMP") contains name
-    def isAnyNumber = name.matches("(|TINY|SMALL|BIG)INT") ||
-        (List("NUMBER", "FLOAT", "REAL", "DOUBLE", "DECIMAL", "NUMERIC") contains name)
-    
-    def isLengthAllowed = !(isAnyDateTime || name.matches("(TINY|MEDIUM|LONG|)(TEXT|BLOB)"))
-    
-    override def toString = name
-}
-
 abstract class DataTypeOption
 
 case object MysqlZerofill extends DataTypeOption
@@ -34,35 +21,100 @@ case object MysqlUnsigned extends DataTypeOption
 case class MysqlCharacterSet(name: String) extends DataTypeOption
 case class MysqlCollate(name: String) extends DataTypeOption
 
-case class DataType(base: DataTypeBase, val length: Option[Int], val options: Seq[DataTypeOption]) {
-    require(length.isEmpty || base.isLengthAllowed, "length is not allowed for " + base)
-    
-    def name = base.name
-    
-    // deprecated
-    def isAnyChar = base.isAnyChar
-    def isAnyDateTime = base.isAnyDateTime
-    def isAnyNumber = base.isAnyNumber
+abstract case class DataType(name: String, length: Option[Int], options: Seq[DataTypeOption]) {
+    require(name.toUpperCase == name)
+
+    def isAnyChar: Boolean
+    def isAnyDateTime: Boolean
+    def isAnyNumber: Boolean
+    def isLengthAllowed: Boolean
+    def normalized: DataType
+
+    def equivalent(other: DataType) = {
+        val n1 = normalized
+        val n2 = other.normalized
+        n1.name == n2.name && n1.length == n2.length && n1.options == n2.options
+    }
+
+    override def toString = name
+
+    require(length.isEmpty || isLengthAllowed, "length is not allowed")
 }
 
-object DataType {
-    def base(name: String) = new DataTypeBase(name.toUpperCase)
+class MysqlDataType(override val name: String, override val length: Option[int], override val options: Seq[DataTypeOption]) 
+    extends DataType(name, length, options) {
+
+    def isAnyChar = name.matches(".*CHAR")
+    def isAnyDateTime = List("DATE", "TIME", "DATETIME", "TIMESTAMP") contains name
+    def isAnyNumber = name.matches("(|TINY|SMALL|BIG)INT") ||
+        (List("NUMBER", "FLOAT", "REAL", "DOUBLE", "DECIMAL", "NUMERIC") contains name)
+    def isLengthAllowed = !(isAnyDateTime || name.matches("(TINY|MEDIUM|LONG|)(TEXT|BLOB)"))
+
+    def normalized = { // XXX
+        if (name == "BIT") new MysqlDataType("TINYINT", Some(1), options)
+        else new MysqlDataType(name, length, options)
+    }
+}
+
+class PostgresqlDataType(override val name: String, override val length: Option[int], override val options: Seq[DataTypeOption]) 
+    extends DataType(name, length, options) {
+
+    def isAnyChar = name.matches(".*CHAR")
+    def isAnyDateTime = List("DATE", "TIME", "TIMESTAMP") contains name
+    def isAnyNumber = name.matches("(SMALL|BIG)INT|INTEGER") ||
+        (List("NUMBER", "REAL", "DOUBLE PRECISION", "DECIMAL", "NUMERIC") contains name)
     
-    def varchar(length: Int) = apply("VARCHAR", Some(length))
+    def isLengthAllowed = !(isAnyDateTime || name.matches("TEXT|BYTEA"))
+
+    def normalized = { // FIXME
+        new PostgresqlDataType(name, length, options)
+    }
+}
+
+abstract class DataTypes {
+    def varchar(length: Int): DataType = make("VARCHAR", Some(length))
     
-    def int = apply("INT")
+    def int: DataType
     
-    def apply(base: DataTypeBase, length: Option[Int]): DataType =
-        apply(base, length, Nil)
+    def make(name: String): DataType = 
+        make(name, None)
     
-    def apply(name: String): DataType =
-        apply(name, None)
-    
-    def apply(name: String, length: Option[Int]): DataType =
-        apply(base(name), length)
-    
-    def apply(name: String, length: Option[Int], options: Seq[DataTypeOption]): DataType =
-        new DataType(base(name), length, options)
+    def make(name: String, length: Option[Int]): DataType =
+        make(name, length, Nil)
+
+    def make(name: String, length: Option[Int], options: Seq[DataTypeOption]): DataType 
+
+    def equivalent(typeA: DataType, typeB: DataType) = {
+        /*
+        def e1(a: DataType, b: DataType) =
+            if (a == dataTypes.make("TINYINT", Some(1)) && b == dataTypes.make("BIT", None)) true
+            else false
+        else if (e1(a, b)) true
+        else if (e1(b, a)) true
+        */
+        val a = typeA.normalized
+        val b = typeB.normalized 
+        
+        if (a == b) true
+        else if (a.name != b.name) false
+        else if (a.isAnyNumber) true // ignore size change: XXX: should rather know DB defaults
+        else if (a.isAnyDateTime) true // probably
+        else a.name == b.name && a.length == b.length // ignoring options for a while; should not ignore if options change
+    }
+}
+
+class MysqlDataTypes extends DataTypes {
+    def int = make("INT")
+
+    def make(name: String, length: Option[Int], options: Seq[DataTypeOption]): DataType =
+        new MysqlDataType(name, length, options)
+}
+
+class PostgresqlDataTypes extends DataTypes {
+    def int = make("INTEGER")
+
+    def make(name: String, length: Option[Int], options: Seq[DataTypeOption]): DataType =
+        new PostgresqlDataType(name, length, options)
 }
 
 abstract class TableEntry
@@ -289,10 +341,13 @@ case object DataTypePropertyType extends ColumnPropertyType {
 
 object ModelTests extends org.specs.Specification {
     include(ColumnPropertiesTests)
+    include(MysqlDataTypesTests)
+
+    import Environment.defaultContext._
     
     "model with repeating column names are not allowed" in {
         try {
-            new TableModel("users", List(new ColumnModel("id", DataType.int), new ColumnModel("id", DataType.varchar(9))))
+            new TableModel("users", List(new ColumnModel("id", dataTypes.int), new ColumnModel("id", dataTypes.varchar(9))))
             fail("two id columns should not be allowed")
         } catch {
             case e: IllegalArgumentException =>
@@ -306,6 +361,14 @@ object ModelTests extends org.specs.Specification {
         } catch {
             case e: IllegalArgumentException =>
         }
+    }
+}
+
+object MysqlDataTypesTests extends org.specs.Specification {
+    import MysqlContext._
+
+    "TINYINT(1) equivalent to BIT" in {
+        dataTypes.equivalent(dataTypes.make("BIT"), dataTypes.make("TINYINT", Some(1))) must beTrue
     }
 }
 

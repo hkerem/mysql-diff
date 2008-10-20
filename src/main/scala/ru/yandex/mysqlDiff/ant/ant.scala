@@ -7,6 +7,8 @@ import scalax.io.Implicits._
 import diff._
 
 class DiffTask extends Task {
+    import Environment.defaultContext._
+
     private var from: String = _
     private var to: String = _
     private var output: File = _
@@ -23,7 +25,7 @@ class DiffTask extends Task {
         val fromModel = Utils.getModelFromArgsLine(from)
         val toModel = Utils.getModelFromArgsLine(to)
         
-        val dbDiff = DiffMaker.compareDatabases(fromModel, toModel)
+        val dbDiff = diffMaker.compareDatabases(fromModel, toModel)
         val script = DiffSerializer.serialize(fromModel, toModel, dbDiff)
         
         log("Writing diff to " + output)

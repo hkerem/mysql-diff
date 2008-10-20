@@ -10,13 +10,14 @@ import script._
 import jdbc._
 
 object Utils {
+    import Environment.defaultContext._
     
     def getModelFromArgsLine(arg: String): DatabaseModel = {
         if (arg.startsWith("jdbc:"))
             JdbcModelExtractor.parse(arg)
         else {
             var str = ReaderResource.file(arg).slurp
-            model.ModelParser.parseModel(str)
+            modelParser.parseModel(str)
         }
     }
     
@@ -25,7 +26,7 @@ object Utils {
             new DatabaseModel(List(JdbcModelExtractor.parseTable(table, arg)))
         else {
             var str = ReaderResource.file(arg).slurp
-            val tableModel = model.ModelParser.parseModel(str).declarations.filter(_.name == table).first
+            val tableModel = modelParser.parseModel(str).declarations.filter(_.name == table).first
             new DatabaseModel(List(tableModel))
         }
     }
@@ -45,6 +46,7 @@ abstract class MainSupport {
 
 object Diff extends MainSupport {
     override val helpBanner = "mysqlDiff.sh from_file|from_jdbc_url to_file|to_jdbc_url"
+    import Environment.defaultContext._
 
     override def main(args: Array[String]) {
         
@@ -58,7 +60,7 @@ object Diff extends MainSupport {
                 exit(1)
         }
         
-        val dbDiff = DiffMaker.compareDatabases(fromdb, todb)
+        val dbDiff = diffMaker.compareDatabases(fromdb, todb)
 
         val script = DiffSerializer.serialize(fromdb, todb, dbDiff)
 

@@ -7,7 +7,9 @@ import script.Implicits._
 
 import scalax.io._
 
-object ModelParser {
+case class ModelParser(val context: Context) {
+    import context._
+    
     def parseModel(text: String): DatabaseModel =
         parseModel(parser.Parser.parse(text))
     
@@ -71,7 +73,7 @@ object ModelParser {
     }
     
     def parseCreateTableScript(text: String) =
-        parseCreateTable(script.parser.SqlParserCombinator.parseCreateTable(text))
+        parseCreateTable(sqlParserCombinator.parseCreateTable(text))
     
     def main(args: Array[String]) {
         val text = InputStreamResource.file(args(0)).reader.slurp()
@@ -81,10 +83,11 @@ object ModelParser {
 }
 
 object ModelParserTests extends org.specs.Specification {
-    import ModelParser._
+    import Environment.defaultContext._
+    import modelParser._
     
     "unspecified nullability means nullable" in {
-        val ctc = CreateTableStatement.Column("age", DataType.int,
+        val ctc = CreateTableStatement.Column("age", dataTypes.int,
             new ColumnProperties(List(DefaultValue(NumberValue(0)))))
         val ct = CreateTableStatement("x", false, List(ctc), Nil)
         val t = parseCreateTable(ct)
@@ -118,7 +121,7 @@ object ModelParserTests extends org.specs.Specification {
     
     /*
     "MySQL TIMESTAMP is DEFAULT NOW()" in {
-        val ct = script.parser.SqlParserCombinator.parseCreateTable(
+        val ct = sqlParserCombinator.parseCreateTable(
             "CREATE TABLE files (created TIMESTAMP)")
         val t = parseCreateTable(ct)
         val c = t.column("created")
@@ -127,7 +130,7 @@ object ModelParserTests extends org.specs.Specification {
     */
     
     "Prohibit TIMESTAMP without DEFAULT value" in {
-        val ct = script.parser.SqlParserCombinator.parseCreateTable(
+        val ct = sqlParserCombinator.parseCreateTable(
             "CREATE TABLE x (a TIMESTAMP)")
         try {
             val t = parseCreateTable(ct)

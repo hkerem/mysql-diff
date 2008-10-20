@@ -4,7 +4,8 @@ import scala.collection.mutable.ArrayBuffer
 
 import model._
 
-object DiffMaker {
+case class DiffMaker(val context: Context) {
+    import context._
 
     def compareSeqs[A, B](a: Seq[A], b: Seq[B], comparator: (A, B) => Boolean): (Seq[A], Seq[B], Seq[(A, B)]) = {
         var onlyInA = List[A]()
@@ -40,25 +41,11 @@ object DiffMaker {
         a == b || e1(a, b) || e1(b, a)
     }
     
-    def dataTypesEquivalent(a: DataType, b: DataType) = {
-        def e1(a: DataType, b: DataType) =
-            if (a == DataType("TINYINT", Some(1)) && b == DataType("BIT", None)) true
-            else false
-        
-        if (a == b) true
-        else if (e1(a, b)) true
-        else if (e1(b, a)) true
-        else if (a.name != b.name) false
-        else if (a.isAnyNumber) true // ignore size change: XXX: should rather know DB defaults
-        else if (a.isAnyDateTime) true // probably
-        else a.name == b.name && a.length == b.length // ignoring options for a while; should not ignore if options change
-    }
-    
     def columnPropertiesEquivalent(a: ColumnProperty, b: ColumnProperty) = {
         require(a.propertyType == b.propertyType)
         val propertyType = a.propertyType
         (a, b) match {
-            case (DataTypeProperty(adt), DataTypeProperty(bdt)) => dataTypesEquivalent(adt, bdt)
+            case (DataTypeProperty(adt), DataTypeProperty(bdt)) => dataTypes.equivalent(adt, bdt)
             case (DefaultValue(adv), DefaultValue(bdv)) => defaultValuesEquivalent(adv, bdv)
             case _ => a == b
         }
@@ -74,7 +61,7 @@ object DiffMaker {
             DefaultValuePropertyType
         )
         
-        if (!dataTypesEquivalent(from.dataType, to.dataType))
+        if (!dataTypes.equivalent(from.dataType, to.dataType))
             diff += new ChangeColumnPropertyDiff(DataTypeProperty(from.dataType), DataTypeProperty(to.dataType))
         
         for (pt <- comparePropertyTypes) {
@@ -147,8 +134,8 @@ object DiffMaker {
     }
     
     def compareTablesFromScript(from: String, to: String) = {
-        val fromModel = ModelParser.parseCreateTableScript(from)
-        val toModel = ModelParser.parseCreateTableScript(to)
+        val fromModel = modelParser.parseCreateTableScript(from)
+        val toModel = modelParser.parseCreateTableScript(to)
         compareTables(fromModel, toModel)
     }
 
@@ -162,15 +149,17 @@ object DiffMaker {
 }        
 
 object DiffMakerTests extends org.specs.Specification {
+    import Environment.defaultContext._
+
     import org.specs.matcher.Matcher
-    import DiffMaker._
+    import diffMaker._
     
     "compareSeqs" in {
         val a = List(1, 2, 3, 5)
         val b = List("4", "3", "2")
 
         def comparator(x: Int, y: String) = x.toString == y
-        val (onlyInA, onlyInB, inBoth) = DiffMaker.compareSeqs(a, b, comparator _)
+        val (onlyInA, onlyInB, inBoth) = diffMaker.compareSeqs(a, b, comparator _)
 
         List(1, 5) must_== onlyInA.toList
         List("4") must_== onlyInB.toList
@@ -178,9 +167,9 @@ object DiffMakerTests extends org.specs.Specification {
     }
     
     "compareColumns rename" in {
-        val oldC = new ColumnModel("user", DataType.varchar(10), new ColumnProperties(List(Nullability(true))))
-        val newC = new ColumnModel("user_name", DataType.varchar(10), new ColumnProperties(List(Nullability(true))))
-        val diff = DiffMaker.compareColumns(oldC, newC).get
+        val oldC = new ColumnModel("user", dataTypes.varchar(10), new ColumnProperties(List(Nullability(true))))
+        val newC = new ColumnModel("user_name", dataTypes.varchar(10), new ColumnProperties(List(Nullability(true))))
+        val diff = diffMaker.compareColumns(oldC, newC).get
         diff must beLike { case ChangeColumnDiff("user", Some("user_name"), Seq()) => true; case _ => false }
     }
     
@@ -212,21 +201,21 @@ object DiffMakerTests extends org.specs.Specification {
         changeProperty(new DataTypeProperty(oldType), new DataTypeProperty(newType))
     
     "compareColumns change type" in {
-        val oldC = new ColumnModel("user", DataType.varchar(10), new ColumnProperties(List(Nullability(true))))
-        val newC = new ColumnModel("user", DataType.varchar(9), new ColumnProperties(List(Nullability(true))))
-        val diff = DiffMaker.compareColumns(oldC, newC).get
-        diff must changeDataType(DataType.varchar(10), DataType.varchar(9))
+        val oldC = new ColumnModel("user", dataTypes.varchar(10), new ColumnProperties(List(Nullability(true))))
+        val newC = new ColumnModel("user", dataTypes.varchar(9), new ColumnProperties(List(Nullability(true))))
+        val diff = diffMaker.compareColumns(oldC, newC).get
+        diff must changeDataType(dataTypes.varchar(10), dataTypes.varchar(9))
         diff.diff.length must_== 1
     }
     
     "compareColumn drop AutoIncrement(false) to none" in {
-        val oldC = new ColumnModel("user", DataType.varchar(10), new ColumnProperties(List(AutoIncrement(false))))
-        val newC = new ColumnModel("user", DataType.varchar(10), new ColumnProperties(List()))
-        DiffMaker.compareColumns(oldC, newC) must_== None
+        val oldC = new ColumnModel("user", dataTypes.varchar(10), new ColumnProperties(List(AutoIncrement(false))))
+        val newC = new ColumnModel("user", dataTypes.varchar(10), new ColumnProperties(List()))
+        diffMaker.compareColumns(oldC, newC) must_== None
     }
     
     "ignore index name change" in {
-        val columns = List(new ColumnModel("id", DataType.int), new ColumnModel("b", DataType.int))
+        val columns = List(new ColumnModel("id", dataTypes.int), new ColumnModel("b", dataTypes.int))
         val i1 = new IndexModel(Some("my_index"), List("b"), true)
         val i2 = new IndexModel(None, List("b"), true)
         val t1 = new TableModel("a", columns, None, List(i1), Nil)
@@ -235,25 +224,25 @@ object DiffMakerTests extends org.specs.Specification {
     }
     
     "BIGINT equivalent to BIGINT(19)" in {
-        dataTypesEquivalent(DataType("BIGINT"), DataType("BIGINT", Some(19))) must_== true
-        dataTypesEquivalent(DataType("BIGINT", Some(19)), DataType("BIGINT")) must_== true
+        dataTypes.equivalent(dataTypes.make("BIGINT"), dataTypes.make("BIGINT", Some(19))) must_== true
+        dataTypes.equivalent(dataTypes.make("BIGINT", Some(19)), dataTypes.make("BIGINT")) must_== true
     }
     
     "INT not equivalent to BIGINT" in {
-        dataTypesEquivalent(DataType("INT"), DataType("BIGINT")) must_== false
-        dataTypesEquivalent(DataType("BIGINT"), DataType("INT")) must_== false
+        dataTypes.equivalent(dataTypes.make("INT"), dataTypes.make("BIGINT")) must_== false
+        dataTypes.equivalent(dataTypes.make("BIGINT"), dataTypes.make("INT")) must_== false
     }
     
     "INT not equivalent to VARCHAR(100)" in {
-        dataTypesEquivalent(DataType("INT"), DataType("VARCHAR", Some(100))) must beFalse
+        dataTypes.equivalent(dataTypes.make("INT"), dataTypes.make("VARCHAR", Some(100))) must beFalse
     }
     
     "VARCHAR(10) not equivalent to VARCHAR(20)" in {
-        dataTypesEquivalent(DataType("VARCHAR", Some(10)), DataType("VARCHAR", Some(20))) must_== false
+        dataTypes.equivalent(dataTypes.make("VARCHAR", Some(10)), dataTypes.make("VARCHAR", Some(20))) must_== false
     }
     
     "TINYINT(1) equivalent to BIT" in {
-        dataTypesEquivalent(DataType("BIT"), DataType("TINYINT", Some(1))) must beTrue
+        dataTypes.equivalent(dataTypes.make("BIT"), dataTypes.make("TINYINT", Some(1))) must beTrue
     }
     
     "0 not equivalent to 1" in {

@@ -20,7 +20,9 @@ object JdbcModelExtractor {
     import JdbcUtils._
     
     import vendor.mysql._
-    
+
+    import MysqlContext._
+
     // http://bugs.mysql.com/36699
     private val PROPER_COLUMN_DEF_MIN_MYSQL_VERSION = MysqlServerVersion.parse("5.0.51")
     
@@ -243,7 +245,7 @@ object JdbcModelExtractor {
                 }
                 
                 val colTypeSize = getIntOption(columns, "COLUMN_SIZE")
-                    .filter(x => DataType.base(colType).isLengthAllowed)
+                    .filter(x => MysqlContext.dataTypes.make(colType, None, Nil).isLengthAllowed)
 
                 val nullable = columns.getString("IS_NULLABLE") match {
                     case "YES" => Some(Nullability(true))
@@ -273,7 +275,7 @@ object JdbcModelExtractor {
                     .filter(x => x != null && x != "")
                     .map(MysqlCollate(_))
                 
-                val dataType = DataType(colType, colTypeSize, Nil ++ characterSet ++ collate)
+                val dataType = MysqlContext.dataTypes.make(colType, colTypeSize, Nil ++ characterSet ++ collate)
                 
                 val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
                 
@@ -358,7 +360,7 @@ object JdbcModelExtractor {
             else Some(StringValue(s))
         }
         else if (dataType.isAnyNumber) {
-            Some(script.parser.SqlParserCombinator.parseValue(s))
+            Some(sqlParserCombinator.parseValue(s))
         }
         else Some(StringValue(s))
     }
@@ -392,20 +394,20 @@ object JdbcModelExtractor {
         for (c <- connection(jdbcUrl)) yield new SingleTableSchemaExtractor(c).extractTable(tableName)
     
     def main(args: scala.Array[String]) {
-    	def usage() {
-    	    Console.err.println("usage: JdbcModelExtractor jdbc-url [table-name]")
-    	}
-    	
-    	val model = args match {
-    	    case Seq(jdbcUrl) =>
+        def usage() {
+            Console.err.println("usage: JdbcModelExtractor jdbc-url [table-name]")
+        }
+        
+        val model = args match {
+            case Seq(jdbcUrl) =>
                 parse(jdbcUrl)
-    	    case Seq(jdbcUrl, tableName) =>
+            case Seq(jdbcUrl, tableName) =>
                 new DatabaseModel(List(parseTable(tableName, jdbcUrl)))
             case _ =>
                 usage(); exit(1)
-    	}
-    	
-    	print(ModelSerializer.serializeDatabaseToText(model))
+        }
+        
+        print(ModelSerializer.serializeDatabaseToText(model))
     }
 }
 

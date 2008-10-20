@@ -105,15 +105,17 @@ object TableScriptBuilderTests extends org.specs.Specification {
     import TableScriptBuilder._
     import AlterTableStatement._
     import CreateTableStatement._
+
+    import Environment.defaultContext._
     
     /** Partial function to predicate */
     private def pftp[T](f: PartialFunction[T, Any]) =
         (t: T) => f.isDefinedAt(t)
     
     "DROP before ADD" in {
-        val oldTable = ModelParser.parseCreateTableScript("CREATE TABLE users (id INT, name VARCHAR(100), dep_id INT, INDEX ni(name))")
-        val newTable = ModelParser.parseCreateTableScript("CREATE TABLE users (id INT, login VARCHAR(10), dep_id BIGINT, INDEX li(login))")
-        val diff = DiffMaker.compareTables(oldTable, newTable).get
+        val oldTable = modelParser.parseCreateTableScript("CREATE TABLE users (id INT, name VARCHAR(100), dep_id INT, INDEX ni(name))")
+        val newTable = modelParser.parseCreateTableScript("CREATE TABLE users (id INT, login VARCHAR(10), dep_id BIGINT, INDEX li(login))")
+        val diff = diffMaker.compareTables(oldTable, newTable).get
         val script = alterScript(diff, newTable)
         //println(script.filter(!_.isInstanceOf[CommentElement]))
         val dropNameI = script.findIndexOf(pftp { case AlterTableStatement(_, Seq(DropColumn("name"))) => true })
