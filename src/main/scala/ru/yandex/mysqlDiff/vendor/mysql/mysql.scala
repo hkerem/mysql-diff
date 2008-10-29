@@ -1,5 +1,7 @@
 package ru.yandex.mysqlDiff.vendor.mysql
 
+object MysqlContext extends Context(new model.MysqlDataTypes())
+
 case class MysqlServerVersion(major: Int, minor: Int, third: Int) extends Ordered[MysqlServerVersion] {
     override def compare(that: MysqlServerVersion) = {
         if (this.major != that.major) this.major - that.major
@@ -31,9 +33,12 @@ object MysqlServerVersionTests extends org.specs.Specification {
     }
 }
 
-object MysqlTests extends org.specs.Specification {
+class MysqlTests(includeOnline: Boolean) extends org.specs.Specification {
     include(MysqlServerVersionTests)
-    include(MysqlOnlineTests)
+    if (includeOnline) include(MysqlOnlineTests)
+    include(MysqlDataTypesTests)
 }
+
+object MysqlTests extends MysqlTests(true)
 
 // vim: set ts=4 sw=4 et:

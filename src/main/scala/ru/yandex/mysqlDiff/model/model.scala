@@ -16,11 +16,6 @@ case object NowValue extends SqlValue
 
 abstract class DataTypeOption
 
-case object MysqlZerofill extends DataTypeOption
-case object MysqlUnsigned extends DataTypeOption
-case class MysqlCharacterSet(name: String) extends DataTypeOption
-case class MysqlCollate(name: String) extends DataTypeOption
-
 abstract case class DataType(name: String, length: Option[Int], options: Seq[DataTypeOption]) {
     require(name.toUpperCase == name)
 
@@ -39,21 +34,6 @@ abstract case class DataType(name: String, length: Option[Int], options: Seq[Dat
     override def toString = name
 
     require(length.isEmpty || isLengthAllowed, "length is not allowed")
-}
-
-class MysqlDataType(override val name: String, override val length: Option[int], override val options: Seq[DataTypeOption]) 
-    extends DataType(name, length, options) {
-
-    def isAnyChar = name.matches(".*CHAR")
-    def isAnyDateTime = List("DATE", "TIME", "DATETIME", "TIMESTAMP") contains name
-    def isAnyNumber = name.matches("(|TINY|SMALL|BIG)INT") ||
-        (List("NUMBER", "FLOAT", "REAL", "DOUBLE", "DECIMAL", "NUMERIC") contains name)
-    def isLengthAllowed = !(isAnyDateTime || name.matches("(TINY|MEDIUM|LONG|)(TEXT|BLOB)"))
-
-    def normalized = { // XXX
-        if (name == "BIT") new MysqlDataType("TINYINT", Some(1), options)
-        else new MysqlDataType(name, length, options)
-    }
 }
 
 class PostgresqlDataType(override val name: String, override val length: Option[int], override val options: Seq[DataTypeOption]) 
@@ -101,13 +81,6 @@ abstract class DataTypes {
         else if (a.isAnyDateTime) true // probably
         else a.name == b.name && a.length == b.length // ignoring options for a while; should not ignore if options change
     }
-}
-
-class MysqlDataTypes extends DataTypes {
-    def int = make("INT")
-
-    def make(name: String, length: Option[Int], options: Seq[DataTypeOption]): DataType =
-        new MysqlDataType(name, length, options)
 }
 
 class PostgresqlDataTypes extends DataTypes {
@@ -341,7 +314,6 @@ case object DataTypePropertyType extends ColumnPropertyType {
 
 object ModelTests extends org.specs.Specification {
     include(ColumnPropertiesTests)
-    include(MysqlDataTypesTests)
 
     import Environment.defaultContext._
     
@@ -361,14 +333,6 @@ object ModelTests extends org.specs.Specification {
         } catch {
             case e: IllegalArgumentException =>
         }
-    }
-}
-
-object MysqlDataTypesTests extends org.specs.Specification {
-    import MysqlContext._
-
-    "TINYINT(1) equivalent to BIT" in {
-        dataTypes.equivalent(dataTypes.make("BIT"), dataTypes.make("TINYINT", Some(1))) must beTrue
     }
 }
 

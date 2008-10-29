@@ -6,17 +6,15 @@ case class Context(dataTypes: model.DataTypes) {
     val sqlParserCombinator = script.parser.SqlParserCombinator(this)
 }
 
-object MysqlContext extends Context(new model.MysqlDataTypes())  
-
 object PostgresqlContext extends Context(new model.PostgresqlDataTypes())
 
 object Environment {
     val defaultContext = MysqlContext
     
     def context(kind: String) = kind match {
-        case "mysql" => MysqlContext
+        case "mysql" => vendor.mysql.MysqlContext
         case "postgresql" => PostgresqlContext
     }
 }
 
-
+// vim: set ts=4 sw=4 et:
