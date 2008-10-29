@@ -13,3 +13,4 @@ lib
 *.swp
 .DS_Store
 tmp
+build.properties
