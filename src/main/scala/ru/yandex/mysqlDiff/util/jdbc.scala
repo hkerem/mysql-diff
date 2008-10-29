@@ -2,8 +2,6 @@ package ru.yandex.mysqlDiff.util
 
 import java.sql._
 import scala.collection.mutable.ArrayBuffer
-import scalax.control.ManagedResource
-import scalax.control.UntranslatedManagedResource
 
 class JdbcTemplate(dataSource: () => Connection) extends Logging {
 
