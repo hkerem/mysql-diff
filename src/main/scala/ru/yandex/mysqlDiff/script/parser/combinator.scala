@@ -15,9 +15,6 @@ import model._
 
 import script.Implicits._
 
-// XXX
-import vendor.mysql._
-
 class CombinatorParserException(msg: String, cause: Throwable) extends Exception(msg, cause) {
     def this(msg: String) = this(msg, null)
 }
@@ -57,9 +54,6 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     lexical.delimiters += ("(", ")", "=", ",", ";", "=", "!=", "-", "*") // hack
     
-    //lexical.reserved += ("CREATE", "TABLE", "VIEW", "IF", "NOT", "NULL", "EXISTS",
-    //        "AS", "SELECT", "UNIQUE", "KEY", "INDEX", "PRIMARY", "DEFAULT", "NOW", "AUTO_INCREMENT")
-   
     def trueKeyword(chars: String): Parser[String] = {
         def itIs(elem: Elem) = elem.isInstanceOf[lexical.Identifier] && elem.chars.equalsIgnoreCase(chars)
         acceptIf(itIs _)(elem => chars.toUpperCase + " expected, got " + elem.chars) ^^ ( _.chars )
@@ -94,23 +88,16 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def defaultValue: Parser[DefaultValue] = "DEFAULT" ~> sqlValue ^^ { value => DefaultValue(value) }
     
-    def autoIncrementability: Parser[AutoIncrement] =
-        "AUTO_INCREMENT" ^^^ AutoIncrement(true)
-    
-    def onUpdateCurrentTimestamp: Parser[OnUpdateCurrentTimestamp] = "ON" ~ "UPDATE" ~ "CURRENT_TIMESTAMP" ^^^
-        OnUpdateCurrentTimestamp(true)
-    
     def uniqueAttr = "UNIQUE" ^^^ InlineUnique
     def pkAttr = "PRIMARY" ~ "KEY" ^^^ InlinePrimaryKey
     
     def referencesAttr: Parser[InlineReferences] = ("REFERENCES" ~> name <~ "(") ~ name <~ ")" ^^
         { case t ~ c => InlineReferences(t, c) }
     
+    def columnProperty: Parser[ColumnProperty] = nullability | defaultValue
+    
     def columnAttr: Parser[ColumnPropertyDecl] =
-        ((nullability | defaultValue | autoIncrementability | onUpdateCurrentTimestamp) ^^
-                { p => ModelColumnProperty(p) }) |
-        uniqueAttr | pkAttr | referencesAttr
-        
+        columnProperty ^^ { p => ModelColumnProperty(p) } | uniqueAttr | pkAttr | referencesAttr
     
     def column: Parser[Column] = name ~ dataType ~ rep(columnAttr) ^^
             { case name ~ dataType ~ attrs => Column(name, dataType, attrs) }

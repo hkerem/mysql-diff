@@ -1,5 +1,6 @@
 package ru.yandex.mysqlDiff.vendor.mysql
 
+import model._
 import script.parser._
 
 class MysqlParserCombinator(context: Context) extends SqlParserCombinator(context) {
@@ -10,6 +11,13 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
       | ("CHARACTER" ~> "SET" ~> name ^^ (name => MysqlCharacterSet(name)))
       | ("COLLATE" ~> name ^^ (name => MysqlCollate(name)))
     )
+    
+    def autoIncrementability = "AUTO_INCREMENT" ^^^ AutoIncrement(true)
+    
+    def onUpdateCurrentTimestamp = "ON" ~ "UPDATE" ~ "CURRENT_TIMESTAMP" ^^^ OnUpdateCurrentTimestamp(true)
+    
+    override def columnProperty =
+        super.columnProperty | autoIncrementability | onUpdateCurrentTimestamp
 }
 
 object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext) {
@@ -23,6 +31,7 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         parse(dataTypeOption)("CHARACTER SET utf8") must_== new MysqlCharacterSet("utf8")
         parse(dataTypeOption)("COLLATE utf8bin") must_== new MysqlCollate("utf8bin")
     }
+    
 }
 
 // vim: set ts=4 sw=4 et:
