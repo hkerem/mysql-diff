@@ -12,6 +12,10 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
       | ("COLLATE" ~> name ^^ (name => MysqlCollate(name)))
     )
     
+    def nowValue: Parser[SqlValue] = (("NOW" ~ "(" ~ ")") | "CURRENT_TIMESTAMP") ^^^ NowValue
+    
+    override def sqlValue = super.sqlValue | nowValue
+    
     def autoIncrementability = "AUTO_INCREMENT" ^^^ AutoIncrement(true)
     
     def onUpdateCurrentTimestamp = "ON" ~ "UPDATE" ~ "CURRENT_TIMESTAMP" ^^^ OnUpdateCurrentTimestamp(true)

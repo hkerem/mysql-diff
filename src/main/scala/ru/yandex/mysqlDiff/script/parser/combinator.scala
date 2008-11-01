@@ -74,9 +74,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def stringValue: Parser[StringValue] = stringLit ^^
             { x => StringValue(x.replaceFirst("^[\"']", "").replaceFirst("[\"']$", "")) }
     
-    def nowValue: Parser[SqlValue] = (("NOW" ~ "(" ~ ")") | "CURRENT_TIMESTAMP") ^^^ NowValue
-    
-    def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | nowValue
+    def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue
     
     def dataTypeOption: Parser[DataTypeOption] = failure("no data type option")
     
