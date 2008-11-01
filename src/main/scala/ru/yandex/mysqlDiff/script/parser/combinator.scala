@@ -84,11 +84,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | nowValue
     
-    def dataTypeOption: Parser[DataTypeOption] =
-        ("UNSIGNED" ^^^ MysqlUnsigned) |
-        ("ZEROFILL" ^^^ MysqlZerofill) |
-        ("CHARACTER" ~> "SET" ~> name ^^ (name => MysqlCharacterSet(name))) |
-        ("COLLATE" ~> name ^^ (name => MysqlCollate(name)))
+    def dataTypeOption: Parser[DataTypeOption] = failure("no data type option")
     
     // XXX: store unsigned
     def dataType: Parser[DataType] = name ~ opt("(" ~> naturalNumber <~ ")") ~ rep(dataTypeOption) ^^
@@ -249,9 +245,9 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
 }
 
 class SqlParserCombinatorTests(context: Context) extends org.specs.Specification {
-    import Environment.defaultContext._
-
+    import context._
     import sqlParserCombinator._
+    
     import CreateTableStatement._
     
     "parseScript" in {
