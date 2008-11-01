@@ -9,7 +9,7 @@ case class Context(dataTypes: model.DataTypes) {
 object PostgresqlContext extends Context(new model.PostgresqlDataTypes())
 
 object Environment {
-    val defaultContext = MysqlContext
+    val defaultContext = vendor.mysql.MysqlContext
     
     def context(kind: String) = kind match {
         case "mysql" => vendor.mysql.MysqlContext

@@ -1,8 +1,10 @@
 package ru.yandex.mysqlDiff.script
 
+import scala.collection.mutable.ArrayBuffer
+
 import model._
 
-import scala.collection.mutable.ArrayBuffer
+import vendor.mysql._
 
 object ScriptSerializer {
     import script.{CreateTableStatement => cts}

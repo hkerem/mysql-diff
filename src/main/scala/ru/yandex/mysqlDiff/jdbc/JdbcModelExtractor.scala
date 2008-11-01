@@ -9,6 +9,9 @@ import scalax.control.ManagedResource
 import scala.util.Sorting._
 import scala.collection.mutable.ArrayBuffer
 
+// XXX: drop it
+import vendor.mysql._
+
 class JdbcModelExtractorException(msg: String, cause: Throwable) extends Exception(msg, cause)
 
 /*

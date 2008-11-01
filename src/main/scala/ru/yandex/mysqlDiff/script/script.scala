@@ -129,6 +129,10 @@ object AlterTableStatement {
     case class AddForeignKey(fk: ForeignKeyModel) extends AddOperation with KeyOperation
 }
 
+case class CreateViewStatement(name: String) extends DdlStatement
+
+case class DropViewStatement(name: String) extends DdlStatement
+
 abstract class DmlStatement extends ScriptStatement
 
 case class InsertStatement(table: String, ignore: Boolean,
@@ -144,6 +148,16 @@ case class InsertStatement(table: String, ignore: Boolean,
     
     require(data.forall(columnsCount == _.length))
 }
+
+// both expression and condition
+abstract class SelectExpr
+
+case object SelectStar extends SelectExpr
+case class SelectName(name: String) extends SelectExpr
+case class SelectValue(value: SqlValue) extends SelectExpr
+case class SelectBinary(left: SelectExpr, op: String, right: SelectExpr) extends SelectExpr
+
+case class SelectStatement(expr: Seq[SelectExpr], tables: Seq[String], condition: Option[SelectExpr])
 
 object ScriptTests extends org.specs.Specification {
 }

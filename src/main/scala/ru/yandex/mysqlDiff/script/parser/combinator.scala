@@ -15,6 +15,9 @@ import model._
 
 import script.Implicits._
 
+// XXX
+import vendor.mysql._
+
 class CombinatorParserException(msg: String, cause: Throwable) extends Exception(msg, cause) {
     def this(msg: String) = this(msg, null)
 }
@@ -52,7 +55,7 @@ case class SqlParserCombinator(val context: Context) extends StandardTokenParser
     
     import CreateTableStatement._
     
-    lexical.delimiters += ("(", ")", "=", ",", ";", "=", "-") // hack
+    lexical.delimiters += ("(", ")", "=", ",", ";", "=", "!=", "-", "*") // hack
     
     //lexical.reserved += ("CREATE", "TABLE", "VIEW", "IF", "NOT", "NULL", "EXISTS",
     //        "AS", "SELECT", "UNIQUE", "KEY", "INDEX", "PRIMARY", "DEFAULT", "NOW", "AUTO_INCREMENT")
@@ -120,10 +123,21 @@ case class SqlParserCombinator(val context: Context) extends StandardTokenParser
     
     def nameList: Parser[Seq[String]] = "(" ~> repsep(name, ",") <~ ")"
     
-    def trash: Parser[Any] = name | "=" | "DEFAULT"
+    def selectExpr: Parser[SelectExpr] = (
+        "*" ^^^ SelectStar
+      | name ^^ { case name => new SelectName(name) }
+      | sqlValue ^^ { case value => new SelectValue(value) }
+    )
     
-    //def select: Parser[Any] = "SELECT" ~> rep(not(";" | lexical.EOF))
-    def select: Parser[Any] = "SELECT" ~> rep(name)
+    def booleanOp: Parser[String] = "=" | "!=" | "LIKE"
+    
+    def selectCondition: Parser[SelectExpr] = selectExpr ~ booleanOp ~ selectExpr ^^
+        { case a ~ op ~ b => new SelectBinary(a, op, b) }
+   
+    def from: Parser[Seq[String]] = "FROM" ~> rep1sep(name, ",")
+    
+    def select: Parser[SelectStatement] = ("SELECT" ~> rep1sep(selectExpr, ",")) ~ from ~ opt("WHERE" ~> selectCondition) ^^
+        { case exprs ~ names ~ where => SelectStatement(exprs, names, where) }
     
     /** True iff unique */
     def indexUniquality: Parser[Boolean] =
@@ -164,11 +178,20 @@ case class SqlParserCombinator(val context: Context) extends StandardTokenParser
       | tableCollate
     )
     
-    def createTable: Parser[CreateTableStatement] = "CREATE" ~> "TABLE" ~> opt(ifNotExists) ~ name ~
+    def createTable = "CREATE" ~ "TABLE" ~> opt(ifNotExists) ~ name ~
             ("(" ~> repsep(tableEntry, ",") <~ ")") ~ rep(tableOption) ^^
                     { case ifne ~ name ~ entries ~ options => CreateTableStatement(name, ifne.isDefined, entries, options) }
     
-    def createView: Parser[Any] = "CREATE" ~ "VIEW" ~ opt(ifNotExists) ~ name ~ opt(nameList) ~ "AS" ~ select
+    def createView = "CREATE" ~ "VIEW" ~> opt(ifNotExists) ~> name ~ opt(nameList) ~ ("AS" ~> select) ^^
+        { case name ~ names ~ select => CreateViewStatement(name) }
+    
+    def dropTable = "DROP" ~ "TABLE" ~> name ^^ { name => DropTableStatement(name) }
+    
+    def dropView = "DROP" ~ "VIEW" ~> name ^^ { name => DropViewStatement(name) }
+    
+    def ddlStmt: Parser[DdlStatement] = createTable | createView | dropTable | dropView
+    
+    /// DML
     
     def insertDataRow: Parser[Seq[SqlValue]] = "(" ~> rep1sep(sqlValue, ",") <~ ")"
     
@@ -176,7 +199,7 @@ case class SqlParserCombinator(val context: Context) extends StandardTokenParser
         (("INSERT" ~> opt("IGNORE") <~ "INTO") ~ name ~ opt(nameList) <~ "VALUES") ~ rep1sep(insertDataRow, ",") ^^
             { case ignore ~ name ~ columns ~ data => new InsertStatement(name, ignore.isDefined, columns, data) }
     
-    def topLevel: Parser[Any] = createView | createTable | insert
+    def topLevel: Parser[Any] = ddlStmt | insert
     
     def script: Parser[Seq[Any]] = repsep(topLevel, ";") <~ opt(";") ~ lexical.EOF
     
@@ -194,6 +217,9 @@ case class SqlParserCombinator(val context: Context) extends StandardTokenParser
     
     def parseCreateTable(text: String) =
         parse(createTable)(text)
+    
+    def parseCreateView(text: String) =
+        parse(createView)(text)
     
     def parseColumn(text: String) =
         parse(column)(text)
@@ -240,6 +266,32 @@ object SqlParserCombinatorTests extends org.specs.Specification {
                 t.column("id") must beLike { case Column("id", _, attrs) if attrs.isEmpty => true }
                 true
         }
+    }
+    
+    "parse CREATE VIEW" in {
+        val v = parseCreateView("CREATE VIEW users_v AS SELECT * FROM users WHERE id != 0")
+        v.name must_== "users_v"
+    }
+    
+    "parse DROP VIEW" in {
+        parse(dropView)("DROP VIEW users_v") must beLike { case DropViewStatement("users_v") => true }
+    }
+    
+    "parse DROP TABLE" in {
+        parse(dropTable)("DROP TABLE users") must beLike { case DropTableStatement("users") => true }
+    }
+    
+    "parse SELECT" in {
+        parse(select)("SELECT * FROM users WHERE login = 'colonel'") must beLike {
+            case SelectStatement(Seq(SelectStar), Seq("users"), _) => true
+        }
+    }
+    
+    "parse selectExpr" in {
+        parse(selectExpr)("*") must_== SelectStar
+        parse(selectExpr)("users") must_== new SelectName("users")
+        parse(selectExpr)("12") must_== new SelectValue(new NumberValue(12))
+        parse(selectExpr)("'aa'") must_== new SelectValue(new StringValue("aa"))
     }
     
     "quotes in identifiers" in {

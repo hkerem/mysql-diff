@@ -1,6 +1,6 @@
 package ru.yandex.mysqlDiff.vendor.mysql
 
-object MysqlContext extends Context(new model.MysqlDataTypes())
+object MysqlContext extends Context(new MysqlDataTypes())
 
 case class MysqlServerVersion(major: Int, minor: Int, third: Int) extends Ordered[MysqlServerVersion] {
     override def compare(that: MysqlServerVersion) = {

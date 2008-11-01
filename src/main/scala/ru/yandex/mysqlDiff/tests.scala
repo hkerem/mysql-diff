@@ -1,6 +1,6 @@
 package ru.yandex.mysqlDiff
 
-class Tests(includeOnline: Boolean) extends org.specs.Specification {
+class SomeTests(includeOnline: Boolean) extends org.specs.Specification {
     include(script.parser.SqlParserCombinatorTests)
     include(model.ModelTests)
     include(model.ModelParserTests)
@@ -12,7 +12,7 @@ class Tests(includeOnline: Boolean) extends org.specs.Specification {
     if (includeOnline) include(jdbc.JdbcModelExtractorTests)
 }
 
-object Tests extends Tests(true)
-object OfflineTests extends Tests(false)
+object Tests extends SomeTests(true)
+object OfflineTests extends SomeTests(false)
 
 // vim: set ts=4 sw=4 et:
