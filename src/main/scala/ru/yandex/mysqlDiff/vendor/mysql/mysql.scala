@@ -1,6 +1,8 @@
 package ru.yandex.mysqlDiff.vendor.mysql
 
-object MysqlContext extends Context(new MysqlDataTypes())
+object MysqlContext extends Context(new MysqlDataTypes()) {
+    override val sqlParserCombinator = new MysqlParserCombinator(this)
+}
 
 case class MysqlServerVersion(major: Int, minor: Int, third: Int) extends Ordered[MysqlServerVersion] {
     override def compare(that: MysqlServerVersion) = {
@@ -37,6 +39,7 @@ class MysqlTests(includeOnline: Boolean) extends org.specs.Specification {
     include(MysqlServerVersionTests)
     if (includeOnline) include(MysqlOnlineTests)
     include(MysqlDataTypesTests)
+    include(MysqlParserCombinatorTests)
 }
 
 object MysqlTests extends MysqlTests(true)

@@ -11,7 +11,7 @@ case class ModelParser(val context: Context) {
     import context._
     
     def parseModel(text: String): DatabaseModel =
-        parseModel(parser.Parser.parse(text))
+        parseModel(parser.parse(text))
     
     def parseModel(script: Script): DatabaseModel =
         new DatabaseModel(script.ddlStatements.map(parseScriptElement _))

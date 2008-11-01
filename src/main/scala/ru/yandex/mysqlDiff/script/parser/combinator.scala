@@ -48,7 +48,7 @@ class SqlLexical extends StdLexical {
 /*
  * Note to readers: ~ operator has higher priority then ~> or <~
  */
-case class SqlParserCombinator(val context: Context) extends StandardTokenParsers {
+class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     import context._
 
     override val lexical = new SqlLexical
@@ -248,7 +248,7 @@ case class SqlParserCombinator(val context: Context) extends StandardTokenParser
     }
 }
 
-object SqlParserCombinatorTests extends org.specs.Specification {
+class SqlParserCombinatorTests(context: Context) extends org.specs.Specification {
     import Environment.defaultContext._
 
     import sqlParserCombinator._
@@ -363,11 +363,13 @@ object SqlParserCombinatorTests extends org.specs.Specification {
     
 }
 
-object Parser {
-    import Environment.defaultContext._
+object SqlParserCombinatorTests extends SqlParserCombinatorTests(Environment.defaultContext)
+
+// XXX: make class depending on context
+class Parser(context: Context) {
+    import context._
 
     def parse(text: String): Script = {
-        val c = SqlParserCombinator
         new Script(sqlParserCombinator.parse(text).map(_.asInstanceOf[ScriptElement]))
     }
     
