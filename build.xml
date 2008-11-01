@@ -63,9 +63,9 @@
                 addparams="-Xprint:typer"
                 -->
     </target>
-
-    <target name="run-tests" depends="compile">
-        <java classname="ru.yandex.mysqlDiff.Tests" failonerror="true">
+    
+    <target name="run-test" depends="compile">
+        <java classname="${test.name}" failonerror="true">
             <sysproperty key="java.awt.headless" value="true"/>
             <classpath refid="build.classpath"/>
             <classpath>
@@ -74,16 +74,15 @@
             </classpath>
         </java>
     </target>
+
+    <target name="run-tests" depends="compile">
+        <property name="test.name" value="ru.yandex.mysqlDiff.Tests"/>
+        <antcall target="run-test"/>
+    </target>
     
     <target name="run-tests-offline" depends="compile">
-        <java classname="ru.yandex.mysqlDiff.OfflineTests" failonerror="true">
-            <sysproperty key="java.awt.headless" value="true"/>
-            <classpath refid="build.classpath"/>
-            <classpath>
-                <pathelement location="target/classes"/>
-                <pathelement location="${scala-library.jar}"/>
-            </classpath>
-        </java>
+        <property name="test.name" value="ru.yandex.mysqlDiff.OfflineTests"/>
+        <antcall target="run-test"/>
     </target>
     
     <target name="do-jar">
