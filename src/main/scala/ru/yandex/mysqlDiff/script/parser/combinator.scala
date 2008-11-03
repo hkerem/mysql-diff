@@ -110,7 +110,17 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
       | sqlValue ^^ { case value => new SelectValue(value) }
     )
     
+    /** value op value to boolean */
     def booleanOp: Parser[String] = "=" | "!=" | "LIKE"
+    
+    /*
+    def andCondition: Parser[SelectExpr] = 
+    
+    def orCondition: Parser[SelectExpr] = andCondition ~ opt("AND" ~> orCondition) ^^ {
+        case a ~ Some(b) => SelectBinary(a, "AND", b)
+        case a ~ None => a
+    }
+    */
     
     def selectCondition: Parser[SelectExpr] = selectExpr ~ booleanOp ~ selectExpr ^^
         { case a ~ op ~ b => new SelectBinary(a, op, b) }
@@ -277,6 +287,20 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         parse(selectExpr)("12") must_== new SelectValue(new NumberValue(12))
         parse(selectExpr)("'aa'") must_== new SelectValue(new StringValue("aa"))
     }
+    
+    /* Not yet
+    "parse selectCondition" in {
+        parse(selectCondition)("1 = 1 AND name Like 'vas%'") must beLike {
+            case SelectBinary(l, "AND", r) =>
+                l must beLike {
+                    case SelectBinary(SelectValue(NumberValue(1)), "=", SelectValue(NumberValue(1))) => true
+                }
+                r must beLike {
+                    case SelectBinary(SelectName("name"), "Like", SelectValue(StringValue("vas%"))) => true
+                }
+        }
+    }
+    */
     
     "quotes in identifiers" in {
         val t = parseCreateTable("""CREATE TABLE `a` (`id` INT, "login" VARCHAR(100))""")
