@@ -129,7 +129,7 @@ object AlterTableStatement {
     case class AddForeignKey(fk: ForeignKeyModel) extends AddOperation with KeyOperation
 }
 
-case class CreateViewStatement(name: String) extends DdlStatement
+case class CreateViewStatement(name: String, select: SelectStatement) extends DdlStatement
 
 case class DropViewStatement(name: String) extends DdlStatement
 

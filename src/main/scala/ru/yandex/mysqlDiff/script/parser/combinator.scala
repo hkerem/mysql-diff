@@ -163,8 +163,8 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
             ("(" ~> repsep(tableEntry, ",") <~ ")") ~ rep(tableOption) ^^
                     { case ifne ~ name ~ entries ~ options => CreateTableStatement(name, ifne.isDefined, entries, options) }
     
-    def createView = "CREATE" ~ "VIEW" ~> opt(ifNotExists) ~> name ~ opt(nameList) ~ ("AS" ~> select) ^^
-        { case name ~ names ~ select => CreateViewStatement(name) }
+    def createView = "CREATE" ~ "VIEW" ~> opt(ifNotExists) ~> name ~ ("AS" ~> select) ^^
+        { case name ~ select => CreateViewStatement(name, select) }
     
     def dropTable = "DROP" ~ "TABLE" ~> name ^^ { name => DropTableStatement(name) }
     
@@ -252,6 +252,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     "parse CREATE VIEW" in {
         val v = parseCreateView("CREATE VIEW users_v AS SELECT * FROM users WHERE id != 0")
         v.name must_== "users_v"
+        v.select.expr must beLike { case Seq(SelectStar) => true }
     }
     
     "parse DROP VIEW" in {
@@ -263,9 +264,11 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     }
     
     "parse SELECT" in {
-        parse(select)("SELECT * FROM users WHERE login = 'colonel'") must beLike {
+        val s = parse(select)("SELECT * FROM users WHERE login = 'colonel'")
+        s must beLike {
             case SelectStatement(Seq(SelectStar), Seq("users"), _) => true
         }
+        s.condition.get must_== SelectBinary(SelectName("login"), "=", SelectValue(StringValue("colonel")))
     }
     
     "parse selectExpr" in {
