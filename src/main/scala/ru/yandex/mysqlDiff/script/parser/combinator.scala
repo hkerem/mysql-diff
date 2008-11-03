@@ -119,10 +119,13 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     /** value op value to boolean */
     def booleanOp: Parser[String] = "=" | "!=" | "LIKE"
     
-    /** Lowest */
-    def llCondition: Parser[SelectExpr] = selectExpr ~ booleanOp ~ selectExpr ^^ {
+    def llBinaryCondition: Parser[SelectExpr] = selectExpr ~ booleanOp ~ selectExpr ^^ {
         case a ~ x ~ b => SelectBinary(a, x, b)
     }
+    
+    /** Lowest */
+    def llCondition: Parser[SelectExpr] = 
+        ("(" ~> selectCondition <~ ")") | llBinaryCondition
     
     def andCondition: Parser[SelectExpr] = rep1sep(llCondition, "AND") ^^ {
         case ands => ands.reduceRight {
@@ -314,14 +317,28 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     }
     
     "parse selectCondition AND higher then OR" in {
-        val and = parse(selectCondition)("1 = 2 OR 2 = 3 AND 4 = 5")
-        and must beLike { case SelectBinary(a, "OR", b) => true }
-        val SelectBinary(a, "OR", b) = and
+        val or = parse(selectCondition)("1 = 2 OR 2 = 3 AND 4 = 5")
+        or must beLike { case SelectBinary(a, "OR", b) => true }
+        val SelectBinary(a, "OR", b) = or
         a must beLike {
             case SelectBinary(SelectValue(NumberValue(1)), "=", SelectValue(NumberValue(2))) => true
         }
         b must beLike {
             case SelectBinary(c, "AND", d) =>
+                c must beLike { case SelectBinary(_, "=", _) => true }
+                d must beLike { case SelectBinary(_, "=", _) => true }
+        }
+    }
+    
+    "parse selectCondition braces" in {
+        val and = parse(selectCondition)("1 = 2 AND (2 = 3 OR 4 = 5)")
+        and must beLike { case SelectBinary(a, "AND", b) => true }
+        val SelectBinary(a, "AND", b) = and
+        a must beLike {
+            case SelectBinary(SelectValue(NumberValue(1)), "=", SelectValue(NumberValue(2))) => true
+        }
+        b must beLike {
+            case SelectBinary(c, "OR", d) =>
                 c must beLike { case SelectBinary(_, "=", _) => true }
                 d must beLike { case SelectBinary(_, "=", _) => true }
         }
