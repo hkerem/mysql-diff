@@ -104,6 +104,12 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def nameList: Parser[Seq[String]] = "(" ~> repsep(name, ",") <~ ")"
     
+    def binaryOp = "+" | "-"
+    
+    // XXX: unused yet
+    def selectBinary: Parser[SelectExpr] = selectExpr ~ binaryOp ~ selectExpr ^^
+        { case a ~ op ~ b => new SelectBinary(a, op, b) }
+    
     def selectExpr: Parser[SelectExpr] = (
         "*" ^^^ SelectStar
       | name ^^ { case name => new SelectName(name) }
@@ -113,18 +119,25 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     /** value op value to boolean */
     def booleanOp: Parser[String] = "=" | "!=" | "LIKE"
     
-    /*
-    def andCondition: Parser[SelectExpr] = 
-    
-    def orCondition: Parser[SelectExpr] = andCondition ~ opt("AND" ~> orCondition) ^^ {
-        case a ~ Some(b) => SelectBinary(a, "AND", b)
-        case a ~ None => a
+    /** Lowest */
+    def llCondition: Parser[SelectExpr] = selectExpr ~ booleanOp ~ selectExpr ^^ {
+        case a ~ x ~ b => SelectBinary(a, x, b)
     }
-    */
     
-    def selectCondition: Parser[SelectExpr] = selectExpr ~ booleanOp ~ selectExpr ^^
-        { case a ~ op ~ b => new SelectBinary(a, op, b) }
-   
+    def andCondition: Parser[SelectExpr] = rep1sep(llCondition, "AND") ^^ {
+        case ands => ands.reduceRight {
+            (c1: SelectExpr, c2: SelectExpr) => SelectBinary(c1, "AND", c2)
+        }
+    }
+    
+    def orCondition: Parser[SelectExpr] = rep1sep(andCondition, "OR") ^^ {
+        case ors => ors.reduceRight {
+            (c1: SelectExpr, c2: SelectExpr) => SelectBinary(c1, "OR", c2)
+        }
+    }
+    
+    def selectCondition: Parser[SelectExpr] = orCondition
+    
     def from: Parser[Seq[String]] = "FROM" ~> rep1sep(name, ",")
     
     def select: Parser[SelectStatement] = ("SELECT" ~> rep1sep(selectExpr, ",")) ~ from ~ opt("WHERE" ~> selectCondition) ^^
@@ -288,7 +301,6 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         parse(selectExpr)("'aa'") must_== new SelectValue(new StringValue("aa"))
     }
     
-    /* Not yet
     "parse selectCondition" in {
         parse(selectCondition)("1 = 1 AND name Like 'vas%'") must beLike {
             case SelectBinary(l, "AND", r) =>
@@ -300,7 +312,6 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
                 }
         }
     }
-    */
     
     "quotes in identifiers" in {
         val t = parseCreateTable("""CREATE TABLE `a` (`id` INT, "login" VARCHAR(100))""")
