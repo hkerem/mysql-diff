@@ -128,13 +128,13 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         ("(" ~> selectCondition <~ ")") | llBinaryCondition
     
     def andCondition: Parser[SelectExpr] = rep1sep(llCondition, "AND") ^^ {
-        case ands => ands.reduceRight {
+        case ands => ands.reduceLeft {
             (c1: SelectExpr, c2: SelectExpr) => SelectBinary(c1, "AND", c2)
         }
     }
     
     def orCondition: Parser[SelectExpr] = rep1sep(andCondition, "OR") ^^ {
-        case ors => ors.reduceRight {
+        case ors => ors.reduceLeft {
             (c1: SelectExpr, c2: SelectExpr) => SelectBinary(c1, "OR", c2)
         }
     }
@@ -342,6 +342,17 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
                 c must beLike { case SelectBinary(_, "=", _) => true }
                 d must beLike { case SelectBinary(_, "=", _) => true }
         }
+    }
+    
+    "parse selectCondition first AND computed before second" in {
+        val and = parse(selectCondition)("1 = 2 AND 3 = 4 AND 5 = 6")
+        and must beLike {
+            case SelectBinary(SelectBinary(_, "AND", _), "AND", _) => true
+        }
+        val SelectBinary(SelectBinary(a, "AND", b), "AND", c) = and
+        a must beLike { case SelectBinary(SelectValue(NumberValue(1)), "=", SelectValue(NumberValue(2))) => true }
+        b must beLike { case SelectBinary(SelectValue(NumberValue(3)), "=", SelectValue(NumberValue(4))) => true }
+        c must beLike { case SelectBinary(SelectValue(NumberValue(5)), "=", SelectValue(NumberValue(6))) => true }
     }
     
     "quotes in identifiers" in {
