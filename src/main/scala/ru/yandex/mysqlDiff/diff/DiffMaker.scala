@@ -218,6 +218,12 @@ object DiffMakerTests extends org.specs.Specification {
         diffMaker.compareColumns(oldC, newC) must_== None
     }
     
+    "changeColumn bug?" in {
+        val oldC = new ColumnModel("vote", dataTypes.make("BIGINT"), new ColumnProperties(Seq.single(DefaultValue(NullValue))))
+        val newC = new ColumnModel("vote", dataTypes.make("BIGINT"), new ColumnProperties(List(DefaultValue(NullValue))))
+        diffMaker.compareColumns(oldC, newC) must_== None
+    }
+    
     "ignore index name change" in {
         val columns = List(new ColumnModel("id", dataTypes.int), new ColumnModel("b", dataTypes.int))
         val i1 = new IndexModel(Some("my_index"), List("b"), true)
