@@ -41,6 +41,25 @@ object MysqlOnlineTests extends org.specs.Specification {
         // XXX: check model
         ()
     }
+    
+    "diff unspecified default to script with default 0" in {
+        jdbcTemplate.execute("DROP TABLE IF EXISTS b")
+        
+        jdbcTemplate.execute("CREATE TABLE b (x INT NOT NULL)")
+        val oldModel = JdbcModelExtractor.extractTable("b", conn)
+        
+        val newModel = modelParser.parseCreateTableScript("CREATE TABLE b (x INT NOT NULL DEFAULT 0)")
+        
+        val diff = diffMaker.compareTables(oldModel, newModel).get
+        
+        val ChangeTableDiff("b", None, Seq(columnDiff), Seq()) = diff
+        val ChangeColumnDiff("x", None, Seq(propertyDiff)) = columnDiff
+        propertyDiff match { // must be any of
+            case ChangeColumnPropertyDiff(oldP, newP) =>
+            case CreateColumnPropertyDiff(p) =>
+        }
+    }
+    
 }
 
 // vim: set ts=4 sw=4 et:
