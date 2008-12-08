@@ -73,7 +73,8 @@ object Dump extends MainSupport {
     override val helpBanner = "$0 file|jdbc_url"
     
     override def main(args: Array[String]) {
-        val db = args match {
+        val verboseOpt = args.contains("--verbose")
+        val db = args.filter(_ != "--verbose") match {
             case Seq(db) => getModelFromArgsLine(db)
             case Seq(db, table) => getModelFromArgsLine(db, table)
             case _ =>
@@ -81,7 +82,12 @@ object Dump extends MainSupport {
                 exit(1)
         }
         
-        print(ModelSerializer.serializeDatabaseToText(db))
+        object options extends ScriptSerializer.Options.Multiline {
+            override def verbose = verboseOpt
+        }
+        
+        //print(ModelSerializer.serializeDatabaseToText(db))
+        print(ScriptSerializer.serialize(ModelSerializer.serializeDatabase(db), options))
     }
 }
 

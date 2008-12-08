@@ -15,19 +15,24 @@ object ScriptSerializer {
         def scriptTail: String = stmtJoin
         def indent = ""
         def afterComma = ""
+        def verbose = false
     }
     
     object Options {
-        object multiline extends Options {
+        trait Multiline extends Options {
             override def stmtJoin = "\n"
             override def indent = "    "
         }
         
-        object singleline extends Options {
+        object multiline extends Multiline
+        
+        trait Singleline extends Options {
             override def stmtJoin = " "
             override def scriptTail = ""
             override def afterComma = " "
         }
+        
+        object singleline extends Singleline
     }
     
     def serialize(stmts: Seq[ScriptElement], options: Options): String = {
@@ -99,7 +104,9 @@ object ScriptSerializer {
     }
     
     def serializeCreateTable(t: CreateTableStatement, options: Options): String = {
-        val l = t.entries.map(serializeTableEntry _).reverse
+        def mapEntry(e: CreateTableStatement.Entry) =
+            serializeTableEntry(e) + (if (options.verbose) " /* " + e.toString + " */" else "")
+        val l = t.entries.map(mapEntry _).reverse
         val lines = (List(l.first) ++ l.drop(1).map(_ + "," + options.afterComma)).reverse.map(options.indent + _)
         
         val firstLine = "CREATE TABLE " + t.name + " ("
