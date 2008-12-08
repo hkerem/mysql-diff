@@ -71,6 +71,10 @@ case class DiffMaker(val context: Context) {
                 case (Some(fromP), Some(toP)) if !columnPropertiesEquivalent(fromP, toP) =>
                     diff += new ChangeColumnPropertyDiff(fromP, toP)
                 
+                // don't know how to deal with default values properly
+                case (None, Some(toP)) if pt == DefaultValuePropertyType =>
+                    diff += new ChangeColumnPropertyDiff(DefaultValue(NullValue), toP)
+                
                 case _ =>
             }
         }
