@@ -22,7 +22,7 @@ class MysqlDataType(override val name: String, override val length: Option[int],
     }
 }
 
-class MysqlDataTypes extends DataTypes {
+object MysqlDataTypes extends DataTypes {
     def int = make("INT")
 
     def make(name: String, length: Option[Int], options: Seq[DataTypeOption]): DataType =

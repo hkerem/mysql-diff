@@ -36,21 +36,6 @@ abstract case class DataType(name: String, length: Option[Int], options: Seq[Dat
     require(length.isEmpty || isLengthAllowed, "length is not allowed")
 }
 
-class PostgresqlDataType(override val name: String, override val length: Option[int], override val options: Seq[DataTypeOption]) 
-    extends DataType(name, length, options) {
-
-    def isAnyChar = name.matches(".*CHAR")
-    def isAnyDateTime = List("DATE", "TIME", "TIMESTAMP") contains name
-    def isAnyNumber = name.matches("(SMALL|BIG)INT|INTEGER") ||
-        (List("NUMBER", "REAL", "DOUBLE PRECISION", "DECIMAL", "NUMERIC") contains name)
-    
-    def isLengthAllowed = !(isAnyDateTime || name.matches("TEXT|BYTEA"))
-
-    def normalized = { // FIXME
-        new PostgresqlDataType(name, length, options)
-    }
-}
-
 abstract class DataTypes {
     def varchar(length: Int): DataType = make("VARCHAR", Some(length))
     
@@ -81,13 +66,6 @@ abstract class DataTypes {
         else if (a.isAnyDateTime) true // probably
         else a.name == b.name && a.length == b.length // ignoring options for a while; should not ignore if options change
     }
-}
-
-class PostgresqlDataTypes extends DataTypes {
-    def int = make("INTEGER")
-
-    def make(name: String, length: Option[Int], options: Seq[DataTypeOption]): DataType =
-        new PostgresqlDataType(name, length, options)
 }
 
 abstract class TableEntry

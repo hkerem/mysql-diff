@@ -1,6 +1,6 @@
 package ru.yandex.mysqlDiff.vendor.mysql
 
-object MysqlContext extends Context(new MysqlDataTypes()) {
+object MysqlContext extends Context(MysqlDataTypes) {
     override val sqlParserCombinator = new MysqlParserCombinator(this)
 }
 
