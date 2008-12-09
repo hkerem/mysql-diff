@@ -85,6 +85,16 @@
         <antcall target="run-test"/>
     </target>
     
+    <target name="run-tests-mysql" depends="compile">
+        <property name="test.name" value="ru.yandex.mysqlDiff.MysqlTests"/>
+        <antcall target="run-test"/>
+    </target>
+    
+    <target name="run-tests-postgresql" depends="compile">
+        <property name="test.name" value="ru.yandex.mysqlDiff.PostgresqlTests"/>
+        <antcall target="run-test"/>
+    </target>
+    
     <target name="do-jar">
         <jar jarfile="target/yandex-mysql-diff${jar.suffix}.jar" index="true">
             <fileset dir="target/classes"/>
