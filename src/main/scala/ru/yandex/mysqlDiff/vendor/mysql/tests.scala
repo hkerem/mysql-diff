@@ -60,6 +60,17 @@ object MysqlOnlineTests extends org.specs.Specification {
         }
     }
     
+    "identical" in {
+        jdbcTemplate.execute("DROP TABLE IF EXISTS c")
+        
+        jdbcTemplate.execute("CREATE TABLE c (idc BIGINT NOT NULL)")
+        val oldModel = JdbcModelExtractor.extractTable("c", conn)
+        
+        val newModel = modelParser.parseCreateTableScript("CREATE TABLE c (idc BIGINT NOT NULL)")
+        
+        diffMaker.compareTables(oldModel, newModel) must_== None
+    }
+    
 }
 
 // vim: set ts=4 sw=4 et:
