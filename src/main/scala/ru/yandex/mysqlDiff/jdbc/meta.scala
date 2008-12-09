@@ -111,4 +111,16 @@ class MetaDao(jt: JdbcTemplate) {
    
 }
 
+abstract class DbMetaDaoTests(ds: LiteDataSource) extends org.specs.Specification {
+    // XXX: write some tests
+}
+
+object MysqlMetaDaoTests extends DbMetaDaoTests(vendor.mysql.MysqlTestDataSourceParameters.ds)
+
+class MetaDaoTests(testsSelector: TestsSelector) extends org.specs.Specification {
+    if (testsSelector.includeMysql) include(MysqlMetaDaoTests)
+}
+
+object MetaDaoTests extends MetaDaoTests(AllTestsSelector)
+
 // vim: set ts=4 sw=4 et:

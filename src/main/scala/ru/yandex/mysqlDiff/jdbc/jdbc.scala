@@ -46,4 +46,11 @@ object QueryTool {
     }
 }
 
+class JdbcTests(testsSelector: TestsSelector) extends org.specs.Specification {
+    include(new MetaDaoTests(testsSelector))
+    if (testsSelector.includeMysql) include(JdbcModelExtractorTests)
+}
+
+object JdbcTests extends JdbcTests(AllTestsSelector)
+
 // vim: set ts=4 sw=4 et:

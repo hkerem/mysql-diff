@@ -26,8 +26,7 @@ class SomeTests(testsSelector: TestsSelector) extends org.specs.Specification {
     include(diff.DiffMakerTests)
     include(diff.DiffSerializerTests)
     include(new vendor.VendorTests(testsSelector))
-    // XXX: JdbcModelExtractorTests must be moved to mysql subpackage
-    if (testsSelector.includeMysql) include(jdbc.JdbcModelExtractorTests)
+    include(new jdbc.JdbcTests(testsSelector))
 }
 
 object Tests extends SomeTests(AllTestsSelector)

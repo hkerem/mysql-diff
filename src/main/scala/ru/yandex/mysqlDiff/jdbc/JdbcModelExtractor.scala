@@ -295,24 +295,25 @@ object JdbcModelExtractor {
         r
     }
     
-    def extractTables(conn: ManagedResource[Connection]): Seq[TableModel] =
-        for (c <- conn) yield new AllTablesSchemaExtractor(c).extractTables()
+    def extractTables(ds: LiteDataSource): Seq[TableModel] =
+        for (c <- new JdbcTemplate(ds)) yield new AllTablesSchemaExtractor(c).extractTables()
     
-    def extractTable(tableName: String, conn: ManagedResource[Connection]): TableModel =
-        for (c <- conn) yield new SingleTableSchemaExtractor(c).extractTable(tableName)
+    def extractTable(tableName: String, ds: LiteDataSource): TableModel =
+        for (c <- new JdbcTemplate(ds)) yield new SingleTableSchemaExtractor(c).extractTable(tableName)
     
-    def extract(conn: ManagedResource[Connection]): DatabaseModel =
-        for (c <- conn) yield new AllTablesSchemaExtractor(c).extract()
+    def extract(ds: LiteDataSource): DatabaseModel =
+        for (c <- new JdbcTemplate(ds)) yield new AllTablesSchemaExtractor(c).extract()
     
     def search(url: String): Seq[TableModel] = {
-        extractTables(connection(url))
+        extractTables(LiteDataSource.driverManager(url))
     }
 
 
     def parse(jdbcUrl: String): DatabaseModel = new DatabaseModel(search(jdbcUrl))
     
     def parseTable(tableName: String, jdbcUrl: String) =
-        for (c <- connection(jdbcUrl)) yield new SingleTableSchemaExtractor(c).extractTable(tableName)
+        for (c <- new JdbcTemplate(LiteDataSource.driverManager(jdbcUrl)))
+            yield new SingleTableSchemaExtractor(c).extractTable(tableName)
     
     def main(args: scala.Array[String]) {
         def usage() {
@@ -344,7 +345,7 @@ object JdbcModelExtractorTests extends org.specs.Specification {
     }
     
     def extractTable(name: String) =
-        for (c <- conn) yield new JdbcModelExtractor.SingleTableSchemaExtractor(c).extractTable(name)
+        for (c <- jdbcTemplate) yield new JdbcModelExtractor.SingleTableSchemaExtractor(c).extractTable(name)
     
     "Simple Table" in {
         dropTable("bananas")

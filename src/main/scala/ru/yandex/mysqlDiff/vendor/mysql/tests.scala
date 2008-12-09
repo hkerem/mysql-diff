@@ -7,6 +7,7 @@ import jdbc._
 import diff._
 import model._
 import script._
+import util._
 
 object MysqlTestDataSourceParameters {
     Class.forName("com.mysql.jdbc.Driver")
@@ -17,9 +18,9 @@ object MysqlTestDataSourceParameters {
     
     def openConnection() = DriverManager.getConnection(testDsUrl, testDsUser, testDsPassword)
     
-    val conn = ManagedResource(openConnection)
+    val ds = LiteDataSource.driverManager(testDsUrl, testDsUser, testDsPassword)
     
-    val jdbcTemplate = new util.JdbcTemplate(() => openConnection())
+    val jdbcTemplate = new util.JdbcTemplate(ds)
 }
 
 object MysqlOnlineTests extends org.specs.Specification {
@@ -31,13 +32,13 @@ object MysqlOnlineTests extends org.specs.Specification {
         
         jdbcTemplate.execute("CREATE TABLE a (kk INT)")
         val nk = "CREATE TABLE a (id INT PRIMARY KEY AUTO_INCREMENT, kk INT)"
-        val oldModel = JdbcModelExtractor.extractTable("a", conn)
+        val oldModel = JdbcModelExtractor.extractTable("a", ds)
         val newModel = modelParser.parseCreateTableScript(nk)
         val diff = diffMaker.compareTables(oldModel, newModel).get
         val script = new Script(TableScriptBuilder.alterScript(diff, newModel)).statements
         //script.foreach((s: ScriptStatement) => println(s.serialize))
         script.foreach((s: ScriptStatement) => jdbcTemplate.execute(s.serialize))
-        val gotModel = JdbcModelExtractor.extractTable("a", conn)
+        val gotModel = JdbcModelExtractor.extractTable("a", ds)
         // XXX: check model
         ()
     }
@@ -46,7 +47,7 @@ object MysqlOnlineTests extends org.specs.Specification {
         jdbcTemplate.execute("DROP TABLE IF EXISTS b")
         
         jdbcTemplate.execute("CREATE TABLE b (x INT NOT NULL)")
-        val oldModel = JdbcModelExtractor.extractTable("b", conn)
+        val oldModel = JdbcModelExtractor.extractTable("b", ds)
         
         val newModel = modelParser.parseCreateTableScript("CREATE TABLE b (x INT NOT NULL DEFAULT 0)")
         
@@ -64,7 +65,7 @@ object MysqlOnlineTests extends org.specs.Specification {
         jdbcTemplate.execute("DROP TABLE IF EXISTS c")
         
         jdbcTemplate.execute("CREATE TABLE c (idc BIGINT NOT NULL)")
-        val oldModel = JdbcModelExtractor.extractTable("c", conn)
+        val oldModel = JdbcModelExtractor.extractTable("c", ds)
         
         val newModel = modelParser.parseCreateTableScript("CREATE TABLE c (idc BIGINT NOT NULL)")
         

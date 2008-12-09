@@ -18,6 +18,12 @@ object LiteDataSource extends Logging {
     
     def apply(ds: DataSource): LiteDataSource = apply(() => ds.getConnection())
     
+    def driverManager(url: String, user: String, password: String): LiteDataSource =
+        apply(() => DriverManager.getConnection(url, user, password))
+    
+    def driverManager(url: String): LiteDataSource =
+        apply(() => DriverManager.getConnection(url))
+    
     def singleConnection(c: Connection) = new SingleConnectionLiteDataSource(c)
 }
 
@@ -57,6 +63,23 @@ class JdbcTemplate(dataSource: LiteDataSource) extends Logging {
     def this(ds: DataSource) = this(LiteDataSource(ds))
 
     import dataSource._
+
+    
+    // copy from scalax.resource
+    def foreach(f: Connection => Unit): Unit = acquireFor(f)
+    def flatMap[B](f: Connection => B): B = acquireFor(f)
+    def map[B](f: Connection => B): B = acquireFor(f)
+
+    /** Acquires the resource for the duration of the supplied function. */
+    private def acquireFor[B](f: Connection => B): B = {
+        val c = openConnection()
+        try {
+            f(c)
+        } finally {
+            closeConnectionQuietly(c)
+        }
+    }
+    
 
     trait Query {
         def prepareStatement(conn: Connection): PreparedStatement
