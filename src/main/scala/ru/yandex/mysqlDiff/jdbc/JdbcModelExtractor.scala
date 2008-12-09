@@ -12,6 +12,8 @@ import scala.collection.mutable.ArrayBuffer
 // XXX: drop it
 import vendor.mysql._
 
+import util._
+
 class JdbcModelExtractorException(msg: String, cause: Throwable) extends Exception(msg, cause)
 
 /*
@@ -81,98 +83,12 @@ object JdbcModelExtractor {
     
     import MetaDao._
         
+    /**
+     * @deprecated
+     */
     class MetaDao(conn: Connection) {
         
-        def findPrimaryKey(catalog: String, schema: String, tableName: String): Option[PrimaryKeyModel] = {
-            val rs = conn.getMetaData.getPrimaryKeys(catalog, schema, tableName)
-            
-            case class R(pkName: String, columnName: String, keySeq: int)
-            
-            val r0 = read(rs) { rs =>
-                R(rs.getString("PK_NAME"), rs.getString("COLUMN_NAME"), rs.getInt("KEY_SEQ"))
-            }
-            
-            val r = stableSort(r0, (r: R) => r.keySeq)
-            
-            if (r.isEmpty) None
-            else {
-                val pkName = r.first.pkName
-                
-                // check all rows have the same name
-                for (R(p, _, _) <- r)
-                    if (p != pkName)
-                        throw new IllegalStateException("got different names for pk: " + p + ", " + pkName)
-                
-                // MySQL names primary key PRIMARY
-                val pkNameO = if (pkName != null && pkName != "PRIMARY") Some(pkName) else None
-                
-                Some(new PrimaryKeyModel(pkNameO, r.map(_.columnName)))
-            }
-        }
-        
-        def findTableNames(catalog: String, schema: String) = {
-            val data = conn.getMetaData
-
-            val rs = data.getTables(catalog, schema, "%", List("TABLE").toArray)
-
-            read(rs) { rs =>
-                rs.getString("TABLE_NAME")
-            }
-        }
-        
-        // regular indexes
-        def findIndexes(catalog: String, schema: String, tableName: String): Seq[IndexModel] = {
-            val rs = conn.getMetaData.getIndexInfo(catalog, schema, tableName, false, false)
-            
-            case class R(indexName: String, nonUnique: Boolean, ordinalPosition: Int,
-                    columnName: String, ascOrDesc: String)
-            {
-                def unique = !nonUnique
-            }
-            
-            val r = read(rs) { rs =>
-                R(rs.getString("INDEX_NAME"), rs.getBoolean("NON_UNIQUE"), rs.getInt("ORDINAL_POSITION"),
-                        rs.getString("COLUMN_NAME"), rs.getString("ASC_OR_DESC"))
-            }
-            
-            val indexNames = Set(r.map(_.indexName): _*).toSeq
-            
-            indexNames.map { indexName =>
-                val rowsWithName = r.filter(_.indexName == indexName)
-                val rows = stableSort(rowsWithName, (r: R) => r.ordinalPosition)
-                
-                val unique = rows.first.unique
-                
-                IndexModel(Some(indexName), rows.map(_.columnName), unique)
-            }
-        }
-        
-        def findImportedKeys(catalog: String, schema: String, tableName: String): Seq[ForeignKeyModel] = {
-            val rs = conn.getMetaData.getImportedKeys(catalog, schema, tableName)
-            
-            case class R(keyName: String, externalTableName: String,
-                    localColumnName: String, externalColumnName: String)
-            
-            val r = read(rs) { rs =>
-                R(rs.getString("FK_NAME"), rs.getString("PKTABLE_NAME"),
-                        rs.getString("FKCOLUMN_NAME"), rs.getString("PKCOLUMN_NAME"))
-            }
-            
-            // key name can be null
-            val keys = Set(r.map(x => (x.keyName, x.externalTableName)): _*).toSeq
-            
-            keys.map { case (keyName, _) =>
-                val rows = r.filter(_.keyName == keyName)
-                val externalTableNames = Set(rows.map(_.externalTableName): _*)
-                if (externalTableNames.size != 1) {
-                    val m = "internal error, got external table names: " + externalTableNames +
-                            " for key " + keyName
-                    throw new IllegalStateException(m)
-                }
-                ForeignKeyModel(Some(keyName), rows.map(_.localColumnName),
-                        externalTableNames.elements.next, rows.map(_.externalColumnName))
-            }
-        }
+        // XXX: move outside: MySQL-specific
         
         def mapTableOptions(rs: ResultSet) =
             (rs.getString("TABLE_NAME"), List(TableOption("ENGINE", rs.getString("ENGINE"))))
@@ -220,6 +136,7 @@ object JdbcModelExtractor {
     
     abstract class SchemaExtractor(conn: Connection) {
         protected val dao = new MetaDao(conn)
+        protected val dao2 = new jdbc.MetaDao(LiteDataSource.singleConnection(conn))
         
         lazy val currentDb = {
             val db = conn.getMetaData.getURL.replaceFirst("\\?.*", "").replaceFirst(".*/", "")
@@ -302,13 +219,13 @@ object JdbcModelExtractor {
         }
         
         def getPrimaryKey(tableName: String): Option[PrimaryKeyModel] =
-            dao.findPrimaryKey(currentCatalog, currentSchema, tableName)
+            dao2.findPrimaryKey(currentCatalog, currentSchema, tableName)
         
         def getIndexes(tableName: String): Seq[IndexModel] =
-            dao.findIndexes(currentCatalog, currentSchema, tableName)
+            dao2.findIndexes(currentCatalog, currentSchema, tableName)
 
         def getFks(tableName: String): Seq[ForeignKeyModel] =
-            dao.findImportedKeys(currentCatalog, currentSchema, tableName)
+            dao2.findImportedKeys(currentCatalog, currentSchema, tableName)
         
         /** Not including PK */
         def getKeys(tableName: String): Seq[KeyModel] =
@@ -332,7 +249,7 @@ object JdbcModelExtractor {
         def extract(): DatabaseModel =
             new DatabaseModel(extractTables())
         
-        private val cachedTableNames = new Lazy(dao.findTableNames(currentCatalog, currentSchema))
+        private val cachedTableNames = new Lazy(dao2.findTableNames(currentCatalog, currentSchema))
         def tableNames = cachedTableNames.get
         
         private val cachedTablesOptions = new Lazy(dao.findTablesOptions(currentDb))
@@ -369,7 +286,8 @@ object JdbcModelExtractor {
     }
     
     
-    private def read[T](rs: ResultSet)(f: ResultSet => T) = {
+    // XXX: move to jdbc.MetaDao
+    def read[T](rs: ResultSet)(f: ResultSet => T) = {
         var r = List[T]()
         while (rs.next()) {
             r += f(rs)
