@@ -1,11 +1,62 @@
 package ru.yandex.mysqlDiff.util
 
 import java.sql._
+import javax.sql.DataSource
 import scala.collection.mutable.ArrayBuffer
 
-class JdbcTemplate(dataSource: () => Connection) extends Logging {
+trait LiteDataSource {
+    def openConnection(): Connection
+    def closeConnection(c: Connection) = c.close()
+    /** Close data source */
+    def close() = ()
+}
 
-    def openConnection() = dataSource()
+object LiteDataSource extends Logging {
+    def apply(f: () => Connection): LiteDataSource = new LiteDataSource {
+        override def openConnection() = f()
+    }
+    
+    def apply(ds: DataSource): LiteDataSource = apply(() => ds.getConnection())
+    
+    def singleConnection(c: Connection) = new SingleConnectionLiteDataSource(c)
+}
+
+class SingleConnectionLiteDataSource(c: Connection) extends LiteDataSource {
+    override def openConnection() = c
+    override def closeConnection(c: Connection) = ()
+}
+
+class CacheConnectionLiteDataSource(ds: LiteDataSource) extends LiteDataSource {
+    private var cached: Option[Connection] = None
+    
+    override def openConnection() = synchronized {
+        cached match {
+            case Some(c) => c
+            case None =>
+                val c = ds.openConnection()
+                cached = Some(c)
+                c
+        }
+    }
+    
+    override def closeConnection(c: Connection) = ()
+    
+    override def close() = synchronized {
+        cached match {
+            case Some(c) =>
+                ds.closeConnection(c)
+                cached = None
+            case None =>
+        }
+    }
+}
+
+class JdbcTemplate(dataSource: LiteDataSource) extends Logging {
+    
+    def this(ds: () => Connection) = this(LiteDataSource(ds))
+    def this(ds: DataSource) = this(LiteDataSource(ds))
+
+    import dataSource._
 
     trait Query {
         def prepareStatement(conn: Connection): PreparedStatement
@@ -31,6 +82,7 @@ class JdbcTemplate(dataSource: () => Connection) extends Logging {
         
     }
     
+    /** Close quietly */
     private def close(o: { def close() }) {
         if (o != null)
             try {
@@ -40,12 +92,19 @@ class JdbcTemplate(dataSource: () => Connection) extends Logging {
             }
     }
     
+    def closeConnectionQuietly(c: Connection) =
+        try {
+            closeConnection(c)
+        } catch {
+            case e => logger.warn("failed to close connection: " + e, e)
+        }
+    
     def execute[T](ccb: Connection => T): T = {
         val conn = openConnection()
         try {
             ccb(conn)
         } finally {
-            close(conn)
+            closeConnectionQuietly(conn)
         }
     }
     
