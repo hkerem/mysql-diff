@@ -118,7 +118,7 @@ abstract class DbMetaDaoTests(ds: LiteDataSource) extends org.specs.Specificatio
     
     // dummy
     "SELECT 1" in {
-        jt.query("SELECT 1").single(r => r.getInt(1)) must_== 1
+        jt.query("SELECT 1").int() must_== 1
     }
 }
 

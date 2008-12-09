@@ -57,13 +57,9 @@ class CacheConnectionLiteDataSource(ds: LiteDataSource) extends LiteDataSource {
     }
 }
 
-class JdbcTemplate(dataSource: LiteDataSource) extends Logging {
-    
-    def this(ds: () => Connection) = this(LiteDataSource(ds))
-    def this(ds: DataSource) = this(LiteDataSource(ds))
-
-    import dataSource._
-
+trait JdbcOperations extends Logging {
+    val ds: LiteDataSource
+    import ds._
     
     // copy from scalax.resource
     def foreach(f: Connection => Unit): Unit = acquireFor(f)
@@ -80,12 +76,11 @@ class JdbcTemplate(dataSource: LiteDataSource) extends Logging {
         }
     }
     
-
     trait Query {
         def prepareStatement(conn: Connection): PreparedStatement
         
         def execute[T](rse: ResultSet => T) =
-            JdbcTemplate.this.execute { conn =>
+            JdbcOperations.this.execute { conn =>
                 val ps = prepareStatement(conn)
                 try {
                     val rs = ps.executeQuery()
@@ -95,7 +90,7 @@ class JdbcTemplate(dataSource: LiteDataSource) extends Logging {
                 }
             }
         
-        def seq[T](rm: ResultSet => T): Seq[T] = execute { rs =>
+        private def read[T](rs: ResultSet, rm: ResultSet => T): Seq[T] = {
             val r = new ArrayBuffer[T]
             while (rs.next()) {
                 r += rm(rs)
@@ -103,11 +98,28 @@ class JdbcTemplate(dataSource: LiteDataSource) extends Logging {
             r
         }
         
-        def single[T](rm: ResultSet => T): T = {
-            val s = seq(rm)
-            if (s.length != 1) throw new Exception("expecting 1 row") // XXX: better exception
-            s.first
+        def seq[T](rm: ResultSet => T): Seq[T] =
+            execute { rs => read(rs, rm) }
+        
+        private def singleColumnSeq[T](rm: ResultSet => T): Seq[T] = execute { rs =>
+            if (rs.getMetaData.getColumnCount != 1) throw new Exception("expecting single column") // XXX
+            read(rs, rm)
         }
+        
+        def ints(): Seq[Int] = singleColumnSeq { rs => rs.getInt(1) }
+        
+        private class SqlResultSeq[T](s: Seq[T]) {
+            def singleRow: T = {
+                if (s.length != 1) throw new Exception("expecting 1 row")
+                s.first
+            }
+        }
+        
+        implicit private def sqlResultSeq[T](s: Seq[T]) = new SqlResultSeq[T](s)
+        
+        def single[T](rm: ResultSet => T): T = seq(rm).singleRow
+        
+        def int() = ints().singleRow
     }
     
     /** Close quietly */
@@ -169,6 +181,13 @@ class JdbcTemplate(dataSource: LiteDataSource) extends Logging {
     }
     
     def query(q: String, params: Any*) = new ParamsQuery(q, params: _*)
+}
+
+class JdbcTemplate(override val ds: LiteDataSource) extends JdbcOperations {
+    
+    def this(ds: () => Connection) = this(LiteDataSource(ds))
+    def this(ds: DataSource) = this(LiteDataSource(ds))
+
 }
 
 // vim: set ts=4 sw=4 et:
