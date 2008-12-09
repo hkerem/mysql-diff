@@ -113,12 +113,21 @@ class MetaDao(jt: JdbcTemplate) {
 
 abstract class DbMetaDaoTests(ds: LiteDataSource) extends org.specs.Specification {
     // XXX: write some tests
+    
+    val jt = new util.JdbcTemplate(ds)
+    
+    // dummy
+    "SELECT 1" in {
+        jt.query("SELECT 1").single(r => r.getInt(1)) must_== 1
+    }
 }
 
 object MysqlMetaDaoTests extends DbMetaDaoTests(vendor.mysql.MysqlTestDataSourceParameters.ds)
+object PostgresqlMetaDaoTests extends DbMetaDaoTests(vendor.postgresql.PostgresqlTestDataSourceParameters.ds)
 
 class MetaDaoTests(testsSelector: TestsSelector) extends org.specs.Specification {
     if (testsSelector.includeMysql) include(MysqlMetaDaoTests)
+    if (testsSelector.includePostgresql) include(PostgresqlMetaDaoTests)
 }
 
 object MetaDaoTests extends MetaDaoTests(AllTestsSelector)

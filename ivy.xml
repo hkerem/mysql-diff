@@ -10,6 +10,7 @@
         <dependency org="org.slf4j" name="slf4j-simple" rev="1.5.3"/>
         
         <dependency org="mysql" name="mysql-connector-java" rev="5.1.6"/>
+        <dependency org="postgresql" name="postgresql" rev="8.3-603.jdbc4"/>
         
         <dependency org="org.scalaforge" name="scalax" rev="0.1"/>
         

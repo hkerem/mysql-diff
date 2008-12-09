@@ -103,6 +103,11 @@ class JdbcTemplate(dataSource: LiteDataSource) extends Logging {
             r
         }
         
+        def single[T](rm: ResultSet => T): T = {
+            val s = seq(rm)
+            if (s.length != 1) throw new Exception("expecting 1 row") // XXX: better exception
+            s.first
+        }
     }
     
     /** Close quietly */

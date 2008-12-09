@@ -1,6 +1,5 @@
 package ru.yandex.mysqlDiff.vendor.mysql
 
-import scalax.control.ManagedResource
 import java.sql._
 
 import jdbc._
@@ -9,18 +8,13 @@ import model._
 import script._
 import util._
 
-object MysqlTestDataSourceParameters {
+object MysqlTestDataSourceParameters extends TestDataSourceParameters {
     Class.forName("com.mysql.jdbc.Driver")
     
     val testDsUrl = "jdbc:mysql://fastshot:3306/mysql_diff_test"
     val testDsUser = "test"
     val testDsPassword = "test"
     
-    def openConnection() = DriverManager.getConnection(testDsUrl, testDsUser, testDsPassword)
-    
-    val ds = LiteDataSource.driverManager(testDsUrl, testDsUser, testDsPassword)
-    
-    val jdbcTemplate = new util.JdbcTemplate(ds)
 }
 
 object MysqlOnlineTests extends org.specs.Specification {
