@@ -18,11 +18,15 @@ object LiteDataSource extends Logging {
     
     def apply(ds: DataSource): LiteDataSource = apply(() => ds.getConnection())
     
-    def driverManager(url: String, user: String, password: String): LiteDataSource =
+    def driverManager(url: String, user: String, password: String): LiteDataSource = {
+        require(url != null && url.length > 0, "url must be not empty")
         apply(() => DriverManager.getConnection(url, user, password))
+    }
     
-    def driverManager(url: String): LiteDataSource =
+    def driverManager(url: String): LiteDataSource = {
+        require(url != null && url.length > 0, "url must be not empty")
         apply(() => DriverManager.getConnection(url))
+    }
     
     def singleConnection(c: Connection) = new SingleConnectionLiteDataSource(c)
 }
