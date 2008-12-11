@@ -9,11 +9,10 @@ import script._
 import util._
 
 object MysqlTestDataSourceParameters extends TestDataSourceParameters {
-    Class.forName("com.mysql.jdbc.Driver")
     
-    val testDsUrl = "jdbc:mysql://fastshot:3306/mysql_diff_test"
-    val testDsUser = "test"
-    val testDsPassword = "test"
+    override val testDsUrl = "jdbc:mysql://fastshot:3306/mysql_diff_test"
+    override val testDsUser = "test"
+    override val testDsPassword = "test"
     
 }
 
