@@ -16,14 +16,17 @@
     <echo>java.home=${java.home}</echo>
     <echo>scala.home=${scala.home}</echo>
     
-    <available property="ivy.available" file="lib/ivy/ivy-2.0.0-beta2.jar"/>
+    <property name="ivy.version" value="2.0.0-rc2"/>
+    
+    <available property="ivy.available" file="lib/ivy/ivy-${ivy.version}.jar"/>
     <target name="download-ivy" unless="ivy.available">
+        <delete dir="lib/ivy"/>
         <mkdir dir="lib/ivy"/>
         
         <echo>Downloading ivy</echo>
         
-        <get src="http://repo1.maven.org/maven2/org/apache/ivy/ivy/2.0.0-beta2/ivy-2.0.0-beta2.jar"
-                dest="lib/ivy/ivy-2.0.0-beta2.jar"/>
+        <get src="http://repo1.maven.org/maven2/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar"
+                dest="lib/ivy/ivy-${ivy.version}.jar"/>
     </target>
     
     <target name="resolve" depends="download-ivy">
