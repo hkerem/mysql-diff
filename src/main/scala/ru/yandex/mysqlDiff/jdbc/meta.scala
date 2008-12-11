@@ -20,7 +20,7 @@ class MetaDao(jt: JdbcTemplate) {
         execute { conn =>
             val rs = conn.getMetaData.getPrimaryKeys(catalog, schema, tableName)
 
-            case class R(pkName: String, columnName: String, keySeq: int)
+            case class R(pkName: String, columnName: String, keySeq: Int)
 
             val r0 = read(rs) { rs =>
                 R(rs.getString("PK_NAME"), rs.getString("COLUMN_NAME"), rs.getInt("KEY_SEQ"))
