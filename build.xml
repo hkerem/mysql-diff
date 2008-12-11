@@ -68,7 +68,7 @@
     </target>
     
     <target name="run-test" depends="compile">
-        <java classname="${test.name}" failonerror="true">
+        <java classname="${test.name}" failonerror="true" fork="yes">
             <sysproperty key="java.awt.headless" value="true"/>
             <classpath refid="build.classpath"/>
             <classpath>
