@@ -9,7 +9,7 @@ object PostgresqlDataTypes extends DataTypes {
         new PostgresqlDataType(name, length, options)
 }
 
-class PostgresqlDataType(override val name: String, override val length: Option[int], override val options: Seq[DataTypeOption])
+case class PostgresqlDataType(override val name: String, override val length: Option[int], override val options: Seq[DataTypeOption])
     extends DataType(name, length, options) {
 
     def isAnyChar = name.matches(".*CHAR")

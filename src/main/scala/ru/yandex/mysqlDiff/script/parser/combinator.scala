@@ -78,8 +78,10 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def dataTypeOption: Parser[DataTypeOption] = failure("no data type option")
     
+    def dataTypeName = name
+    
     // XXX: store unsigned
-    def dataType: Parser[DataType] = name ~ opt("(" ~> naturalNumber <~ ")") ~ rep(dataTypeOption) ^^
+    def dataType: Parser[DataType] = dataTypeName ~ opt("(" ~> naturalNumber <~ ")") ~ rep(dataTypeOption) ^^
             { case name ~ length ~ options => dataTypes.make(name.toUpperCase, length, options) }
    
     def nullability: Parser[Nullability] = opt("NOT") <~ "NULL" ^^ { x => Nullability(x.isEmpty) }
@@ -364,7 +366,8 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     "parseColumn default value" in {
         val column = parseColumn("friend_files_count INT NOT NULL DEFAULT 17")
         column.name must_== "friend_files_count"
-        column.dataType must_== dataTypes.int
+        //column.dataType must_== dataTypes.int
+        column.dataType.name must_== "INT"
         column.defaultValue must_== Some(NumberValue(17))
     }
     
@@ -387,7 +390,8 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         t.name must_== "a"
         t.columns must haveSize(1)
         t.columns must exist({ c: CreateTableStatement.Column => c.name == "id" })
-        t.column("id").dataType must_== dataTypes.int
+        //t.column("id").dataType must_== dataTypes.int
+        t.column("id").dataType.name must_== "INT"
     }
     
     "parse references from column" in {
