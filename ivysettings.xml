@@ -7,6 +7,7 @@
         <chain name="default">
             <ibiblio name="ibiblio" m2compatible="true"/>
             <ibiblio name="scala-tools" root="http://scala-tools.org/repo-releases/" m2compatible="true"/>
+            <ibiblio name="scala-tools-ss" root="http://scala-tools.org/repo-snapshots/" m2compatible="true"/>
         </chain>
     </resolvers>
 </ivysettings>
