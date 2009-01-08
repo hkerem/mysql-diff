@@ -34,4 +34,12 @@ object OfflineTests extends SomeTests(OfflineTestsSelector)
 object MysqlTests extends SomeTests(new TestsSelector { override def includeMysql = true })
 object PostgresqlTests extends SomeTests(new TestsSelector { override def includePostgresql = true })
 
+// ?
+//object TestsFromTeamcity extends SomeTests(AllTestsSelector) with org.specs.runner.TeamCityReporter
+
+object TestsFromTeamcity extends org.specs.runner.TeamCityRunner(Tests)
+
+//class TempTests extends org.specs.Specification
+//object TestTestsWithTs extends TempTests with org.specs.runner.TeamCityReporter
+
 // vim: set ts=4 sw=4 et:
