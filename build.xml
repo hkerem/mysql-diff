@@ -109,6 +109,12 @@
         </jar>
     </target>
     
+    <target name="do-jar-sources">
+        <jar jarfile="target/yandex-mysql-diff-sources${jar.suffix}.jar">
+            <fileset dir="src/main/scala"/>
+        </jar>
+    </target>
+    
     <target name="do-jar-jar" depends="do-jar">
         <taskdef name="jarjar" classname="com.tonicsystems.jarjar.JarJarTask">
             <classpath>
@@ -139,7 +145,7 @@
 
     <target name="jar" depends="compile, do-jar"/>
 
-    <target name="do-dist" depends="do-jar, do-jar-jar">
+    <target name="do-dist" depends="do-jar, do-jar-sources, do-jar-jar">
         <mkdir dir="target/dist/mysql-diff"/>
         <mkdir dir="target/dist/mysql-diff/bin"/>
         <mkdir dir="target/dist/mysql-diff/lib"/>
