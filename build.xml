@@ -199,6 +199,14 @@
             </tarfileset>
         </tar>
     </target>
+    
+    <target name="pom" depends="init">
+        <ivy:makepom pomFile="target/pom.xml" ivyFile="ivy.xml">
+            <mapping conf="runtime" scope="compile"/>
+            <mapping conf="compile" scope="test"/>
+            <mapping conf="test" scope="test"/>
+        </ivy:makepom>
+    </target>
 
     <target name="dist" depends="clean,jar,do-dist"/>
     
