@@ -5,7 +5,8 @@ errExit() {
     exit 1
 }
 
-ant dist
+# ivy.cache.dir is to make debuild work
+ant -Divy.cache.dir=$HOME/.ivy2/cache dist
 
 DESTDIR="$1"
 
