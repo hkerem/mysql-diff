@@ -23,6 +23,7 @@ abstract case class DataType(name: String, length: Option[Int], options: Seq[Dat
     def isAnyDateTime: Boolean
     def isAnyNumber: Boolean
     def isLengthAllowed: Boolean
+    /** @deprecated */
     def normalized: DataType
 
     def equivalent(other: DataType) = {
@@ -48,6 +49,10 @@ abstract class DataTypes {
         make(name, length, Nil)
 
     def make(name: String, length: Option[Int], options: Seq[DataTypeOption]): DataType 
+    
+    def resolveTypeNameAlias(name: String) = name
+    
+    def normalize(dt: DataType) = make(resolveTypeNameAlias(dt.name), dt.length, dt.options)
 
     def equivalent(typeA: DataType, typeB: DataType) = {
         /*
@@ -57,8 +62,8 @@ abstract class DataTypes {
         else if (e1(a, b)) true
         else if (e1(b, a)) true
         */
-        val a = typeA.normalized
-        val b = typeB.normalized 
+        val a = normalize(typeA)
+        val b = normalize(typeB)
         
         if (a == b) true
         else if (a.name != b.name) false
