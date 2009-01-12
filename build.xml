@@ -68,6 +68,23 @@
                 -->
     </target>
     
+    <target name="gen-version-properties">
+        <mkdir dir="target/classes"/>
+        <delete file="target/classes/mysql-diff.properties"/>
+        
+        <exec outputproperty="project.version" executable="./version.sh" osfamily="unix"/>
+        <property name="project.version" value="unknown"/>
+        
+        <tstamp>
+            <format property="build.date" pattern="yyyy-MM-dd HH:mm:ss" locale="en,US"/>
+        </tstamp>
+        
+        <propertyfile file="target/classes/mysql-diff.properties">
+            <entry key="project.version" value="${project.version}"/>
+            <entry key="build.date" value="${build.date}"/>
+        </propertyfile>
+    </target>
+    
     <target name="run-test" depends="compile">
         <java classname="${test.name}" failonerror="true" fork="yes">
             <sysproperty key="java.awt.headless" value="true"/>
@@ -144,7 +161,7 @@
         </jarjar>
     </target>
 
-    <target name="jar" depends="compile, do-jar"/>
+    <target name="jar" depends="compile, gen-version-properties, do-jar"/>
 
     <target name="do-dist" depends="do-jar, do-jar-sources, do-jar-jar">
         <mkdir dir="target/dist/mysql-diff"/>
