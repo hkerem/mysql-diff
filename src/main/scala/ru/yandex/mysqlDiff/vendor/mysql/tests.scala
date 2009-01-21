@@ -10,7 +10,7 @@ import util._
 
 object MysqlTestDataSourceParameters extends TestDataSourceParameters {
     
-    override val testDsUrl = "jdbc:mysql://fastshot:3306/mysql_diff_test"
+    override val defaultTestDsUrl = "jdbc:mysql://localhost:3306/mysql_diff_test"
     override val testDsUser = "test"
     override val testDsPassword = "test"
     
