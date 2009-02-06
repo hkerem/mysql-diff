@@ -17,7 +17,7 @@
     <echo>scala.home=${scala.home} (scala version must be at least 2.7.2)</echo>
     <echo>user.home=${user.home}</echo>
     
-    <property name="ivy.version" value="2.0.0-rc2"/>
+    <property name="ivy.version" value="2.0.0"/>
     
     <available property="ivy.available" file="lib/ivy/ivy-${ivy.version}.jar"/>
     <target name="download-ivy" unless="ivy.available">
