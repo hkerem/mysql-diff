@@ -103,6 +103,9 @@ object Diff extends MainSupport {
             case Seq("-debugenv") =>
                 debug()
                 exit(0)
+            case Seq("-version") =>
+                println(MysqlDiffVersion.version)
+                exit(0)
             case Seq(from, to) =>
                 (getModelFromArgsLine(from), getModelFromArgsLine(to))
             case Seq(from, to, table) =>
