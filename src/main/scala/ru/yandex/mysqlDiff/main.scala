@@ -37,8 +37,57 @@ import Utils._
 abstract class MainSupport {
     val helpBanner: String
     
+    import Console.err
+    
     def usage() {
-        Console.err.println(helpBanner)
+        err.println(helpBanner)
+    }
+    
+    private def md5(isf: => java.io.InputStream) = {
+        val md = java.security.MessageDigest.getInstance("MD5")
+        val is = isf
+        try {
+            var done = false
+            while (!done) {
+                val buffer = new Array[Byte](0x1000)
+                val r = is.read(buffer)
+                if (r >= 0) {
+                    md.update(buffer, 0, r)
+                } else {
+                    done = true
+                }
+            }
+            md.digest
+        } finally {
+            is.close()
+        }
+    }
+    
+    private def hex(bs: Array[Byte]) =
+        (bs map { b => String.format("%02x", java.lang.Byte.valueOf(b)) }).mkString
+    
+    private def printCl(name: String, cl: ClassLoader) {
+        err.println(name + ": " + cl)
+        cl match {
+            case cl: java.net.URLClassLoader =>
+                for (u <- cl.getURLs) {
+                    val r = try {
+                        hex(md5(u.openStream))
+                    } catch {
+                        case e => "failed to get md5: " + e
+                    }
+                    err.println("    " + u + " (" + r + ")")
+                }
+        }
+        if (cl != null && cl.getParent != null)
+            printCl("parent", cl.getParent)
+    }
+    
+    def debug() {
+        err.println("main class: " + this.getClass.getName)
+        printCl("context classloader", Thread.currentThread.getContextClassLoader)
+        printCl(this.getClass.getName + ".classloader", this.getClass.getClassLoader)
+        printCl("system classloader", ClassLoader.getSystemClassLoader)
     }
     
     def main(args: Array[String])
@@ -51,6 +100,9 @@ object Diff extends MainSupport {
     override def main(args: Array[String]) {
         
         val (fromdb, todb) = args match {
+            case Seq("-debugenv") =>
+                debug()
+                exit(0)
             case Seq(from, to) =>
                 (getModelFromArgsLine(from), getModelFromArgsLine(to))
             case Seq(from, to, table) =>
