@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-BASE=0.2
+BASE=0.3
 
 TAGS=$(hg id --tags)
 
