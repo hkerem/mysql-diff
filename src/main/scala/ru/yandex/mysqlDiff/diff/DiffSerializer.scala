@@ -3,7 +3,7 @@ package ru.yandex.mysqlDiff.diff
 import model._
 import script._
 
-object TableScriptBuilder {
+class DiffSerializer(val context: Context) {
     import script.{AlterTableStatement => ats}
     import script.{CreateTableStatement => cts}
 
@@ -99,14 +99,41 @@ object TableScriptBuilder {
         // XXX: sort: drop, then change, then create
     }
     
+    import context._
+    
+    // XXX: rename to serialize
+    def serializeToScript(diff: DatabaseDiff, oldModel: DatabaseModel, newModel: DatabaseModel)
+            : Seq[ScriptElement] =
+    {
+        val newTablesMap: Map[String, TableModel] = Map(newModel.declarations.map(o => (o.name, o)): _*)
+        val oldTablesMap: Map[String, TableModel] = Map(oldModel.declarations.map(o => (o.name, o)): _*)
+        diff.tableDiff.flatMap(tbl => tbl match {
+            case CreateTableDiff(t) => ModelSerializer.serializeTable(t) :: Nil
+            case DropTableDiff(name) => DropTableStatement(name) :: Nil
+            case diff @ ChangeTableDiff(name, renameTo, columnDiff, indexDiff) =>
+                    renameTo.map(RenameTableStatement(name, _)) ++
+                            alterScript(diff, newTablesMap(diff.newName))
+        })
+    }
+    
+    def serializeToScriptStrings(diff: DatabaseDiff, oldModel: DatabaseModel, newModel: DatabaseModel)
+            : Seq[String] =
+        serializeToScript(diff, oldModel, newModel).map(ScriptSerializer.serialize(_))
+    
+    // XXX: rename to serializeToText
+    def serialize(oldModel: DatabaseModel, newModel: DatabaseModel, diff: DatabaseDiff): String = {
+        val options = ScriptSerializer.Options.multiline
+        ScriptSerializer.serialize(serializeToScript(diff, oldModel, newModel), options)
+    }
 }
 
-object TableScriptBuilderTests extends org.specs.Specification {
-    import TableScriptBuilder._
+object DiffSerializerTests extends org.specs.Specification {
+    
     import AlterTableStatement._
     import CreateTableStatement._
 
     import Environment.defaultContext._
+    import diffSerializer._
     
     /** Partial function to predicate */
     private def pftp[T](f: PartialFunction[T, Any]) =
@@ -133,37 +160,8 @@ object TableScriptBuilderTests extends org.specs.Specification {
         dropNameI must be_<(addLoginI)
         addLoginI must be_<(addLiI)
     }
-}
 
-object DiffSerializer {
-    // XXX: rename to serialize
-    def serializeToScript(diff: DatabaseDiff, oldModel: DatabaseModel, newModel: DatabaseModel)
-            : Seq[ScriptElement] =
-    {
-        val newTablesMap: Map[String, TableModel] = Map(newModel.declarations.map(o => (o.name, o)): _*)
-        val oldTablesMap: Map[String, TableModel] = Map(oldModel.declarations.map(o => (o.name, o)): _*)
-        diff.tableDiff.flatMap(tbl => tbl match {
-            case CreateTableDiff(t) => ModelSerializer.serializeTable(t) :: Nil
-            case DropTableDiff(name) => DropTableStatement(name) :: Nil
-            case diff @ ChangeTableDiff(name, renameTo, columnDiff, indexDiff) =>
-                    renameTo.map(RenameTableStatement(name, _)) ++
-                            TableScriptBuilder.alterScript(diff, newTablesMap(diff.newName))
-        })
-    }
-    
-    def serializeToScriptStrings(diff: DatabaseDiff, oldModel: DatabaseModel, newModel: DatabaseModel)
-            : Seq[String] =
-        serializeToScript(diff, oldModel, newModel).map(ScriptSerializer.serialize(_))
-    
-    // XXX: rename to serializeToText
-    def serialize(oldModel: DatabaseModel, newModel: DatabaseModel, diff: DatabaseDiff): String = {
-        val options = ScriptSerializer.Options.multiline
-        ScriptSerializer.serialize(serializeToScript(diff, oldModel, newModel), options)
-    }
-}
 
-object DiffSerializerTests extends org.specs.Specification {
-    include(TableScriptBuilderTests)
 }
 
 // vim: set ts=4 sw=4 et:

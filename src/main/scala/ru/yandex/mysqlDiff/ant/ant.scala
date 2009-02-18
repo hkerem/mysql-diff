@@ -7,6 +7,7 @@ import scalax.io.Implicits._
 import diff._
 
 class DiffTask extends Task {
+    // XXX: make context dependent on DB vendor
     import Environment.defaultContext._
 
     private var from: String = _
@@ -26,7 +27,7 @@ class DiffTask extends Task {
         val toModel = Utils.getModelFromArgsLine(to)
         
         val dbDiff = diffMaker.compareDatabases(fromModel, toModel)
-        val script = DiffSerializer.serialize(fromModel, toModel, dbDiff)
+        val script = diffSerializer.serialize(fromModel, toModel, dbDiff)
         
         log("Writing diff to " + output)
         output.write(script)

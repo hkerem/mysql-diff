@@ -117,7 +117,7 @@ object Diff extends MainSupport {
         
         val dbDiff = diffMaker.compareDatabases(fromdb, todb)
 
-        val script = DiffSerializer.serialize(fromdb, todb, dbDiff)
+        val script = diffSerializer.serialize(fromdb, todb, dbDiff)
 
         print(script)
 
