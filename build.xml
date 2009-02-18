@@ -85,8 +85,8 @@
         </propertyfile>
     </target>
     
-    <target name="run-test" depends="compile">
-        <java classname="${test.name}" failonerror="true" fork="yes">
+    <target name="do-run-test" depends="init">
+        <java classname="${test.name}" failonerror="true" maxmemory="128m" fork="yes">
             <sysproperty key="java.awt.headless" value="true"/>
             <syspropertyset>
                 <propertyref regex=".*\.test\.ds\.url"/>
@@ -98,6 +98,8 @@
             </classpath>
         </java>
     </target>
+    
+    <target name="run-test" depends="compile, do-run-test"/>
 
     <target name="run-tests" depends="compile">
         <property name="test.name" value="ru.yandex.mysqlDiff.Tests"/>
