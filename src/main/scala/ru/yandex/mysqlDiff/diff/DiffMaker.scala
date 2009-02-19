@@ -108,7 +108,13 @@ case class DiffMaker(val context: Context) {
         case _ => false
     }
         
-    def tableOptionsEquivalent(a: TableOption, b: TableOption) = a == b
+    def tableOptionsEquivalent(a: TableOption, b: TableOption) = a.name == b.name
+    
+    def compareTableOptions(a: TableOption, b: TableOption) = {
+        require(a.name == b.name)
+        if (a.value == b.value) None
+        else Some(CreateTableOptionDiff(b))
+    }
     
     def compareTables(from: TableModel, to: TableModel): Option[ChangeTableDiff] = {
 
@@ -138,11 +144,8 @@ case class DiffMaker(val context: Context) {
             compareSeqs(from.options, to.options, tableOptionsEquivalent _)
         
         val dropOptionDiff = Nil: Seq[TableOptionDiff] // cannot drop options
-        val createOptionDiff = toOptions.map(o => CreateTableOptionDiff(o))
-        val alterOptionDiff = changeOptionPairs.flatMap {
-            case (o, n) if o == n => None
-            case (o, n) => Some(ChangeTableOptionDiff(o, n))
-        }
+        val createOptionDiff = Nil: Seq[TableOptionDiff] // unknown: do not force creation
+        val alterOptionDiff = changeOptionPairs.flatMap(c => compareTableOptions(c._1, c._2))
         
         val alterTableOptionDiff = dropOptionDiff ++ createOptionDiff ++ alterOptionDiff
         
