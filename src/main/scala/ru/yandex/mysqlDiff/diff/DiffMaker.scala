@@ -139,7 +139,10 @@ case class DiffMaker(val context: Context) {
         
         val dropOptionDiff = Nil: Seq[TableOptionDiff] // cannot drop options
         val createOptionDiff = toOptions.map(o => CreateTableOptionDiff(o))
-        val alterOptionDiff = changeOptionPairs.map { case (o, n) => ChangeTableOptionDiff(o, n) }
+        val alterOptionDiff = changeOptionPairs.flatMap {
+            case (o, n) if o == n => None
+            case (o, n) => Some(ChangeTableOptionDiff(o, n))
+        }
         
         val alterTableOptionDiff = dropOptionDiff ++ createOptionDiff ++ alterOptionDiff
         
