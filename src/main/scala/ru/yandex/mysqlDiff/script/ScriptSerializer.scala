@@ -156,6 +156,8 @@ object ScriptSerializer {
             
             case DropForeignKey(name) => "DROP FOREIGN KEY " + name
             case AddForeignKey(fk) => "ADD " + serializeForeignKey(fk)
+            
+            case TableOption(o) => serializeTableOption(o)
         }
     }
     
@@ -206,7 +208,7 @@ object ScriptSerializer {
         words += ("(" + index.columns.mkString(", ") + ")")
         words.mkString(" ")
     }
-        
+    
 }
 
 object ScriptSerializerTests extends org.specs.Specification {

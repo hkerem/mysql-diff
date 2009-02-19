@@ -37,12 +37,21 @@ class DiffSerializer(val context: Context) {
         case ChangeKeyDiff(ok, nk) => List(dropKeyStmt(ok), createKeyStmt(nk))
     }
     
+    def alterTableOptionStmt(od: TableOptionDiff, table: TableModel) = {
+        val o = od match {
+            case CreateTableOptionDiff(o) => o
+            case ChangeTableOptionDiff(o, n) => n
+        }
+        ats.TableOption(o)
+    }
+    
     def alterKeyScript(d: KeyDiff, table: TableModel) =
         AlterTableStatement(table.name, alterKeyStmts(d))
     
     def alterTableEntryStmts(d: TableEntryDiff, table: TableModel) = d match {
         case kd: KeyDiff => alterKeyStmts(kd)
         case cd: ColumnDiff => List(alterColumnStmt(cd, table))
+        case od: TableOptionDiff => List(alterTableOptionStmt(od, table))
     }
     
     private def operationOrder(op: ats.Operation) = op match {
@@ -110,7 +119,7 @@ class DiffSerializer(val context: Context) {
         diff.tableDiff.flatMap(tbl => tbl match {
             case CreateTableDiff(t) => ModelSerializer.serializeTable(t) :: Nil
             case DropTableDiff(name) => DropTableStatement(name) :: Nil
-            case diff @ ChangeTableDiff(name, renameTo, columnDiff, indexDiff) =>
+            case diff @ ChangeTableDiff(name, renameTo, columnDiff, indexDiff, optionDiff) =>
                     renameTo.map(RenameTableStatement(name, _)) ++
                             alterScript(diff, newTablesMap(diff.newName))
         })

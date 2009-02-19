@@ -47,7 +47,7 @@ object MysqlOnlineTests extends org.specs.Specification {
         
         val diff = diffMaker.compareTables(oldModel, newModel).get
         
-        val ChangeTableDiff("b", None, Seq(columnDiff), Seq()) = diff
+        val ChangeTableDiff("b", None, Seq(columnDiff), Seq(), Seq()) = diff
         val ChangeColumnDiff("x", None, Seq(propertyDiff)) = columnDiff
         propertyDiff match { // must be any of
             case ChangeColumnPropertyDiff(oldP, newP) =>
@@ -92,7 +92,7 @@ object MysqlOnlineTests extends org.specs.Specification {
         
         val resultModel = JdbcModelExtractor.extractTable("collate_test", ds)
         // checking patch properly applied
-        resultModel.options must contain(MysqlCollate("cp866_bin"))
+        resultModel.options must contain(TableOption("COLLATE", "cp866_bin"))
     }
     
 }

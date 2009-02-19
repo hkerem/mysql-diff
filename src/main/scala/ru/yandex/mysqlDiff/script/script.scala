@@ -127,6 +127,9 @@ object AlterTableStatement {
     case class DropForeignKey(name: String) extends DropOperation with KeyOperation
     
     case class AddForeignKey(fk: ForeignKeyModel) extends AddOperation with KeyOperation
+    
+    // XXX: rename model.TableOption -> model.TableOptionModel
+    case class TableOption(o: model.TableOption) extends Operation
 }
 
 case class CreateViewStatement(name: String, select: SelectStatement) extends DdlStatement

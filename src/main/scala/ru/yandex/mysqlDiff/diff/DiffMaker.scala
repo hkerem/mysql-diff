@@ -108,10 +108,12 @@ case class DiffMaker(val context: Context) {
         case _ => false
     }
         
+    def tableOptionsEquivalent(a: TableOption, b: TableOption) = a == b
     
     def compareTables(from: TableModel, to: TableModel): Option[ChangeTableDiff] = {
 
-        val (fromColumns, toColumns, changeColumnPairs) = compareSeqs(from.columns, to.columns, (x: ColumnModel, y: ColumnModel) => x.name == y.name)
+        val (fromColumns, toColumns, changeColumnPairs) =
+            compareSeqs(from.columns, to.columns, (x: ColumnModel, y: ColumnModel) => x.name == y.name)
 
         val dropColumnDiff = fromColumns.map(c => DropColumnDiff(c.name))
         val createColumnDiff = toColumns.map(c => CreateColumnDiff(c))
@@ -121,18 +123,30 @@ case class DiffMaker(val context: Context) {
 
         val primaryKeyDiff: Seq[KeyDiff] = comparePrimaryKeys(from.primaryKey, to.primaryKey).toList
 
-        val (fromKeys, toKeys, changeIndexPairs) = compareSeqs(from.keys, to.keys, keysEquivalent _)
+
+        val (fromKeys, toKeys, _) = // XXX: check third argument
+            compareSeqs(from.keys, to.keys, keysEquivalent _)
 
         val dropKeysDiff = fromKeys.map(k => DropKeyDiff(k))
         val createKeysDiff = toKeys.map(k => CreateKeyDiff(k))
         val alterKeysDiff = Nil // we have no alter index
 
         val alterKeyDiff = primaryKeyDiff ++ createKeysDiff ++ dropKeysDiff ++ alterKeysDiff
-
+        
+        
+        val (fromOptions, toOptions, changeOptionPairs) =
+            compareSeqs(from.options, to.options, tableOptionsEquivalent _)
+        
+        val dropOptionDiff = Nil: Seq[TableOptionDiff] // cannot drop options
+        val createOptionDiff = toOptions.map(o => CreateTableOptionDiff(o))
+        val alterOptionDiff = changeOptionPairs.map { case (o, n) => ChangeTableOptionDiff(o, n) }
+        
+        val alterTableOptionDiff = dropOptionDiff ++ createOptionDiff ++ alterOptionDiff
+        
         if (from.name != to.name)
-            Some(new ChangeTableDiff(from.name, Some(to.name), alterColumnDiff, alterKeyDiff))
-        else if (alterColumnDiff.size > 0 || alterKeyDiff.size > 0)
-            Some(new ChangeTableDiff(from.name, None, alterColumnDiff, alterKeyDiff))
+            Some(new ChangeTableDiff(from.name, Some(to.name), alterColumnDiff, alterKeyDiff, alterTableOptionDiff))
+        else if (alterColumnDiff.size > 0 || alterKeyDiff.size > 0 || alterTableOptionDiff.size > 0)
+            Some(new ChangeTableDiff(from.name, None, alterColumnDiff, alterKeyDiff, alterTableOptionDiff))
         else
             None
     }

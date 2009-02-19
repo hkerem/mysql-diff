@@ -190,6 +190,7 @@ case class ForeignKeyModel(override val name: Option[String],
     require(localColumns.length == externalColumns.length)
 }
 
+// XXX: rename to TableOptionModel
 case class TableOption(name: String, value: String)
 
 case class TableModel(override val name: String, columns: Seq[ColumnModel],

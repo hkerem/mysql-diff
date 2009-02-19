@@ -39,15 +39,21 @@ case class DropKeyDiff(index: KeyModel) extends KeyDiff
 case class ChangeKeyDiff(oldKey: KeyModel, newKey: KeyModel)
     extends KeyDiff
 
+abstract class TableOptionDiff extends TableEntryDiff
+case class CreateTableOptionDiff(option: TableOption) extends TableOptionDiff
+case class DropTableOptionDiff(option: TableOption) extends TableOptionDiff
+case class ChangeTableOptionDiff(oldOption: TableOption, newOption: TableOption)
+    extends TableOptionDiff
+
 abstract class TableDiff
 
 case class CreateTableDiff(table: TableModel) extends TableDiff
 case class DropTableDiff(name: String) extends TableDiff
 case class ChangeTableDiff(override val name: String, override val renameTo: Option[String],
-        columnDiff: Seq[ColumnDiff], keyDiff: Seq[KeyDiff])
+        columnDiff: Seq[ColumnDiff], keyDiff: Seq[KeyDiff], tableOptionDiff: Seq[TableOptionDiff])
     extends TableDiff with ChangeSomethingDiff
 {
-    def entriesDiff = List[TableEntryDiff]() ++ columnDiff ++ keyDiff
+    def entriesDiff = List[TableEntryDiff]() ++ columnDiff ++ keyDiff ++ tableOptionDiff
 }
 
 
