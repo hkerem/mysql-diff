@@ -95,6 +95,14 @@ object MysqlOnlineTests extends org.specs.Specification {
         resultModel.options must contain(TableOption("COLLATE", "cp866_bin"))
     }
     
+    "same engine" in {
+        jdbcTemplate.execute("DROP TABLE IF EXISTS yaru_events")
+        val s = "CREATE TABLE yaru_events (user_id BIGINT) ENGINE=InnoDB"
+        jdbcTemplate.execute(s)
+        val d = JdbcModelExtractor.extractTable("yaru_events", ds)
+        val t = modelParser.parseCreateTableScript(s)
+        diffMaker.compareTables(d, t) must beEmpty
+    }
 }
 
 // vim: set ts=4 sw=4 et:
