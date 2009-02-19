@@ -91,7 +91,10 @@ object JdbcModelExtractor {
         // XXX: move outside: MySQL-specific
         
         def mapTableOptions(rs: ResultSet) =
-            (rs.getString("TABLE_NAME"), List(TableOption("ENGINE", rs.getString("ENGINE"))))
+            (rs.getString("TABLE_NAME"), List(
+                    TableOption("ENGINE", rs.getString("ENGINE")),
+                    TableOption("COLLATE", rs.getString("TABLE_COLLATION"))
+                    ))
         
         def findTablesOptions(schema: String): Seq[(String, Seq[TableOption])] = {
             val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ?"
@@ -427,11 +430,18 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         person.fks must haveSize(0)
     }
     
-    "table options" in {
+    "fetch table option ENGINE" in {
         dropTable("dogs")
         execute("CREATE TABLE dogs (id INT) ENGINE=InnoDB")
         val table = extractTable("dogs")
         table.options must contain(TableOption("ENGINE", "InnoDB"))
+    }
+    
+    "fetch table option COLLATE" in {
+        dropTable("cats")
+        execute("CREATE TABLE cats (id INT) COLLATE=cp1251_bin")
+        val table = extractTable("cats")
+        table.options must contain(TableOption("COLLATE", "cp1251_bin"))
     }
     
     "DEFAULT NOW()" in {
