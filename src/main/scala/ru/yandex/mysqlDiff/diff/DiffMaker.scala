@@ -154,6 +154,16 @@ case class DiffMaker(val context: Context) {
             None
     }
     
+    def compareTablesScript(from: TableModel, to: TableModel): Seq[script.ScriptElement] =
+        compareTables(from, to) match {
+            case None => Nil
+            case Some(diff) => diff match {
+                case c: CreateTableDiff => diffSerializer.serializeCreateTableDiff(c)
+                case d: DropTableDiff => diffSerializer.serializeDropTableDiff(d)
+                case d: ChangeTableDiff => diffSerializer.serializeChangeTableDiff(d, to)
+            }
+        }
+    
     def compareTablesFromScript(from: String, to: String) = {
         val fromModel = modelParser.parseCreateTableScript(from)
         val toModel = modelParser.parseCreateTableScript(to)

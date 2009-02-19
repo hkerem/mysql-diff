@@ -103,6 +103,22 @@ object MysqlOnlineTests extends org.specs.Specification {
         val t = modelParser.parseCreateTableScript(s)
         diffMaker.compareTables(d, t) must beEmpty
     }
+    
+    "change engine" in {
+        jdbcTemplate.execute("DROP TABLE IF exists change_engine")
+        jdbcTemplate.execute("CREATE TABLE change_engine (id INT) ENGINE=MyISAM")
+        val d = JdbcModelExtractor.extractTable("change_engine", ds)
+        d.options must contain(TableOption("ENGINE", "MyISAM"))
+        val t = modelParser.parseCreateTableScript("CREATE TABLE change_engine (id INT) ENGINE=InnoDB")
+        val script = new Script(diffMaker.compareTablesScript(d, t))
+        script.statements must notBeEmpty
+        for (s <- script.statements) {
+            jdbcTemplate.execute(scriptSerializer.serialize(s))
+        }
+        
+        val resultModel = JdbcModelExtractor.extractTable("change_engine", ds)
+        resultModel.options must contain(TableOption("ENGINE", "InnoDB"))
+    }
 }
 
 // vim: set ts=4 sw=4 et:

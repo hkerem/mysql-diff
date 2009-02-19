@@ -4,6 +4,8 @@ import model._
 import script._
 
 class DiffSerializer(val context: Context) {
+    import context._
+    
     import script.{AlterTableStatement => ats}
     import script.{CreateTableStatement => cts}
 
@@ -69,6 +71,7 @@ class DiffSerializer(val context: Context) {
     }
     
     /**
+     * Does not include rename.
      * @param model new model
      */
     def alterScript(diff: ChangeTableDiff, table: TableModel): Seq[ScriptElement] = {
@@ -108,7 +111,20 @@ class DiffSerializer(val context: Context) {
         // XXX: sort: drop, then change, then create
     }
     
-    import context._
+    def serializeCreateTableDiff(c: CreateTableDiff) =
+        ModelSerializer.serializeTable(c.table) :: Nil
+    
+    def serializeDropTableDiff(d: DropTableDiff) =
+        DropTableStatement(d.name) :: Nil
+    
+    def serializeChangeTableDiff(d: ChangeTableDiff, newTable: TableModel)
+        : Seq[ScriptElement] =
+    {
+        val ChangeTableDiff(name, renameTo, columnDiff, indexDiff, optionDiff) = d
+        require(renameTo.isEmpty || renameTo.get == newTable.name)
+        renameTo.map(RenameTableStatement(name, _)).toSeq ++
+                alterScript(d, newTable)
+    }
     
     // XXX: rename to serialize
     def serializeToScript(diff: DatabaseDiff, oldModel: DatabaseModel, newModel: DatabaseModel)
@@ -116,12 +132,11 @@ class DiffSerializer(val context: Context) {
     {
         val newTablesMap: Map[String, TableModel] = Map(newModel.declarations.map(o => (o.name, o)): _*)
         val oldTablesMap: Map[String, TableModel] = Map(oldModel.declarations.map(o => (o.name, o)): _*)
-        diff.tableDiff.flatMap(tbl => tbl match {
-            case CreateTableDiff(t) => ModelSerializer.serializeTable(t) :: Nil
-            case DropTableDiff(name) => DropTableStatement(name) :: Nil
-            case diff @ ChangeTableDiff(name, renameTo, columnDiff, indexDiff, optionDiff) =>
-                    renameTo.map(RenameTableStatement(name, _)) ++
-                            alterScript(diff, newTablesMap(diff.newName))
+        diff.tableDiff.flatMap(_ match {
+            case c: CreateTableDiff => serializeCreateTableDiff(c)
+            case d: DropTableDiff => serializeDropTableDiff(d)
+            case d @ ChangeTableDiff(name, renameTo, columnDiff, indexDiff, optionDiff) =>
+                    serializeChangeTableDiff(d, newTablesMap(d.newName))
         })
     }
     
