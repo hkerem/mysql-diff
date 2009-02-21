@@ -119,6 +119,15 @@ object MysqlOnlineTests extends org.specs.Specification {
         val resultModel = JdbcModelExtractor.extractTable("change_engine", ds)
         resultModel.options must contain(TableOption("ENGINE", "InnoDB"))
     }
+    
+    "bug with NULL PRIMARY KEY" in {
+        jdbcTemplate.execute("DROP TABLE IF EXISTS null_pk")
+        val s = "CREATE TABLE null_pk (id INT NULL DEFAULT NULL, PRIMARY KEY(id))"
+        jdbcTemplate.execute(s)
+        val d = JdbcModelExtractor.extractTable("null_pk", ds)
+        val t = modelParser.parseCreateTableScript(s)
+        diffMaker.compareTables(d, t) must beLike { case None => true }
+    }
 }
 
 // vim: set ts=4 sw=4 et:
