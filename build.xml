@@ -14,7 +14,7 @@
     <property name="jar.suffix" value=""/>
     
     <echo>java.home=${java.home} (java version must be at least 1.6)</echo>
-    <echo>scala.home=${scala.home} (scala version must be at least 2.7.2)</echo>
+    <echo>scala.home=${scala.home} (scala version must be at least 2.7.3)</echo>
     <echo>user.home=${user.home}</echo>
     
     <property name="ivy.version" value="2.0.0"/>
