@@ -2,6 +2,7 @@
 
 - 0.3 -
   * MySQL collation comparison support
+  * Handle NULL DEFAULT NULL PRIMARY KEY properly
   * ...
 
 - 0.2 -
