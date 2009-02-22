@@ -53,23 +53,47 @@ case class ModelParser(val context: Context) {
         
         val pk = pks.firstOption
         
-        def pkContainsColumn(c: String) =
-            pk.exists(_.columns.exists(_ == c))
-        
         val columns2 = columns.map {
             c =>
-                val defaultNullability = Nullability(!pkContainsColumn(c.name))
+                // XXX: drop here, reasonable only for PK columns
                 val defaultAutoincrement = AutoIncrement(false)
                 
                 val properties = c.properties
-                    .withDefaultProperty(defaultNullability)
-                    .withDefaultProperty(DefaultValue(NullValue))
                     .withDefaultProperty(defaultAutoincrement)
                 
                 ColumnModel(c.name, c.dataType, properties)
         }
         
-        TableModel(name, columns2.toList, pk, keys.toList, ct.options)
+        fixTable(TableModel(name, columns2.toList, pk, keys.toList, ct.options))
+    }
+    
+    protected def fixTable(table: TableModel) = {
+        val TableModel(name, columns, pk, keys, options) = table
+        TableModel(name, columns.map(fixColumn(_, table)), pk, keys, options)
+    }
+    
+    protected def fixColumn(column: ColumnModel, table: TableModel) = column match {
+        case c if table.isPk(c.name) => fixPkColumn(c)
+        case c => fixRegularColumn(c)
+    }
+    
+    protected def fixPkColumn(column: ColumnModel) = {
+        var properties = column.properties
+        
+        // don't know which is better
+        properties = properties.overrideProperty(Nullability(false))
+        //properties = properties.removeProperty(NullabilityPropertyType)
+        
+        if (properties.defaultValue == Some(NullValue))
+            properties = properties.removeProperty(DefaultValuePropertyType)
+        ColumnModel(column.name, column.dataType, properties)
+    }
+    
+    protected def fixRegularColumn(column: ColumnModel) = {
+        var properties = column.properties
+        properties = properties.withDefaultProperty(Nullability(true))
+        properties = properties.withDefaultProperty(DefaultValue(NullValue))
+        ColumnModel(column.name, column.dataType, properties)
     }
     
     def parseCreateTableScript(text: String) =

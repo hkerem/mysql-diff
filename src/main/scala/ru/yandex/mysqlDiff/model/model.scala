@@ -220,6 +220,10 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel],
     
     def createLikeThis(newName: String) =
         TableModel(newName, columns, primaryKey, keys, options)
+    
+    /** Columns is contained in PK */
+    def isPk(name: String) =
+        primaryKey.isDefined && primaryKey.get.columns.contains(name)
 }
 
 abstract class DatabaseDeclaration(val name: String) 
