@@ -16,10 +16,9 @@ object MysqlTestDataSourceParameters extends TestDataSourceParameters {
     
 }
 
-object MysqlOnlineTests extends org.specs.Specification {
-    import MysqlTestDataSourceParameters._
-    // XXX: use proper context
-    import Environment.defaultContext._
+object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSourceParameters) {
+    import tdsp._
+    import context._
     
     "CAP-101" in {
         jdbcTemplate.execute("DROP TABLE IF EXISTS a")
@@ -96,12 +95,8 @@ object MysqlOnlineTests extends org.specs.Specification {
     }
     
     "same engine" in {
-        jdbcTemplate.execute("DROP TABLE IF EXISTS yaru_events")
-        val s = "CREATE TABLE yaru_events (user_id BIGINT) ENGINE=InnoDB"
-        jdbcTemplate.execute(s)
-        val d = JdbcModelExtractor.extractTable("yaru_events", ds)
-        val t = modelParser.parseCreateTableScript(s)
-        diffMaker.compareTables(d, t) must beEmpty
+        checkTableGeneratesNoDiff(
+            "CREATE TABLE yaru_events (user_id BIGINT) ENGINE=InnoDB")
     }
     
     "change engine" in {
@@ -121,12 +116,8 @@ object MysqlOnlineTests extends org.specs.Specification {
     }
     
     "bug with NULL PRIMARY KEY" in {
-        jdbcTemplate.execute("DROP TABLE IF EXISTS null_pk")
-        val s = "CREATE TABLE null_pk (id INT NULL DEFAULT NULL, PRIMARY KEY(id))"
-        jdbcTemplate.execute(s)
-        val d = JdbcModelExtractor.extractTable("null_pk", ds)
-        val t = modelParser.parseCreateTableScript(s)
-        diffMaker.compareTables(d, t) must beLike { case None => true }
+        checkTableGeneratesNoDiff(
+            "CREATE TABLE null_pk (id INT NULL DEFAULT NULL, PRIMARY KEY(id))")
     }
 }
 
