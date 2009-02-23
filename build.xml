@@ -1,20 +1,14 @@
 <?xml version="1.0"?>
 
 <project name="mysqlDiff" default="dist" xmlns:ivy="antlib:org.apache.ivy.ant">
-    <!-- local properties, scala.home for example -->
+    <!-- local properties -->
     <property file="build.properties"/>
     <property file="${user.home}/build.local.properties"/>
     <property file="${user.home}/build.properties"/>
     
-    <!-- better then nothing -->
-    <property name="scala.home" value="/usr/local/scala"/>
-
-    <property name="scala-library.jar" value="${scala.home}/lib/scala-library.jar"/>
-    
     <property name="jar.suffix" value=""/>
     
     <echo>java.home=${java.home} (java version must be at least 1.6)</echo>
-    <echo>scala.home=${scala.home} (scala version must be at least 2.7.3)</echo>
     <echo>user.home=${user.home}</echo>
     
     <property name="ivy.version" value="2.0.0"/>
@@ -38,21 +32,18 @@
             </classpath>
         </taskdef>
         
-        <ivy:retrieve pattern="lib/dep/[organisation]-[artifact]-[revision].[ext]" sync="true"/>
+        <ivy:retrieve pattern="lib/dep/[organisation]-[artifact]-[revision].[ext]" sync="true" type="jar"/>
     </target>
 
     <target name="init" depends="resolve">
-        <echo>scala.home=${scala.home}</echo>
         
         <path id="build.classpath">
-            <pathelement location="${scala-library.jar}"/>
             <fileset dir="lib/dep" includes="**/*.jar"/>
         </path>
 
         <taskdef resource="scala/tools/ant/antlib.xml">
             <classpath>
-                <pathelement location="${scala.home}/lib/scala-compiler.jar"/>
-                <pathelement location="${scala-library.jar}"/>
+                <fileset dir="lib/dep" includes="org.scala-lang-*.jar"/>
             </classpath>
         </taskdef>
     </target>
@@ -94,7 +85,6 @@
             <classpath refid="build.classpath"/>
             <classpath>
                 <pathelement location="target/classes"/>
-                <pathelement location="${scala-library.jar}"/>
             </classpath>
         </java>
     </target>
@@ -147,22 +137,25 @@
             </classpath>
         </taskdef>
         
-        <jarjar jarfile="target/yandex-mysql-diff-standalone${jar.suffix}.jar" index="true">
+        <jarjar jarfile="target/yandex-mysql-diff-standalone${jar.suffix}.jar" index="true" duplicate="preserve">
             <manifest>
                 <attribute name="Main-Class" value="ru.yandex.mysqlDiff.Diff"/>
             </manifest>
             <fileset dir="target/classes"/>
+            <fileset dir="src/main/jarjar"/>
             <zipgroupfileset dir="lib/dep">
                 <exclude name="jarjar-*"/>
                 <exclude name="org.specs-*"/>
                 <exclude name="org.apache.ant-*.jar"/>
                 <exclude name="xml-apis-*.jar"/>
                 <exclude name="xerces-*.jar"/>
+                <exclude name="*scala-compiler*"/>
             </zipgroupfileset>
-            <zipfileset src="${scala-library.jar}"/>
             
             <rule pattern="scalax.**" result="ru.yandex.mysqlDiff.dep.@0"/>
+            <!-- XXX: wrong
             <rule pattern="com.**" result="ru.yandex.mysqlDiff.dep.@0"/>
+            -->
             <rule pattern="org.slf4j.**" result="ru.yandex.mysqlDiff.dep.@0"/>
             <rule pattern="scala.**" result="ru.yandex.mysqlDiff.dep.@0"/>
         </jarjar>
@@ -188,7 +181,6 @@
             </fileset>
         </copy>
         
-        <copy todir="target/dist/mysql-diff/lib" file="${scala-library.jar}"/>
         <copy todir="target/dist/mysql-diff/lib" file="target/yandex-mysql-diff${jar.suffix}.jar"/>
         
         <copy file="src/main/bin/mysql-diff" todir="target/dist/mysql-diff/bin"/>

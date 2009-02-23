@@ -26,7 +26,7 @@
         
         <dependency org="org.apache.ant" name="ant" rev="1.7.0" conf="compile->*"/>
         
-        <exclude org="org.scala-lang"/>
+        <dependency org="org.scala-lang" name="scala-compiler" rev="2.7.3" conf="compile->*"/>
     </dependencies>
         
 </ivy-module>
