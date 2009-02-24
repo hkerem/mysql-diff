@@ -119,6 +119,19 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         checkTableGeneratesNoDiff(
             "CREATE TABLE null_pk (id INT NULL DEFAULT NULL, PRIMARY KEY(id))")
     }
+    
+    "bug with character set implies collation" in {
+        jdbcTemplate.execute("DROP TABLE IF EXISTS moderated_tags")
+        jdbcTemplate.execute("CREATE TABLE moderated_tags (tag VARCHAR(255) CHARACTER SET utf8 NOT NULL, type INT(11) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
+        val s2 = "CREATE TABLE moderated_tags (tag VARCHAR(255) NOT NULL, type INT(11) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
+        
+        val dbModel = JdbcModelExtractor.extractTable("moderated_tags", ds)
+        val localModel = modelParser.parseCreateTableScript(s2)
+        
+        // collation is changed from utf8_bin to utf8_general_ci
+        // (character set implies collation)
+        diffMaker.compareTables(dbModel, localModel) must beLike { case Some(_) => true }
+    }
 }
 
 // vim: set ts=4 sw=4 et:
