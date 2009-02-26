@@ -2,10 +2,34 @@ package ru.yandex.mysqlDiff.vendor.mysql
 
 import model._
 
-case object MysqlZerofill extends DataTypeOption
-case object MysqlUnsigned extends DataTypeOption
-case class MysqlCharacterSet(name: String) extends DataTypeOption
-case class MysqlCollate(name: String) extends DataTypeOption
+case class MysqlZerofill(set: Boolean) extends DataTypeOption {
+    override def propertyType = MysqlZerofillType
+}
+case object MysqlZerofillType extends DataTypeOptionType {
+    override type Value = MysqlZerofill
+}
+
+case class MysqlUnsigned(set: Boolean) extends DataTypeOption {
+    override def propertyType = MysqlUnsignedType
+}
+case object MysqlUnsignedType extends DataTypeOptionType {
+    override type Value = MysqlUnsigned
+}
+
+case class MysqlCharacterSet(name: String) extends DataTypeOption {
+    override def propertyType = MysqlCharacterSetType
+}
+case object MysqlCharacterSetType extends DataTypeOptionType {
+    override type Value = MysqlCharacterSet
+}
+
+case class MysqlCollate(name: String) extends DataTypeOption {
+    override def propertyType = MysqlCollateType
+}
+case object MysqlCollateType extends DataTypeOptionType {
+    override type Value = MysqlCollate
+}
+
 
 case class MysqlDataType(override val name: String, override val length: Option[int], override val options: Seq[DataTypeOption])
     extends DataType(name, length, options) {

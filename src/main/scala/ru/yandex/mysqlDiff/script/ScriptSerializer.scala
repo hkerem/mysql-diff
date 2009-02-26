@@ -162,8 +162,8 @@ object ScriptSerializer {
     }
     
     def serializeDataTypeOption(o: DataTypeOption) = o match {
-        case MysqlUnsigned => "UNSIGNED"
-        case MysqlZerofill => "ZEROFILL"
+        case MysqlUnsigned(true) => "UNSIGNED"
+        case MysqlZerofill(true) => "ZEROFILL"
         case MysqlCharacterSet(cs) => "CHARACTER SET " + cs
         case MysqlCollate(collate) => "COLLATE " + collate
     }

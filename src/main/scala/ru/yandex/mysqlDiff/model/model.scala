@@ -3,6 +3,44 @@ package ru.yandex.mysqlDiff.model
 import scala.collection.mutable._
 
 
+
+abstract class Property {
+    def propertyType: PropertyType
+}
+abstract class PropertyType {
+    type Value <: Property
+}
+
+case class PropertyMap[T <: PropertyType, V <: Property](val properties: Seq[V]) {
+    //type V = T#Value
+    
+    def propertyTypes = properties.map(_.propertyType)
+    
+    // check there are no duplicate property types
+    require(Set(propertyTypes: _*).size == properties.length)
+    
+    protected def copy(properties: Seq[V]): this.type = new PropertyMap[T, V](properties).asInstanceOf[this.type]
+    
+    def isEmpty = properties.isEmpty
+    
+    def find[U <: T](pt: U): Option[U#Value] =
+        properties.find(_.propertyType == pt).map(_.asInstanceOf[U#Value])
+    
+    def withDefaultProperty(property: V): this.type =
+        if (find(property.propertyType.asInstanceOf[T]).isDefined) this
+        else copy(properties ++ List(property))
+    
+    def removeProperty(pt: T): this.type =
+        copy(properties.filter(_.propertyType != pt))
+    
+    def overrideProperty(o: V): this.type =
+        copy(removeProperty(o.propertyType.asInstanceOf[T]).properties ++ List(o))
+    
+    def addProperty(p: V): this.type =
+        copy(properties ++ List(p))
+}
+
+
 abstract class SqlValue
 
 case object NullValue extends SqlValue
@@ -14,7 +52,13 @@ case class StringValue(value: String) extends SqlValue
 // used as default value
 case object NowValue extends SqlValue
 
-abstract class DataTypeOption
+abstract class DataTypeOption extends Property {
+    override def propertyType: DataTypeOptionType
+}
+
+abstract class DataTypeOptionType extends PropertyType {
+    override type Value <: DataTypeOption
+}
 
 abstract case class DataType(name: String, length: Option[Int], options: Seq[DataTypeOption]) {
     require(name.toUpperCase == name)
@@ -75,19 +119,17 @@ abstract class DataTypes {
 
 abstract class TableEntry
 
-case class ColumnProperties(val properties: Seq[ColumnProperty]) {
-    def propertyTypes = properties.map(_.propertyType)
-    
-    // check there are no duplicate property types
-    require(Set(propertyTypes: _*).size == properties.length)
-    
-    def isEmpty = properties.isEmpty
-    
-    def find[T <: ColumnPropertyType](pt: T): Option[T#ValueType] =
-        properties.find(_.propertyType == pt).map(_.asInstanceOf[T#ValueType])
+/**
+ * @deprecated in favor of PropertyMap
+ */
+case class ColumnProperties(ps: Seq[ColumnProperty])
+    extends PropertyMap[ColumnPropertyType, ColumnProperty](ps)
+{
     
     /** True iff NOT NULL or unknown */
     def isNotNull = find(NullabilityPropertyType).map(!_.nullable).getOrElse(false)
+    
+    override def copy(properties: Seq[ColumnProperty]) = new ColumnProperties(properties).asInstanceOf[this.type]
     
     def comment: Option[String] = find(CommentPropertyType).map(_.comment)
     
@@ -100,19 +142,6 @@ case class ColumnProperties(val properties: Seq[ColumnProperty]) {
     
     /** True iff all properties are model properties */
     def isModelProperties = properties.forall(_.isModelProperty)
-    
-    def withDefaultProperty(property: ColumnProperty) =
-        if (find(property.propertyType).isDefined) this
-        else new ColumnProperties(properties ++ List(property))
-    
-    def removeProperty(pt: ColumnPropertyType) =
-        new ColumnProperties(properties.filter(_.propertyType != pt))
-    
-    def overrideProperty(o: ColumnProperty) =
-        new ColumnProperties(removeProperty(o.propertyType).properties ++ List(o))
-    
-    def addProperty(p: ColumnProperty) =
-        new ColumnProperties(properties ++ List(p))
 }
 
 object ColumnProperties {
@@ -190,8 +219,11 @@ case class ForeignKeyModel(override val name: Option[String],
     require(localColumns.length == externalColumns.length)
 }
 
-// XXX: rename to TableOptionModel
 case class TableOption(name: String, value: String)
+
+abstract class TableOptionType {
+    type OptionType <: TableOption
+}
 
 case class TableModel(override val name: String, columns: Seq[ColumnModel],
         primaryKey: Option[PrimaryKeyModel], keys: Seq[KeyModel], options: Seq[TableOption])
@@ -238,15 +270,15 @@ case class DatabaseModel(declarations: Seq[TableModel])
     def table(name: String) = tables.find(_.name == name).get
 }
 
-abstract class ColumnProperty {
+abstract class ColumnProperty extends Property {
     def propertyType: ColumnPropertyType
     
     /** @deprecated */
     final def isModelProperty = propertyType.isModelProperty
 }
 
-abstract class ColumnPropertyType {
-    type ValueType <: ColumnProperty
+abstract class ColumnPropertyType extends PropertyType {
+    override type Value <: ColumnProperty
     
     /** True iff property belongs to column model */
     def isModelProperty = true
@@ -257,7 +289,7 @@ case class Nullability(nullable: Boolean) extends ColumnProperty {
 }
 
 case object NullabilityPropertyType extends ColumnPropertyType {
-    override type ValueType = Nullability
+    override type Value = Nullability
 }
 
 case class DefaultValue(value: SqlValue) extends ColumnProperty {
@@ -265,7 +297,7 @@ case class DefaultValue(value: SqlValue) extends ColumnProperty {
 }
 
 case object DefaultValuePropertyType extends ColumnPropertyType {
-    override type ValueType = DefaultValue
+    override type Value = DefaultValue
 }
 
 case class AutoIncrement(autoIncrement: Boolean) extends ColumnProperty {
@@ -273,7 +305,7 @@ case class AutoIncrement(autoIncrement: Boolean) extends ColumnProperty {
 }
 
 case object AutoIncrementPropertyType extends ColumnPropertyType {
-    override type ValueType = AutoIncrement
+    override type Value = AutoIncrement
 }
 
 case class OnUpdateCurrentTimestamp(set: Boolean) extends ColumnProperty {
@@ -281,7 +313,7 @@ case class OnUpdateCurrentTimestamp(set: Boolean) extends ColumnProperty {
 }
 
 case object OnUpdateCurrentTimestampPropertyType extends ColumnPropertyType {
-    override type ValueType = OnUpdateCurrentTimestamp
+    override type Value = OnUpdateCurrentTimestamp
 }
 
 case class CommentProperty(comment: String) extends ColumnProperty {
@@ -289,7 +321,7 @@ case class CommentProperty(comment: String) extends ColumnProperty {
 }
 
 case object CommentPropertyType extends ColumnPropertyType {
-    override type ValueType = CommentProperty
+    override type Value = CommentProperty
 }
 
 case class DataTypeProperty(dataType: DataType) extends ColumnProperty {
@@ -297,7 +329,7 @@ case class DataTypeProperty(dataType: DataType) extends ColumnProperty {
 }
 
 case object DataTypePropertyType extends ColumnPropertyType {
-    override type ValueType = DataTypeProperty
+    override type Value = DataTypeProperty
 }
 
 object ModelTests extends org.specs.Specification {
