@@ -54,10 +54,14 @@ object ScriptSerializer {
     
     def serialize(stmt: ScriptElement): String = serialize(stmt, Options.singleline)
     
-    def serializeStatement(stmt: ScriptStatement, options: Options): String = stmt match {
+    def serializeTableStatement(stmt: TableDdlStatement, options: Options): String = stmt match {
         case st: CreateTableStatement => serializeCreateTable(st, options)
         case DropTableStatement(n) => serializeDropTable(n)
         case st: AlterTableStatement => serializeChangeTable(st)
+    }
+    
+    def serializeStatement(stmt: ScriptStatement, options: Options): String = stmt match {
+        case ts: TableDdlStatement => serializeTableStatement(ts, options)
         case is: InsertStatement => serializeInsert(is)
     }
     

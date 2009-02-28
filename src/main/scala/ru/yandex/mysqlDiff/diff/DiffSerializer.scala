@@ -105,7 +105,9 @@ class DiffSerializer(val context: Context) {
             import ats._
             val ops = rest2.flatMap(alterTableEntryStmts(_, table)) ++ addPkSingleColumnDiffProper
             val sorted = scala.util.Sorting.stableSort(ops, operationOrder _)
-            sorted.map { op: ats.Operation => AlterTableStatement(table.name, List(op)) }
+            // XXX: make configurable
+            if (false) sorted.map { op: ats.Operation => AlterTableStatement(table.name, List(op)) } 
+            else List(AlterTableStatement(table.name, sorted))
         }
         
         // XXX: sort: drop, then change, then create
@@ -167,12 +169,16 @@ object DiffSerializerTests extends org.specs.Specification {
         val oldTable = modelParser.parseCreateTableScript("CREATE TABLE users (id INT, name VARCHAR(100), dep_id INT, INDEX ni(name))")
         val newTable = modelParser.parseCreateTableScript("CREATE TABLE users (id INT, login VARCHAR(10), dep_id BIGINT, INDEX li(login))")
         val diff = diffMaker.compareTables(oldTable, newTable).get
-        val script = alterScript(diff, newTable)
-        //println(script.filter(!_.isInstanceOf[CommentElement]))
-        val dropNameI = script.findIndexOf(pftp { case AlterTableStatement(_, Seq(DropColumn("name"))) => true })
-        val dropNiI = script.findIndexOf(pftp { case AlterTableStatement(_, Seq(DropIndex("ni"))) => true })
-        val addLoginI = script.findIndexOf(pftp { case AlterTableStatement(_, Seq(AddColumn(c: Column))) if c.name == "login" => true })
-        val addLiI = script.findIndexOf(pftp { case AlterTableStatement(_, Seq(AddIndex(c: IndexModel))) if c.name == Some("li") => true })
+        val script = alterScript(diff, newTable).filter(_.isInstanceOf[ScriptStatement])
+        
+        script.size must_== 1
+        script(0) must beLike { case AlterTableStatement(_, _) => true }
+        val altStmt = script(0).asInstanceOf[AlterTableStatement].ops
+
+        val dropNameI = altStmt.findIndexOf(pftp { case DropColumn("name") => true })
+        val dropNiI = altStmt.findIndexOf(pftp { case DropIndex("ni") => true })
+        val addLoginI = altStmt.findIndexOf(pftp { case AddColumn(c: Column) if c.name == "login" => true })
+        val addLiI = altStmt.findIndexOf(pftp { case AddIndex(c: IndexModel) if c.name == Some("li") => true })
         
         dropNiI must be_>=(0)
         dropNameI must be_>=(0)
