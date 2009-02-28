@@ -34,6 +34,11 @@
         
         <ivy:retrieve pattern="lib/dep/[organisation]-[artifact]-[revision].[ext]" sync="true" type="jar"/>
     </target>
+    
+    <target name="dependencies-report" depends="resolve" description="generate dependencies report">
+        <mkdir dir="target/dependencies-report"/>
+        <ivy:report todir="target/dependencies-report"/>
+    </target>
 
     <target name="init" depends="resolve">
         
