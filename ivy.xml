@@ -12,8 +12,8 @@
     <dependencies>
         <dependency org="org.specs" name="specs" rev="1.4.3" conf="test->master"/>
         
-        <dependency org="org.slf4j" name="slf4j-api" rev="1.5.3" conf="runtime->*"/>
-        <dependency org="org.slf4j" name="slf4j-simple" rev="1.5.3" conf="runtime->*"/>
+        <dependency org="org.slf4j" name="slf4j-api" rev="1.5.6" conf="runtime->*"/>
+        <dependency org="org.slf4j" name="slf4j-simple" rev="1.5.6" conf="runtime->*"/>
         
         <dependency org="mysql" name="mysql-connector-java" rev="5.1.6" conf="runtime->*"/>
         <dependency org="postgresql" name="postgresql" rev="8.3-603.jdbc4" conf="runtime->*"/>
