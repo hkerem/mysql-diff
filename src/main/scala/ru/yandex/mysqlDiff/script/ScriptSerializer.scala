@@ -178,7 +178,7 @@ object ScriptSerializer {
             var size = dataType.length.map("(" + _ + ")").getOrElse("")
             dataType.name + size
         }
-        words ++= dataType.options.map(serializeDataTypeOption _)
+        words ++= dataType.options.properties.map(serializeDataTypeOption _)
         words.mkString(" ")
     }
     

@@ -168,7 +168,7 @@ object JdbcModelExtractor {
                 }
                 
                 val colTypeSize = getIntOption(columns, "COLUMN_SIZE")
-                    .filter(x => MysqlContext.dataTypes.make(colType, None, Nil).isLengthAllowed)
+                    .filter { x => dataTypes.isLengthAllowed(colType) }
 
                 val nullable = columns.getString("IS_NULLABLE") match {
                     case "YES" => Some(Nullability(true))
@@ -198,7 +198,8 @@ object JdbcModelExtractor {
                     .filter(x => x != null && x != "")
                     .map(MysqlCollate(_))
                 
-                val dataType = MysqlContext.dataTypes.make(colType, colTypeSize, Nil ++ characterSet ++ collate)
+                val dataType = dataTypes.make(colType, colTypeSize,
+                    new DataTypeOptions(List[DataTypeOption]() ++ characterSet ++ collate))
                 
                 val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
                 
@@ -273,16 +274,16 @@ object JdbcModelExtractor {
     
     protected def parseDefaultValueFromDb(s: String, dataType: DataType): Option[SqlValue] = {
         if (s == null) Some(NullValue) // None
-        else if (dataType.isAnyChar) {
+        else if (dataTypes.isAnyChar(dataType.name)) {
             if (s matches "'.*'") Some(StringValue(s.replaceFirst("^'", "").replaceFirst("'$", "")))
             else Some(StringValue(s))
         }
         else if (s == "NULL") None
-        else if (dataType.isAnyDateTime) {
+        else if (dataTypes.isAnyDateTime(dataType.name)) {
             if (s == "CURRENT_TIMESTAMP") Some(NowValue)
             else Some(StringValue(s))
         }
-        else if (dataType.isAnyNumber) {
+        else if (dataTypes.isAnyNumber(dataType.name)) {
             Some(sqlParserCombinator.parseValue(s))
         }
         else Some(StringValue(s))
@@ -484,8 +485,8 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         val a = table.column("a")
         val b = table.column("b")
         
-        b.dataType.options must contain(MysqlCharacterSet("utf8"))
-        b.dataType.options must contain(MysqlCollate("utf8_bin"))
+        b.dataType.options.properties must contain(MysqlCharacterSet("utf8"))
+        b.dataType.options.properties must contain(MysqlCollate("utf8_bin"))
     }
     
     "DATETIME without length" in {

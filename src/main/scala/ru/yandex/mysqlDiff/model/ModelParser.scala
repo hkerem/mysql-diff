@@ -72,10 +72,11 @@ case class ModelParser(val context: Context) {
         TableModel(name, columns.map(fixColumn(_, table)), pk, keys, options)
     }
     
-    protected def fixColumn(column: ColumnModel, table: TableModel) = column match {
-        case c if table.isPk(c.name) => fixPkColumn(c)
-        case c => fixRegularColumn(c)
-    }
+    protected def fixColumn(column: ColumnModel, table: TableModel) =
+        column.withDataType(fixDataType(column.dataType, column, table)) match {
+            case c if table.isPk(c.name) => fixPkColumn(c)
+            case c => fixRegularColumn(c)
+        }
     
     protected def fixPkColumn(column: ColumnModel) = {
         var properties = column.properties
@@ -95,6 +96,9 @@ case class ModelParser(val context: Context) {
         properties = properties.withDefaultProperty(DefaultValue(NullValue))
         ColumnModel(column.name, column.dataType, properties)
     }
+    
+    protected def fixDataType(dataType: DataType, column: ColumnModel, table: TableModel): DataType =
+        dataType
     
     def parseCreateTableScript(text: String) =
         parseCreateTable(sqlParserCombinator.parseCreateTable(text))

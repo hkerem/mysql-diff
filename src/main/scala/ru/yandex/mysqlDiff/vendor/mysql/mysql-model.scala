@@ -31,28 +31,14 @@ case object MysqlCollateType extends DataTypeOptionType {
 }
 
 
-case class MysqlDataType(override val name: String, override val length: Option[int], override val options: Seq[DataTypeOption])
-    extends DataType(name, length, options) {
-
-    def isAnyChar = name.matches(".*CHAR")
-    def isAnyDateTime = List("DATE", "TIME", "DATETIME", "TIMESTAMP") contains name
-    def isAnyNumber = name.matches("(|TINY|SMALL|BIG)INT") ||
-        (List("NUMBER", "FLOAT", "REAL", "DOUBLE", "DECIMAL", "NUMERIC") contains name)
-    def isLengthAllowed = !(isAnyDateTime || name.matches("(TINY|MEDIUM|LONG|)(TEXT|BLOB)"))
-    
-    override def normalized = MysqlDataTypes.normalize(this)
-}
-
 object MysqlDataTypes extends DataTypes {
     def int = make("INT")
 
-    override def make(name: String, length: Option[Int], options: Seq[DataTypeOption]): DataType =
-        new MysqlDataType(name, length, options)
-
     override def normalize(dt: DataType) = super.normalize(dt) match {
-        case MysqlDataType("BIT", _, options) => new MysqlDataType("TINYINT", Some(1), options)
+        case DataType("BIT", _, options) => make("TINYINT", Some(1), options)
         case dt => dt
     }
+    
 }
 
 object MysqlDataTypesTests extends org.specs.Specification {
@@ -60,6 +46,32 @@ object MysqlDataTypesTests extends org.specs.Specification {
 
     "TINYINT(1) equivalent to BIT" in {
         dataTypes.equivalent(dataTypes.make("BIT"), dataTypes.make("TINYINT", Some(1))) must beTrue
+    }
+}
+
+class MysqlModelParser(override val context: Context) extends ModelParser(context) {
+    // XXX: database defaults should be used too
+    protected def tableCollation(table: TableModel): Option[String] =
+        None
+    
+    // XXX: database defaults should be used too
+    protected def tableCharacterSet(table: TableModel): Option[String] =
+        None
+    
+    protected override def fixDataType(dataType: DataType, column: ColumnModel, table: TableModel) = {
+        // http://dev.mysql.com/doc/refman/5.1/en/charset-column.html
+        
+        val defaultCharset: Option[MysqlCharacterSet] =
+            None
+        val defaultCollation: Option[MysqlCollate] =
+            dataType.options.find(MysqlCharacterSetType).flatMap {
+                    cs: MysqlCharacterSet => MysqlCollation.defaultCollation(cs.name) }
+                .orElse(tableCollation(table))
+                .map(MysqlCollate(_))
+        
+        val defaultOptions: Seq[DataTypeOption] = List[DataTypeOption]() ++ defaultCharset ++ defaultCollation
+        
+        dataType.withOptions(dataType.options.withDefaultProperties(defaultOptions))
     }
 }
 

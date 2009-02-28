@@ -14,7 +14,7 @@ object PostgresqlParserCombinatorTests extends SqlParserCombinatorTests(Postgres
     import sqlParserCombinator._
     
     "DOUBLE PRECISION" in {
-        parse(dataType)("DOUBLE PRECISION") must_== PostgresqlDataType("DOUBLE PRECISION", None, Nil)
+        parse(dataType)("DOUBLE PRECISION") must_== new DataType("DOUBLE PRECISION", None)
     }
 }
 

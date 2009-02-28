@@ -82,7 +82,8 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     // XXX: store unsigned
     def dataType: Parser[DataType] = dataTypeName ~ opt("(" ~> naturalNumber <~ ")") ~ rep(dataTypeOption) ^^
-            { case name ~ length ~ options => dataTypes.make(name.toUpperCase, length, options) }
+            { case name ~ length ~ options =>
+                    dataTypes.make(name.toUpperCase, length, new DataTypeOptions(options)) }
    
     def nullability: Parser[Nullability] = opt("NOT") <~ "NULL" ^^ { x => Nullability(x.isEmpty) }
     

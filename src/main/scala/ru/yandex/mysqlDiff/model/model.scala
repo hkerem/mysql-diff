@@ -28,7 +28,13 @@ case class PropertyMap[T <: PropertyType, V <: Property](val properties: Seq[V])
     
     def withDefaultProperty(property: V): this.type =
         if (find(property.propertyType.asInstanceOf[T]).isDefined) this
-        else copy(properties ++ List(property))
+        else copy(properties ++ Seq(property))
+    
+    def withDefaultProperties(ps: Seq[V]): this.type = {
+        var r: this.type = this
+        for (p <- ps) r = r.withDefaultProperty(p)
+        r
+    }
     
     def removeProperty(pt: T): this.type =
         copy(properties.filter(_.propertyType != pt))
@@ -38,6 +44,8 @@ case class PropertyMap[T <: PropertyType, V <: Property](val properties: Seq[V])
     
     def addProperty(p: V): this.type =
         copy(properties ++ List(p))
+    
+    def mkString(sep: String) = properties.mkString(sep)
 }
 
 
@@ -60,25 +68,29 @@ abstract class DataTypeOptionType extends PropertyType {
     override type Value <: DataTypeOption
 }
 
-abstract case class DataType(name: String, length: Option[Int], options: Seq[DataTypeOption]) {
+case class DataTypeOptions(ps: Seq[DataTypeOption])
+    extends PropertyMap[DataTypeOptionType, DataTypeOption](ps)
+{
+    override def copy(options: Seq[DataTypeOption]) = new DataTypeOptions(options).asInstanceOf[this.type]
+}
+
+case class DataType(name: String, length: Option[Int], options: DataTypeOptions) {
     require(name.toUpperCase == name)
+    
+    def this(name: String, length: Option[Int]) =
+        this(name, length, new DataTypeOptions(Nil))
+    
+    def withName(n: String) =
+        new DataType(n, this.length, this.options)
+    
+    def withLength(l: Option[Int]) =
+        new DataType(this.name, l, this.options)
+    
+    def withOptions(os: DataTypeOptions) =
+        new DataType(this.name, this.length, os)
 
-    def isAnyChar: Boolean
-    def isAnyDateTime: Boolean
-    def isAnyNumber: Boolean
-    def isLengthAllowed: Boolean
-    /** @deprecated */
-    def normalized: DataType
-
-    def equivalent(other: DataType) = {
-        val n1 = normalized
-        val n2 = other.normalized
-        n1.name == n2.name && n1.length == n2.length && n1.options == n2.options
-    }
-
-    override def toString = name
-
-    require(length.isEmpty || isLengthAllowed, "length is not allowed")
+    override def toString =
+        name + length.map("(" + _ + ")").getOrElse("") + (if (options.isEmpty) "" else " " + options.mkString(" "))
 }
 
 abstract class DataTypes {
@@ -90,46 +102,43 @@ abstract class DataTypes {
         make(name, None)
     
     def make(name: String, length: Option[Int]): DataType =
-        make(name, length, Nil)
+        make(name, length, new DataTypeOptions(Nil))
 
-    def make(name: String, length: Option[Int], options: Seq[DataTypeOption]): DataType 
+    def make(name: String, length: Option[Int], options: DataTypeOptions) =
+        new DataType(name, length, options)
     
-    def resolveTypeNameAlias(name: String) = name
+    def resolveTypeNameAlias(name: String) = name.toUpperCase
     
     def normalize(dt: DataType) = make(resolveTypeNameAlias(dt.name), dt.length, dt.options)
+    
+    def isAnyChar(name: String) = resolveTypeNameAlias(name).matches(".*CHAR")
+    def isAnyDateTime(name: String) = List("DATE", "TIME", "DATETIME", "TIMESTAMP") contains resolveTypeNameAlias(name)
+    def isAnyNumber(name: String) = name.matches("(|TINY|SMALL|BIG)INT") ||
+        (List("NUMBER", "FLOAT", "REAL", "DOUBLE", "DECIMAL", "NUMERIC") contains resolveTypeNameAlias(name))
+    def isLengthAllowed(name: String) =
+        !(isAnyDateTime(name) || resolveTypeNameAlias(name).matches("(TINY|MEDIUM|LONG|)(TEXT|BLOB)"))
 
     def equivalent(typeA: DataType, typeB: DataType) = {
-        /*
-        def e1(a: DataType, b: DataType) =
-            if (a == dataTypes.make("TINYINT", Some(1)) && b == dataTypes.make("BIT", None)) true
-            else false
-        else if (e1(a, b)) true
-        else if (e1(b, a)) true
-        */
         val a = normalize(typeA)
         val b = normalize(typeB)
         
         if (a == b) true
         else if (a.name != b.name) false
-        else if (a.isAnyNumber) true // ignore size change: XXX: should rather know DB defaults
-        else if (a.isAnyDateTime) true // probably
+        else if (isAnyNumber(a.name)) true // ignore size change: XXX: should rather know DB defaults
+        else if (isAnyDateTime(a.name)) true // probably
         else a.name == b.name && a.length == b.length // ignoring options for a while; should not ignore if options change
     }
 }
 
 abstract class TableEntry
 
-/**
- * @deprecated in favor of PropertyMap
- */
 case class ColumnProperties(ps: Seq[ColumnProperty])
     extends PropertyMap[ColumnPropertyType, ColumnProperty](ps)
 {
+    override def copy(properties: Seq[ColumnProperty]) = new ColumnProperties(properties).asInstanceOf[this.type]
     
     /** True iff NOT NULL or unknown */
     def isNotNull = find(NullabilityPropertyType).map(!_.nullable).getOrElse(false)
-    
-    override def copy(properties: Seq[ColumnProperty]) = new ColumnProperties(properties).asInstanceOf[this.type]
     
     def comment: Option[String] = find(CommentPropertyType).map(_.comment)
     
@@ -183,6 +192,15 @@ case class ColumnModel(val name: String, val dataType: DataType, properties: Col
     def this(name: String, dataType: DataType) = this(name, dataType, ColumnProperties.empty)
     
     require(properties.isModelProperties)
+    
+    def withProperties(ps: ColumnProperties) =
+        new ColumnModel(this.name, this.dataType, ps)
+    
+    def withDataType(dt: DataType) =
+        new ColumnModel(this.name, dt, this.properties)
+    
+    def withName(n: String) =
+        new ColumnModel(n, this.dataType, this.properties)
     
     def isNotNull = properties.isNotNull
     def isAutoIncrement = properties.isAutoIncrement
