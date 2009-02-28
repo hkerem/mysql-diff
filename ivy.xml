@@ -4,30 +4,49 @@
     <info revision="0.2" organisation="ru.yandex" module="mysql-diff"/>
     
     <configurations>
-        <conf name="compile"/>
-        <conf name="runtime" extends="compile"/>
-        <conf name="test" extends="runtime"/>
+        <!-- JDBC drivers -->
+        <conf name="drivers"/>
+        
+        <!-- in classpath to be compiled and executed -->
+        <conf name="api"/>
+        <!-- in classpath to be compiled, but not required for execution -->
+        <conf name="compile" extends="api"/>
+        <!-- in classpath to be executed, but without drivers -->
+        <conf name="runtime" extends="api"/>
+        <!-- everything needed to be executed -->
+        <conf name="app" extends="runtime,drivers"/>
+        
+        <!-- in classpath to be tested -->
+        <conf name="test" extends="compile,runtime,drivers"/>
+        
+        <!-- in classpath to define tools -->
+        <conf name="tools"/>
     </configurations>
     
     <dependencies>
-        <dependency org="org.specs" name="specs" rev="1.4.3" conf="test->master"/>
+        <dependency org="org.specs" name="specs" rev="1.4.3" conf="compile->master"/>
         
         <dependency org="org.slf4j" name="slf4j-api" rev="1.5.6" conf="compile->*"/>
         <dependency org="org.slf4j" name="slf4j-simple" rev="1.5.6" conf="runtime->*"/>
         
-        <dependency org="mysql" name="mysql-connector-java" rev="5.1.6" conf="runtime->*"/>
-        <dependency org="postgresql" name="postgresql" rev="8.3-603.jdbc4" conf="runtime->*"/>
+        <dependency org="mysql" name="mysql-connector-java" rev="5.1.6" conf="drivers->*"/>
+        <dependency org="postgresql" name="postgresql" rev="8.3-603.jdbc4" conf="drivers->*"/>
         
         <dependency org="org.scalaforge" name="scalax" rev="0.1" conf="compile->*"/>
         
         <!-- XXX: introduce conf name=tools -->
-        <dependency org="jarjar" name="jarjar" rev="1.0rc8" conf="compile->*">
+        <dependency org="jarjar" name="jarjar" rev="1.0rc8" conf="tools->*">
             <artifact name="jarjar" type="jar" url="http://jarjar.googlecode.com/files/jarjar-1.0rc8.jar"/>
         </dependency>
         
         <dependency org="org.apache.ant" name="ant" rev="1.7.0" conf="compile->*"/>
         
-        <dependency org="org.scala-lang" name="scala-compiler" rev="2.7.3" conf="compile->*"/>
+        <dependency org="org.scala-lang" name="scala-library" rev="2.7.3" conf="runtime->*"/>
+        
+        <dependency org="org.scala-lang" name="scala-compiler" rev="2.7.3" conf="tools->*"/>
+        
+        <exclude org="xerces"/>
+        <exclude org="xml-apis"/>
     </dependencies>
         
 </ivy-module>
