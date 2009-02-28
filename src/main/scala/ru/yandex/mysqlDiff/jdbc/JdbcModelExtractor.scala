@@ -291,7 +291,7 @@ object JdbcModelExtractor {
     
     // XXX: move to jdbc.MetaDao
     def read[T](rs: ResultSet)(f: ResultSet => T) = {
-        var r = List[T]()
+        val r = new ArrayBuffer[T]()
         while (rs.next()) {
             r += f(rs)
         }

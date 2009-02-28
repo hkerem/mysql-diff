@@ -15,15 +15,15 @@ case class DiffMaker(val context: Context) {
         
         for (x <- a) {
             b.find(comparator(x, _)) match {
-                case Some(y) => inBothA += (x, y)
-                case None => onlyInA += x
+                case Some(y) => inBothA ++= List((x, y))
+                case None => onlyInA ++= List(x)
             }
         }
         
         for (y <- b) {
             a.find(comparator(_, y)) match {
-                case Some(x) => inBothB += (x, y)
-                case None => onlyInB += y
+                case Some(x) => inBothB ++= List((x, y))
+                case None => onlyInB ++= List(y)
             }
         }
         
@@ -249,8 +249,8 @@ object DiffMakerTests extends org.specs.Specification {
     }
     
     "changeColumn bug?" in {
-        val oldC = new ColumnModel("vote", dataTypes.make("BIGINT"), new ColumnProperties(Seq.single(DefaultValue(NullValue))))
-        val newC = new ColumnModel("vote", dataTypes.make("BIGINT"), new ColumnProperties(List(DefaultValue(NullValue))))
+        val oldC = new ColumnModel("vote", dataTypes.make("BIGINT"), new ColumnProperties(Seq(DefaultValue(NullValue))))
+        val newC = new ColumnModel("vote", dataTypes.make("BIGINT"), new ColumnProperties(Seq(DefaultValue(NullValue))))
         diffMaker.compareColumns(oldC, newC) must_== None
     }
     
