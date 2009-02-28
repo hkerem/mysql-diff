@@ -137,7 +137,7 @@ object ScriptSerializer {
         "DROP TABLE " + tableName
     
     def serializeChangeTable(st: AlterTableStatement) =
-        "ALTER TABLE " + st.tableName + " " +
+        "ALTER TABLE " + st.name + " " +
             st.ops.map(serializeAlterTableOperation(_)).mkString(", ")
     
     def serializeAlterTableOperation(op: AlterTableStatement.Operation) = {

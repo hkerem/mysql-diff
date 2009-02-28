@@ -34,9 +34,11 @@ case class Unparsed(q: String) extends ScriptElement
 
 abstract class DdlStatement extends ScriptStatement
 
+abstract class TableDdlStatement(name: String) extends DdlStatement
+
 case class CreateTableStatement(name: String, ifNotExists: Boolean,
         entries: Seq[CreateTableStatement.Entry], options: Seq[TableOption])
-    extends DdlStatement
+    extends TableDdlStatement(name)
 {
     def this(name: String, ifNotExists: Boolean, entries: Seq[CreateTableStatement.Entry]) =
         this(name, ifNotExists, entries, Nil)
@@ -80,18 +82,18 @@ object CreateTableStatement {
     case class ForeignKey(fk: model.ForeignKeyModel) extends Entry
 }
 
-case class DropTableStatement(name: String) extends DdlStatement
+case class DropTableStatement(name: String) extends TableDdlStatement(name)
 
-case class RenameTableStatement(oldName: String, newName: String) extends DdlStatement
+case class RenameTableStatement(name: String, newName: String) extends TableDdlStatement(name)
 
-case class AlterTableStatement(tableName: String, ops: Seq[AlterTableStatement.Operation])
-        extends DdlStatement
+case class AlterTableStatement(name: String, ops: Seq[AlterTableStatement.Operation])
+        extends TableDdlStatement(name)
 {
     require(ops.length > 0)
     
-    def this(tableName: String, op: AlterTableStatement.Operation) = this(tableName, List(op))
+    def this(name: String, op: AlterTableStatement.Operation) = this(name, List(op))
     
-    def flatten = ops.map(new AlterTableStatement(tableName, _))
+    def flatten = ops.map(new AlterTableStatement(name, _))
 }
 
 object AlterTableStatement {
@@ -132,9 +134,12 @@ object AlterTableStatement {
     case class TableOption(o: model.TableOption) extends Operation
 }
 
-case class CreateViewStatement(name: String, select: SelectStatement) extends DdlStatement
+abstract class ViewDdlStatement(name: String) extends DdlStatement
 
-case class DropViewStatement(name: String) extends DdlStatement
+case class CreateViewStatement(name: String, select: SelectStatement) extends ViewDdlStatement(name)
+
+case class DropViewStatement(name: String) extends ViewDdlStatement(name)
+
 
 abstract class DmlStatement extends ScriptStatement
 
