@@ -5,21 +5,22 @@
     
     <configurations>
         <conf name="compile"/>
-        <conf name="test"/>
-        <conf name="runtime"/>
+        <conf name="runtime" extends="compile"/>
+        <conf name="test" extends="runtime"/>
     </configurations>
     
     <dependencies>
         <dependency org="org.specs" name="specs" rev="1.4.3" conf="test->master"/>
         
-        <dependency org="org.slf4j" name="slf4j-api" rev="1.5.6" conf="runtime->*"/>
+        <dependency org="org.slf4j" name="slf4j-api" rev="1.5.6" conf="compile->*"/>
         <dependency org="org.slf4j" name="slf4j-simple" rev="1.5.6" conf="runtime->*"/>
         
         <dependency org="mysql" name="mysql-connector-java" rev="5.1.6" conf="runtime->*"/>
         <dependency org="postgresql" name="postgresql" rev="8.3-603.jdbc4" conf="runtime->*"/>
         
-        <dependency org="org.scalaforge" name="scalax" rev="0.1" conf="runtime->*"/>
+        <dependency org="org.scalaforge" name="scalax" rev="0.1" conf="compile->*"/>
         
+        <!-- XXX: introduce conf name=tools -->
         <dependency org="jarjar" name="jarjar" rev="1.0rc8" conf="compile->*">
             <artifact name="jarjar" type="jar" url="http://jarjar.googlecode.com/files/jarjar-1.0rc8.jar"/>
         </dependency>
