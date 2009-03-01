@@ -89,7 +89,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
             None
         val defaultCollation: Option[MysqlCollate] =
             dataType.options.find(MysqlCharacterSetType).flatMap {
-                    cs: MysqlCharacterSet => MysqlCollation.defaultCollation(cs.name) }
+                    cs: MysqlCharacterSet => MysqlCharsets.defaultCollation(cs.name) }
                 .orElse(tableCollation(table))
                 .map(MysqlCollate(_))
         
