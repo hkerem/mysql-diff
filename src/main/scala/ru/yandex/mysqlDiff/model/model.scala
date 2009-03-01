@@ -115,6 +115,7 @@ abstract class DataTypes {
     def isLengthAllowed(name: String) =
         !(isAnyDateTime(name) || resolveTypeNameAlias(name).matches("(TINY|MEDIUM|LONG|)(TEXT|BLOB)"))
 
+    /** Equivelent without options counting */
     def equivalent(typeA: DataType, typeB: DataType) = {
         val a = normalize(typeA)
         val b = normalize(typeB)

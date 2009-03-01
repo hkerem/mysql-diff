@@ -4,6 +4,8 @@ import scala.collection.mutable.ArrayBuffer
 
 import model._
 
+import Implicits._
+
 case class DiffMaker(val context: Context) {
     import context._
 
@@ -41,11 +43,19 @@ case class DiffMaker(val context: Context) {
         a == b || e1(a, b) || e1(b, a)
     }
     
+    def dataTypesEquivalent(a: DataType, b: DataType) = {
+        if (!dataTypes.equivalent(a, b)) false
+        else
+            compareSeqs(a.options, b.options,
+                    (a: DataTypeOption, b: DataTypeOption) => a.propertyType == b.propertyType
+            )._3.isEmpty
+    }
+    
     def columnPropertiesEquivalent(a: ColumnProperty, b: ColumnProperty) = {
         require(a.propertyType == b.propertyType)
         val propertyType = a.propertyType
         (a, b) match {
-            case (DataTypeProperty(adt), DataTypeProperty(bdt)) => dataTypes.equivalent(adt, bdt)
+            case (DataTypeProperty(adt), DataTypeProperty(bdt)) => dataTypesEquivalent(adt, bdt)
             case (DefaultValue(adv), DefaultValue(bdv)) => defaultValuesEquivalent(adv, bdv)
             case _ => a == b
         }
@@ -61,7 +71,7 @@ case class DiffMaker(val context: Context) {
             DefaultValuePropertyType
         )
         
-        if (!dataTypes.equivalent(from.dataType, to.dataType))
+        if (!dataTypesEquivalent(from.dataType, to.dataType))
             diff += new ChangeColumnPropertyDiff(DataTypeProperty(from.dataType), DataTypeProperty(to.dataType))
         
         for (pt <- comparePropertyTypes) {

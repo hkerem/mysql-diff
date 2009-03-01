@@ -74,19 +74,28 @@ object MysqlCollateTableOptionType extends TableOptionType {
 }
 
 class MysqlModelParser(override val context: Context) extends ModelParser(context) {
-    // XXX: database defaults should be used too
-    protected def tableCollation(table: TableModel): Option[String] =
-        None
+    private def tableCollation(table: TableModel): Option[String] = {
+        def defaultCollation =
+            table.options.find(MysqlCharacterSetTableOptionType).flatMap(
+                o => MysqlCharsets.defaultCollation(o.name))
+        table.options.find(MysqlCollateTableOptionType).map(_.name).orElse(defaultCollation)
+    }
     
-    // XXX: database defaults should be used too
-    protected def tableCharacterSet(table: TableModel): Option[String] =
-        None
+    private def tableCharacterSet(table: TableModel): Option[String] = {
+        def defaultCharset = 
+            table.options.find(MysqlCollateTableOptionType).flatMap(
+                o => MysqlCharsets.defaultCharset(o.name))
+        table.options.find(MysqlCharacterSetTableOptionType).map(_.name).orElse(defaultCharset)
+    }
     
     protected override def fixDataType(dataType: DataType, column: ColumnModel, table: TableModel) = {
         // http://dev.mysql.com/doc/refman/5.1/en/charset-column.html
         
         val defaultCharset: Option[MysqlCharacterSet] =
-            None
+            dataType.options.find(MysqlCollateType).flatMap {
+                    cl: MysqlCollate => MysqlCharsets.defaultCharset(cl.name) }
+                .orElse(tableCharacterSet(table))
+                .map(MysqlCharacterSet(_))
         val defaultCollation: Option[MysqlCollate] =
             dataType.options.find(MysqlCharacterSetType).flatMap {
                     cs: MysqlCharacterSet => MysqlCharsets.defaultCollation(cs.name) }

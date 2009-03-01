@@ -128,9 +128,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         val dbModel = JdbcModelExtractor.extractTable("moderated_tags", ds)
         val localModel = modelParser.parseCreateTableScript(s2)
         
-        println(dbModel)
-        println(localModel)
-        // collation is changed from utf8_bin to utf8_general_ci
+        // column collation is changed from utf8_bin to utf8_general_ci
         // (character set implies collation)
         diffMaker.compareTables(dbModel, localModel) must beLike { case Some(_) => true }
     }

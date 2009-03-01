@@ -92,11 +92,12 @@ object JdbcModelExtractor {
         
         // XXX: move outside: MySQL-specific
         
+        // MySQL does not store default charset:
+        // http://dev.mysql.com/doc/refman/5.1/en/tables-table.html
         def mapTableOptions(rs: ResultSet) =
-            (rs.getString("TABLE_NAME"), List(
+            (rs.getString("TABLE_NAME"), Seq(
                     MysqlEngineTableOption(rs.getString("ENGINE")),
                     MysqlCollateTableOption(rs.getString("TABLE_COLLATION"))
-                    // XXX: character set
                     ))
         
         def findTablesOptions(schema: String): Seq[(String, Seq[TableOption])] = {
@@ -480,7 +481,7 @@ object JdbcModelExtractorTests extends org.specs.Specification {
         //t.column("name").properties.autoIncrement must_== None
     }
     
-    "fetches CHARACTER SET and COLLATE" in {
+    "fetch column CHARACTER SET and COLLATE" in {
         dropTable("qwqw")
         execute("CREATE TABLE qwqw (a VARCHAR(2), b VARCHAR(2) CHARACTER SET utf8 COLLATE utf8_bin)")
         
