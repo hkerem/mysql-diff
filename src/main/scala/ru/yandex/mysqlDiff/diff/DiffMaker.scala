@@ -274,21 +274,21 @@ object DiffMakerTests extends org.specs.Specification {
     }
     
     "BIGINT equivalent to BIGINT(19)" in {
-        dataTypes.equivalent(dataTypes.make("BIGINT"), dataTypes.make("BIGINT", Some(19))) must_== true
-        dataTypes.equivalent(dataTypes.make("BIGINT", Some(19)), dataTypes.make("BIGINT")) must_== true
+        dataTypesEquivalent(dataTypes.make("BIGINT"), dataTypes.make("BIGINT", Some(19))) must_== true
+        dataTypesEquivalent(dataTypes.make("BIGINT", Some(19)), dataTypes.make("BIGINT")) must_== true
     }
     
     "INT not equivalent to BIGINT" in {
-        dataTypes.equivalent(dataTypes.make("INT"), dataTypes.make("BIGINT")) must_== false
-        dataTypes.equivalent(dataTypes.make("BIGINT"), dataTypes.make("INT")) must_== false
+        dataTypesEquivalent(dataTypes.make("INT"), dataTypes.make("BIGINT")) must_== false
+        dataTypesEquivalent(dataTypes.make("BIGINT"), dataTypes.make("INT")) must_== false
     }
     
     "INT not equivalent to VARCHAR(100)" in {
-        dataTypes.equivalent(dataTypes.make("INT"), dataTypes.make("VARCHAR", Some(100))) must beFalse
+        dataTypesEquivalent(dataTypes.make("INT"), dataTypes.make("VARCHAR", Some(100))) must beFalse
     }
     
     "VARCHAR(10) not equivalent to VARCHAR(20)" in {
-        dataTypes.equivalent(dataTypes.make("VARCHAR", Some(10)), dataTypes.make("VARCHAR", Some(20))) must_== false
+        dataTypesEquivalent(dataTypes.make("VARCHAR", Some(10)), dataTypes.make("VARCHAR", Some(20))) must_== false
     }
     
     "VARCHAR(100) equivalent" in {
@@ -303,7 +303,7 @@ object DiffMakerTests extends org.specs.Specification {
     }
     
     "TINYINT(1) equivalent to BIT" in {
-        dataTypes.equivalent(dataTypes.make("BIT"), dataTypes.make("TINYINT", Some(1))) must beTrue
+        dataTypesEquivalent(dataTypes.make("BIT"), dataTypes.make("TINYINT", Some(1))) must beTrue
     }
     
     "0 not equivalent to 1" in {

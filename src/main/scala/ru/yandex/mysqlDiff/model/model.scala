@@ -110,8 +110,10 @@ abstract class DataTypes {
     
     def isAnyChar(name: String) = resolveTypeNameAlias(name).matches(".*CHAR")
     def isAnyDateTime(name: String) = List("DATE", "TIME", "DATETIME", "TIMESTAMP") contains resolveTypeNameAlias(name)
-    def isAnyNumber(name: String) = name.matches("(|TINY|SMALL|BIG)INT") ||
+    def isAnyNumber(name: String) = resolveTypeNameAlias(name).matches("(|TINY|SMALL|BIG)INT") ||
         (List("NUMBER", "FLOAT", "REAL", "DOUBLE", "DECIMAL", "NUMERIC") contains resolveTypeNameAlias(name))
+    
+    def isLengthIgnored(name: String) = false
     def isLengthAllowed(name: String) =
         !(isAnyDateTime(name) || resolveTypeNameAlias(name).matches("(TINY|MEDIUM|LONG|)(TEXT|BLOB)"))
 
@@ -124,8 +126,14 @@ abstract class DataTypes {
         else if (a.name != b.name) false
         else if (isAnyNumber(a.name)) true // ignore size change: XXX: should rather know DB defaults
         else if (isAnyDateTime(a.name)) true // probably
-        else a.name == b.name && a.length == b.length // ignoring options for a while; should not ignore if options change
+        else a.name == b.name && a.length == b.length
     }
+}
+
+object DataTypesTests extends org.specs.Specification {
+    import Environment.defaultContext._
+    
+    // no tests yet
 }
 
 abstract class TableEntry
@@ -359,6 +367,7 @@ case object DataTypePropertyType extends ColumnPropertyType {
 
 object ModelTests extends org.specs.Specification {
     include(ColumnPropertiesTests)
+    include(DataTypesTests)
 
     import Environment.defaultContext._
     
