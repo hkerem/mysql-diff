@@ -132,6 +132,11 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         // (character set implies collation)
         diffMaker.compareTables(dbModel, localModel) must beLike { case Some(_) => true }
     }
+    
+    "bug with data type options equivalence" in {
+        checkTableGeneratesNoDiff(
+            "CREATE TABLE alive_apps (hostname VARCHAR(100) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8")
+    }
 }
 
 // vim: set ts=4 sw=4 et:

@@ -48,7 +48,7 @@ case class DiffMaker(val context: Context) {
         else
             compareSeqs(a.options, b.options,
                     (a: DataTypeOption, b: DataTypeOption) => a.propertyType == b.propertyType
-            )._3.isEmpty
+            )._3.forall { case (a, b) => a == b }
     }
     
     def columnPropertiesEquivalent(a: ColumnProperty, b: ColumnProperty) = {
@@ -196,6 +196,8 @@ object DiffMakerTests extends org.specs.Specification {
     import org.specs.matcher.Matcher
     import diffMaker._
     
+    import vendor.mysql._
+    
     "compareSeqs" in {
         val a = List(1, 2, 3, 5)
         val b = List("4", "3", "2")
@@ -287,6 +289,17 @@ object DiffMakerTests extends org.specs.Specification {
     
     "VARCHAR(10) not equivalent to VARCHAR(20)" in {
         dataTypes.equivalent(dataTypes.make("VARCHAR", Some(10)), dataTypes.make("VARCHAR", Some(20))) must_== false
+    }
+    
+    "VARCHAR(100) equivalent" in {
+        val dt = dataTypes.make("VARCHAR", Some(100))
+        dataTypesEquivalent(dt, dt) must beTrue
+    }
+    
+    "VARCHAR(100) CHARACTER SET utf8 COLLATE utf8_general_ci equivalent" in {
+        val dt = dataTypes.make("VARCHAR", Some(100),
+                Seq(MysqlCollate("utf8_general_ci"), MysqlCharacterSet("utf8")))
+        dataTypesEquivalent(dt, dt) must beTrue
     }
     
     "TINYINT(1) equivalent to BIT" in {
