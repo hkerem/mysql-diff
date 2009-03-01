@@ -111,7 +111,8 @@ case class DiffMaker(val context: Context) {
     def tableOptionsEquivalent(a: TableOption, b: TableOption) = a.propertyType == b.propertyType
     
     def compareTableOptions(a: TableOption, b: TableOption) = {
-        Some(ChangeTableOptionDiff(a, b))
+        if (a == b) None
+        else Some(ChangeTableOptionDiff(a, b))
     }
     
     def compareTables(from: TableModel, to: TableModel): Option[ChangeTableDiff] = {
