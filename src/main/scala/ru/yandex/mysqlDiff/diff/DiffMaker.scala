@@ -108,8 +108,6 @@ case class DiffMaker(val context: Context) {
         case _ => false
     }
         
-    def tableOptionsEquivalent(a: TableOption, b: TableOption) = a.propertyType == b.propertyType
-    
     def compareTableOptions(a: TableOption, b: TableOption) = {
         if (a == b) None
         else Some(ChangeTableOptionDiff(a, b))
@@ -140,7 +138,8 @@ case class DiffMaker(val context: Context) {
         
         
         val (fromOptions, toOptions, changeOptionPairs) =
-            compareSeqs(from.options.properties, to.options.properties, tableOptionsEquivalent _)
+            compareSeqs(from.options.properties, to.options.properties,
+                    (x: TableOption, y: TableOption) => x.propertyType == y.propertyType)
         
         val dropOptionDiff = Nil: Seq[TableOptionDiff] // cannot drop options
         val createOptionDiff = Nil: Seq[TableOptionDiff] // unknown: do not force creation
