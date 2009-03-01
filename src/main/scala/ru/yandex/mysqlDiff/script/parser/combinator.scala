@@ -13,7 +13,7 @@ import scalax.io._
 
 import model._
 
-import script.Implicits._
+import Implicits._
 
 class CombinatorParserException(msg: String, cause: Throwable) extends Exception(msg, cause) {
     def this(msg: String) = this(msg, null)

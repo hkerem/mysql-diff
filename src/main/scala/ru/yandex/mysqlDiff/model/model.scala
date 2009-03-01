@@ -2,7 +2,7 @@ package ru.yandex.mysqlDiff.model
 
 import scala.collection.mutable._
 
-
+import Implicits._
 
 abstract class Property {
     def propertyType: PropertyType
@@ -20,8 +20,6 @@ case class PropertyMap[T <: PropertyType, V <: Property](val properties: Seq[V])
     require(Set(propertyTypes: _*).size == properties.length)
     
     protected def copy(properties: Seq[V]): this.type = new PropertyMap[T, V](properties).asInstanceOf[this.type]
-    
-    def isEmpty = properties.isEmpty
     
     def find[U <: T](pt: U): Option[U#Value] =
         properties.find(_.propertyType == pt).map(_.asInstanceOf[U#Value])
@@ -45,7 +43,6 @@ case class PropertyMap[T <: PropertyType, V <: Property](val properties: Seq[V])
     def addProperty(p: V): this.type =
         copy(properties ++ List(p))
     
-    def mkString(sep: String) = properties.mkString(sep)
 }
 
 

@@ -170,12 +170,4 @@ case class SelectStatement(expr: Seq[SelectExpr], tables: Seq[String], condition
 object ScriptTests extends org.specs.Specification {
 }
 
-object Implicits {
-    implicit def toDecls(ps: ColumnProperties) =
-        ps.properties.map(CreateTableStatement.ModelColumnProperty(_))
-    
-    implicit def modelCpToCpDecl(cp: ColumnProperty) =
-        CreateTableStatement.ModelColumnProperty(cp)
-}
-
 // vim: set ts=4 sw=4 et:

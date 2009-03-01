@@ -2,8 +2,9 @@ package ru.yandex.mysqlDiff.model
 
 import scala.collection.mutable.ArrayBuffer
 
+import Implicits._
+
 import script._
-import script.Implicits._
 
 import scalax.io._
 
