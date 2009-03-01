@@ -204,6 +204,7 @@ object MysqlServerVersionTests extends org.specs.Specification {
 class MysqlTests(includeOnline: Boolean) extends org.specs.Specification {
     include(MysqlServerVersionTests)
     include(MysqlCharsetsTests)
+    include(MysqlModelParserTests)
     if (includeOnline) include(MysqlOnlineTests)
     include(MysqlDataTypesTests)
     include(MysqlParserCombinatorTests)

@@ -74,6 +74,8 @@ object MysqlCollateTableOptionType extends TableOptionType {
 }
 
 class MysqlModelParser(override val context: Context) extends ModelParser(context) {
+    import context._
+    
     private def tableCollation(table: TableModel): Option[String] = {
         def defaultCollation =
             table.options.find(MysqlCharacterSetTableOptionType).flatMap(
@@ -92,19 +94,35 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         // http://dev.mysql.com/doc/refman/5.1/en/charset-column.html
         
         val defaultCharset: Option[MysqlCharacterSet] =
-            dataType.options.find(MysqlCollateType).flatMap {
-                    cl: MysqlCollate => MysqlCharsets.defaultCharset(cl.name) }
-                .orElse(tableCharacterSet(table))
-                .map(MysqlCharacterSet(_))
+            if (dataTypes.isAnyChar(dataType.name))
+                dataType.options.find(MysqlCollateType).flatMap {
+                        cl: MysqlCollate => MysqlCharsets.defaultCharset(cl.name) }
+                    .orElse(tableCharacterSet(table))
+                    .map(MysqlCharacterSet(_))
+            else None
         val defaultCollation: Option[MysqlCollate] =
-            dataType.options.find(MysqlCharacterSetType).flatMap {
-                    cs: MysqlCharacterSet => MysqlCharsets.defaultCollation(cs.name) }
-                .orElse(tableCollation(table))
-                .map(MysqlCollate(_))
+            if (dataTypes.isAnyChar(dataType.name))
+                dataType.options.find(MysqlCharacterSetType).flatMap {
+                        cs: MysqlCharacterSet => MysqlCharsets.defaultCollation(cs.name) }
+                    .orElse(tableCollation(table))
+                    .map(MysqlCollate(_))
+            else None
         
         val defaultOptions: Seq[DataTypeOption] = List[DataTypeOption]() ++ defaultCharset ++ defaultCollation
         
         dataType.withOptions(dataType.options.withDefaultProperties(defaultOptions))
+    }
+}
+
+object MysqlModelParserTests extends org.specs.Specification {
+    import MysqlContext._
+    
+    "INT column must have no collation" in {
+        val t = modelParser.parseCreateTableScript(
+            "CREATE TABLE users (id INT) CHARACTER SET utf8 COLLATE utf8_bin")
+        val c = t.column("id")
+        c.dataType.options.find(MysqlCollateType) must_== None
+        c.dataType.options.find(MysqlCharacterSetType) must_== None
     }
 }
 
