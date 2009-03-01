@@ -234,16 +234,25 @@ case class ForeignKeyModel(override val name: Option[String],
     require(localColumns.length == externalColumns.length)
 }
 
-case class TableOption(name: String, value: String)
+abstract class TableOption extends Property {
+    override def propertyType: TableOptionType
+}
 
-abstract class TableOptionType {
-    type OptionType <: TableOption
+abstract class TableOptionType extends PropertyType {
+    override type Value <: TableOption
+}
+
+case class TableOptions(ps: Seq[TableOption])
+    extends PropertyMap[TableOptionType, TableOption](ps)
+{
+    override def copy(options: Seq[TableOption]) = new TableOptions(options).asInstanceOf[this.type]
 }
 
 case class TableModel(override val name: String, columns: Seq[ColumnModel],
-        primaryKey: Option[PrimaryKeyModel], keys: Seq[KeyModel], options: Seq[TableOption])
+        primaryKey: Option[PrimaryKeyModel], keys: Seq[KeyModel], options: TableOptions)
     extends DatabaseDeclaration(name: String)
 {
+    
     def this(name: String, columns: Seq[ColumnModel], pk: Option[PrimaryKeyModel], keys: Seq[KeyModel]) =
         this(name, columns, pk, keys, Nil)
     

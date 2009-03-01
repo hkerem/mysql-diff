@@ -22,6 +22,23 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     
     override def columnProperty =
         super.columnProperty | autoIncrementability | onUpdateCurrentTimestamp
+    
+    def tableDefaultCharset: Parser[TableOption] =
+        opt("DEFAULT") ~> ("CHARSET" | ("CHARACTER" ~ "SET")) ~> opt("=") ~> ident ^^
+            { MysqlCharacterSetTableOption(_) }
+    
+    def tableCollate: Parser[TableOption] =
+        "COLLATE" ~> opt("=") ~> ident ^^ { MysqlCollateTableOption(_) }
+    
+    def tableEngine: Parser[TableOption] =
+        ("ENGINE" | "TYPE") ~> opt("=") ~> ident ^^ { MysqlEngineTableOption(_) }
+   
+    override def tableOption: Parser[TableOption] = (
+        tableEngine
+      | tableDefaultCharset
+      | tableCollate
+    )
+    
 }
 
 object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext) {

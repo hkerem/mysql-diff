@@ -49,6 +49,30 @@ object MysqlDataTypesTests extends org.specs.Specification {
     }
 }
 
+case class MysqlEngineTableOption(engine: String) extends TableOption {
+    override def propertyType = MysqlEngineTableOptionType
+}
+
+object MysqlEngineTableOptionType extends TableOptionType {
+    override type Value = MysqlEngineTableOption
+}
+
+case class MysqlCharacterSetTableOption(name: String) extends TableOption {
+    override def propertyType = MysqlCharacterSetTableOptionType
+}
+
+object MysqlCharacterSetTableOptionType extends TableOptionType {
+    override type Value = MysqlCharacterSetTableOption
+}
+
+case class MysqlCollateTableOption(name: String) extends TableOption {
+    override def propertyType = MysqlCollateTableOptionType
+}
+
+object MysqlCollateTableOptionType extends TableOptionType {
+    override type Value = MysqlCollateTableOption
+}
+
 class MysqlModelParser(override val context: Context) extends ModelParser(context) {
     // XXX: database defaults should be used too
     protected def tableCollation(table: TableModel): Option[String] =

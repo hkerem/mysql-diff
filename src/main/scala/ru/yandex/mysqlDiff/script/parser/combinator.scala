@@ -172,21 +172,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def ifNotExists: Parser[Any] = "IF" ~ "NOT" ~ "EXISTS"
     
-    def tableDefaultCharset: Parser[TableOption] =
-        opt("DEFAULT") ~> ("CHARSET" | ("CHARACTER" ~ "SET")) ~> opt("=") ~> ident ^^
-            { TableOption("DEFAULT CHARSET", _) }
-    
-    def tableCollate: Parser[TableOption] =
-        "COLLATE" ~> opt("=") ~> ident ^^ { TableOption("COLLATE", _) }
-    
-    def tableEngine: Parser[TableOption] =
-        ("ENGINE" | "TYPE") ~> opt("=") ~> ident ^^ { TableOption("ENGINE", _) }
-   
-    def tableOption: Parser[TableOption] = (
-        tableEngine
-      | tableDefaultCharset
-      | tableCollate
-    )
+    def tableOption: Parser[TableOption] = failure("no table options in standard parser")
     
     def createTable = "CREATE" ~ "TABLE" ~> opt(ifNotExists) ~ name ~
             ("(" ~> repsep(tableEntry, ",") <~ ")") ~ rep(tableOption) ^^

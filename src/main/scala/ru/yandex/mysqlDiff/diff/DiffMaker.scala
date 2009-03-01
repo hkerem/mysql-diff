@@ -108,12 +108,10 @@ case class DiffMaker(val context: Context) {
         case _ => false
     }
         
-    def tableOptionsEquivalent(a: TableOption, b: TableOption) = a.name == b.name
+    def tableOptionsEquivalent(a: TableOption, b: TableOption) = a.propertyType == b.propertyType
     
     def compareTableOptions(a: TableOption, b: TableOption) = {
-        require(a.name == b.name)
-        if (a.value == b.value) None
-        else Some(CreateTableOptionDiff(b))
+        Some(ChangeTableOptionDiff(a, b))
     }
     
     def compareTables(from: TableModel, to: TableModel): Option[ChangeTableDiff] = {
@@ -141,7 +139,7 @@ case class DiffMaker(val context: Context) {
         
         
         val (fromOptions, toOptions, changeOptionPairs) =
-            compareSeqs(from.options, to.options, tableOptionsEquivalent _)
+            compareSeqs(from.options.properties, to.options.properties, tableOptionsEquivalent _)
         
         val dropOptionDiff = Nil: Seq[TableOptionDiff] // cannot drop options
         val createOptionDiff = Nil: Seq[TableOptionDiff] // unknown: do not force creation
@@ -258,8 +256,8 @@ object DiffMakerTests extends org.specs.Specification {
         val columns = List(new ColumnModel("id", dataTypes.int), new ColumnModel("b", dataTypes.int))
         val i1 = new IndexModel(Some("my_index"), List("b"), true)
         val i2 = new IndexModel(None, List("b"), true)
-        val t1 = new TableModel("a", columns, None, List(i1), Nil)
-        val t2 = new TableModel("a", columns, None, List(i2), Nil)
+        val t1 = new TableModel("a", columns, None, List(i1), new TableOptions(Nil))
+        val t2 = new TableModel("a", columns, None, List(i2), new TableOptions(Nil))
         compareTables(t1, t2) must_== None
     }
     

@@ -4,6 +4,7 @@ import scala.collection.mutable.ArrayBuffer
 
 import model._
 
+// XXX: drop MySQL
 import vendor.mysql._
 
 object ScriptSerializer {
@@ -120,8 +121,11 @@ object ScriptSerializer {
         (List(firstLine) ++ lines ++ List(lastLine)).mkString(options.stmtJoin)
     }
     
-    def serializeTableOption(opt: TableOption) =
-        opt.name + "=" + opt.value
+    def serializeTableOption(opt: TableOption) = opt match {
+        case MysqlCollateTableOption(name) => "COLLATE=" + name
+        case MysqlCharacterSetTableOption(name) => "CHARACTER SET=" + name
+        case MysqlEngineTableOption(name) => "ENGINE=" + name
+    }
     
     def serializeInsert(is: InsertStatement) = {
         val r = new ArrayBuffer[String]

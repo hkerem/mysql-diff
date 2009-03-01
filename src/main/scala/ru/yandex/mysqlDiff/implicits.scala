@@ -27,6 +27,13 @@ object Implicits {
     
     implicit def fromDataTypeOptions(os: DataTypeOptions) =
         os.properties
+    
+    implicit def toTableOptions(to: Seq[TableOption]) =
+        new TableOptions(to)
+    
+    implicit def fromTableOptions(to: TableOptions) =
+        to.properties
+    
 }
 
 // vim: set ts=4 sw=4 et:

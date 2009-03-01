@@ -30,7 +30,7 @@ object ModelSerializer {
     
     def serializeTable(table: TableModel) =
         CreateTableStatement(table.name, false,
-            table.columns.map(serializeColumn _) ++ table.allKeys.map(serializeKey _), table.options)
+            table.columns.map(serializeColumn _) ++ table.allKeys.map(serializeKey _), table.options.properties)
 
     def serializeDatabaseDeclaration(dd: DatabaseDeclaration) = dd match {
         case table: TableModel => serializeTable(table)

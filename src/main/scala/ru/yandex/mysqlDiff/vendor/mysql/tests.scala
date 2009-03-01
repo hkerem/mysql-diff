@@ -71,12 +71,12 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         val oldModel = JdbcModelExtractor.extractTable("collate_test", ds)
         
         // checking properly extracted
-        oldModel.options must contain(TableOption("COLLATE", "cp1251_bin"))
+        oldModel.options.properties must contain(MysqlCollateTableOption("cp1251_bin"))
         
         val newModel = modelParser.parseCreateTableScript(
             "CREATE TABLE collate_test (id VARCHAR(10)) COLLATE=cp866_bin")
         // checking properly parsed
-        newModel.options must contain(TableOption("COLLATE", "cp866_bin"))
+        newModel.options.properties must contain(MysqlCollateTableOption("cp866_bin"))
         
         val diff = diffMaker.compareTables(oldModel, newModel)
         diff must beSomething
@@ -91,7 +91,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         
         val resultModel = JdbcModelExtractor.extractTable("collate_test", ds)
         // checking patch properly applied
-        resultModel.options must contain(TableOption("COLLATE", "cp866_bin"))
+        resultModel.options.properties must contain(MysqlCollateTableOption("cp866_bin"))
     }
     
     "same engine" in {
@@ -103,7 +103,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         jdbcTemplate.execute("DROP TABLE IF exists change_engine")
         jdbcTemplate.execute("CREATE TABLE change_engine (id INT) ENGINE=MyISAM")
         val d = JdbcModelExtractor.extractTable("change_engine", ds)
-        d.options must contain(TableOption("ENGINE", "MyISAM"))
+        d.options.properties must contain(MysqlEngineTableOption("MyISAM"))
         val t = modelParser.parseCreateTableScript("CREATE TABLE change_engine (id INT) ENGINE=InnoDB")
         val script = new Script(diffMaker.compareTablesScript(d, t))
         script.statements must notBeEmpty
@@ -112,7 +112,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         }
         
         val resultModel = JdbcModelExtractor.extractTable("change_engine", ds)
-        resultModel.options must contain(TableOption("ENGINE", "InnoDB"))
+        resultModel.options.properties must contain(MysqlEngineTableOption("InnoDB"))
     }
     
     "bug with NULL PRIMARY KEY" in {
