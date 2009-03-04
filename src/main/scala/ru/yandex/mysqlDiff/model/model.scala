@@ -11,6 +11,7 @@ abstract class PropertyType {
     type Value <: Property
 }
 
+// XXX: add HasProperties trait
 case class PropertyMap[T <: PropertyType, V <: Property](val properties: Seq[V]) {
     //type V = T#Value
     
@@ -40,6 +41,12 @@ case class PropertyMap[T <: PropertyType, V <: Property](val properties: Seq[V])
     def overrideProperty(o: V): this.type =
         copy(removeProperty(o.propertyType.asInstanceOf[T]).properties ++ List(o))
     
+    def overrideProperties(ps: Seq[V]): this.type = {
+        var r: this.type = this
+        for (p <- ps) r = r.overrideProperty(p)
+        r
+    }
+    
     def addProperty(p: V): this.type =
         copy(properties ++ List(p))
     
@@ -57,6 +64,7 @@ case class StringValue(value: String) extends SqlValue
 // used as default value
 case object NowValue extends SqlValue
 
+// XXX: rename to DataTypeProperties
 abstract class DataTypeOption extends Property {
     override def propertyType: DataTypeOptionType
 }
@@ -85,6 +93,12 @@ case class DataType(name: String, length: Option[Int], options: DataTypeOptions)
     
     def withOptions(os: DataTypeOptions) =
         new DataType(this.name, this.length, os)
+    
+    def overrideOptions(os: Seq[DataTypeOption]) =
+        withOptions(this.options.overrideProperties(os))
+    
+    def withDefaultOptions(os: Seq[DataTypeOption]) =
+        withOptions(this.options.withDefaultProperties(os))
 
     override def toString =
         name + length.map("(" + _ + ")").getOrElse("") + (if (options.isEmpty) "" else " " + options.mkString(" "))
@@ -202,6 +216,13 @@ case class ColumnModel(val name: String, val dataType: DataType, properties: Col
     def withProperties(ps: ColumnProperties) =
         new ColumnModel(this.name, this.dataType, ps)
     
+    def overrideProperties(os: Seq[ColumnProperty]) =
+        withProperties(this.properties.overrideProperties(os))
+    
+    def withDefaultProperties(os: Seq[ColumnProperty]) =
+        withProperties(this.properties.withDefaultProperties(os))
+
+    
     def withDataType(dt: DataType) =
         new ColumnModel(this.name, dt, this.properties)
     
@@ -251,6 +272,7 @@ abstract class TableOptionType extends PropertyType {
     override type Value <: TableOption
 }
 
+// XXX: rename to TableProperties
 case class TableOptions(ps: Seq[TableOption])
     extends PropertyMap[TableOptionType, TableOption](ps)
 {
@@ -289,6 +311,15 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel],
     /** Columns is contained in PK */
     def isPk(name: String) =
         primaryKey.isDefined && primaryKey.get.columns.contains(name)
+    
+    def withOptions(os: TableOptions) =
+        new TableModel(name, columns, primaryKey, keys, os)
+    
+    def overrideOptions(os: Seq[TableOption]) =
+        withOptions(this.options.overrideProperties(os))
+    
+    def withDefaultOptions(os: Seq[TableOption]) =
+        withOptions(this.options.withDefaultProperties(os))
 }
 
 abstract class DatabaseDeclaration(val name: String) 
