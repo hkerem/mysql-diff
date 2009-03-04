@@ -185,6 +185,8 @@ trait JdbcOperations extends Logging {
     }
     
     def query(q: String, params: Any*) = new ParamsQuery(q, params: _*)
+    
+    def metaData[T](cb: DatabaseMetaData => T) = acquireFor { c: Connection => cb(c.getMetaData) }
 }
 
 class JdbcTemplate(override val ds: LiteDataSource) extends JdbcOperations {

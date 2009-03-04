@@ -7,6 +7,7 @@ class Context(val dataTypes: model.DataTypes) {
     val sqlParserCombinator = new script.parser.SqlParserCombinator(this)
     val parser = new script.parser.Parser(this)
     val scriptSerializer = script.ScriptSerializer
+    val jdbcModelExtractor = new jdbc.JdbcModelExtractor(this)
 }
 
 object Environment {

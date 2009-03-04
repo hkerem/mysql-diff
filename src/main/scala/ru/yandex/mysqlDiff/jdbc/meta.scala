@@ -6,15 +6,17 @@ import util._
 import model._
 
 import scala.util.Sorting._
+import scala.collection.mutable.ArrayBuffer
 
+import vendor.mysql._
+    
 class MetaDao(jt: JdbcTemplate) {
     def this(ds: () => Connection) = this(new JdbcTemplate(ds))
     def this(ds: LiteDataSource) = this(new JdbcTemplate(ds))
     
-    // XXX: move here
-    import JdbcModelExtractor.read
-    
     import jt._
+    import MetaDao.read
+    
     
     def findPrimaryKey(catalog: String, schema: String, tableName: String): Option[PrimaryKeyModel] =
         execute { conn =>
@@ -109,6 +111,35 @@ class MetaDao(jt: JdbcTemplate) {
             }
         }
    
+    /**
+     * To be overriden in subclasses.
+     * @return empty Seqs in this implementation
+     */
+    def findTablesOptions(catalog: String, schema: String): Seq[(String, Seq[TableOption])] = {
+        findTableNames(catalog, schema).map(tn => (tn, findTableOptions(catalog, schema, tn)))
+    }
+   
+    /**
+     * To be overriden in subclasses.
+     * @return empty Seq in this implementation
+     */
+    def findTableOptions(catalog: String, schema: String, tableName: String): Seq[TableOption] = {
+        return Seq()
+    }
+    
+
+}
+
+object MetaDao {
+
+    def read[T](rs: ResultSet)(f: ResultSet => T) = {
+        val r = new ArrayBuffer[T]()
+        while (rs.next()) {
+            r += f(rs)
+        }
+        r
+    }
+    
 }
 
 abstract class DbMetaDaoTests(ds: LiteDataSource) extends org.specs.Specification {
@@ -122,7 +153,6 @@ abstract class DbMetaDaoTests(ds: LiteDataSource) extends org.specs.Specificatio
     }
 }
 
-object MysqlMetaDaoTests extends DbMetaDaoTests(vendor.mysql.MysqlTestDataSourceParameters.ds)
 object PostgresqlMetaDaoTests extends DbMetaDaoTests(vendor.postgresql.PostgresqlTestDataSourceParameters.ds)
 
 class MetaDaoTests(testsSelector: TestsSelector) extends org.specs.Specification {

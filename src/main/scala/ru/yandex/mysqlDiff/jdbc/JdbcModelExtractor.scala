@@ -2,17 +2,16 @@ package ru.yandex.mysqlDiff.jdbc
 
 import java.sql._
 
-import model._
-
 import scalax.control.ManagedResource
 
 import scala.util.Sorting._
 import scala.collection.mutable.ArrayBuffer
 
+import model._
+import util._
+
 // XXX: drop it
 import vendor.mysql._
-
-import util._
 
 import Implicits._
 
@@ -23,12 +22,15 @@ class JdbcModelExtractorException(msg: String, cause: Throwable) extends Excepti
  * Extract table engine, default charset
  * Extract keys
  */
-object JdbcModelExtractor {
+class JdbcModelExtractor(context: Context) {
     import JdbcUtils._
+    
+    import context._
     
     import vendor.mysql._
 
-    import MysqlContext._
+    import MetaDao._
+    import MysqlMetaDao._
 
     // http://bugs.mysql.com/36699
     private val PROPER_COLUMN_DEF_MIN_MYSQL_VERSION = MysqlServerVersion.parse("5.0.51")
@@ -42,174 +44,70 @@ object JdbcModelExtractor {
         def isCreated = value.isDefined
     }
     
-    private def groupBy[A, B](seq: Seq[A])(f: A => B): Seq[(B, Seq[A])] = {
-        def g(seq: Seq[(B, A)]): Seq[(B, Seq[A])] = seq match {
-            case Seq() => List()
-            case Seq((b, a)) => List((b, List(a)))
-            case Seq((b1, a1), rest @ _*) =>
-                g(rest) match {
-                    case Seq((`b1`, l), rest @ _*) => (b1, a1 :: l.toList) :: rest.toList
-                    case r => (b1, List(a1)) :: r.toList
-                }
-        }
-            
-        g(seq.map(a => (f(a), a)))
-    }
+    protected def createMetaDao(jt: JdbcTemplate) = new MetaDao(jt)
     
-    object MetaDao {
-        /** INFORMATION_SCHEMA.COLUMNS */
-        case class MysqlColumnInfo(
-            tableCatalog: String, tableSchema: String, tableName: String,
-            columnName: String, ordinalPosition: Int, columnDefault: String,
-            isNullable: Boolean, dataType: String,
-            characterMaximumLength: Double, characterOctetLength: Double,
-            numericPrecision: Int, numericScale: Int,
-            characterSetName: String, collationName: String,
-            columnType: String, /* skipped some columns */ columnComment: String
-        )
-        
-        private def mapColumnsRow(rs: ResultSet) = {
-            import rs._
-            MysqlColumnInfo(
-                getString("table_catalog"), getString("table_schema"), getString("table_name"),
-                getString("column_name"), getInt("ordinal_position"), getString("column_default"),
-                getBoolean("is_nullable"), getString("data_type"),
-                getDouble("character_maximum_length"), getDouble("character_octet_length"),
-                getInt("numeric_precision"), getInt("numeric_scale"),
-                getString("character_set_name"), getString("collation_name"),
-                getString("column_type"), getString("column_comment")
-            )
-        }
-        
-    }
-    
-    import MetaDao._
-        
     /**
-     * @deprecated
+     * Stateful object.
      */
-    class MetaDao(conn: Connection) {
+    protected abstract class SchemaExtractor(val jt: JdbcTemplate) {
+        import jt._
         
-        // XXX: move outside: MySQL-specific
-        
-        // MySQL does not store default charset:
-        // http://dev.mysql.com/doc/refman/5.1/en/tables-table.html
-        def mapTableOptions(rs: ResultSet) =
-            (rs.getString("TABLE_NAME"), Seq(
-                    MysqlEngineTableOption(rs.getString("ENGINE")),
-                    MysqlCollateTableOption(rs.getString("TABLE_COLLATION"))
-                    ))
-        
-        def findTablesOptions(schema: String): Seq[(String, Seq[TableOption])] = {
-            val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ?"
-            val ps = conn.prepareStatement(q)
-            ps.setString(1, schema)
-            val rs = ps.executeQuery()
-            read(rs)(mapTableOptions _)
-        }
-        
-        def findTableOptions(schema: String, tableName: String): Seq[TableOption] = {
-            val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ? AND table_name = ?"
-            val ps = conn.prepareStatement(q)
-            ps.setString(1, schema)
-            ps.setString(2, tableName)
-            val rs = ps.executeQuery()
-            rs.next()
-            mapTableOptions(rs)._2
-        }
-        
-        def findMysqlTablesColumns(schema: String): Seq[(String, Seq[MysqlColumnInfo])] = {
-            val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? ORDER BY table_name"
-            val ps = conn.prepareStatement(q)
-            ps.setString(1, schema)
-            val rs = ps.executeQuery()
-            
-            val columns = read(rs)(mapColumnsRow _)
-            
-            groupBy[MysqlColumnInfo, String](columns)(_.tableName)
-        }
-        
-        def findMysqlColumns(schema: String, tableName: String) = {
-            val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? AND table_name = ?"
-            val ps = conn.prepareStatement(q)
-            ps.setString(1, schema)
-            ps.setString(2, tableName)
-            val rs = ps.executeQuery()
-            
-            read(rs)(mapColumnsRow _)
-        }
-        
-    }
-    
-    abstract class SchemaExtractor(conn: Connection) {
-        protected val dao = new MetaDao(conn)
-        protected val dao2 = new jdbc.MetaDao(LiteDataSource.singleConnection(conn))
+        protected val dao = createMetaDao(jt)
         
         lazy val currentDb = {
-            val db = conn.getMetaData.getURL.replaceFirst("\\?.*", "").replaceFirst(".*/", "")
+            val db = metaData(_.getURL.replaceFirst("\\?.*", "").replaceFirst(".*/", ""))
             require(db.length > 0)
             db
         }
         
-        def currentCatalog = currentDb
-        def currentSchema: String = null
+        def currentCatalog: String = null
+        def currentSchema: String = currentDb
+        
+        protected def parseTableColumn(columns: ResultSet) = {
+            val colName = columns.getString("COLUMN_NAME")
+            
+            val colType = columns.getString("TYPE_NAME")
+            
+            def getIntOption(rs: ResultSet, columnName: String) = {
+                val v = rs.getInt(columnName)
+                if (rs.wasNull) None
+                else Some(v)
+            }
+            
+            val colTypeSize = getIntOption(columns, "COLUMN_SIZE")
+                .filter { x => dataTypes.isLengthAllowed(colType) }
+
+            val nullable = columns.getString("IS_NULLABLE") match {
+                case "YES" => Some(Nullability(true))
+                case "NO" => Some(Nullability(false))
+                case "" => None
+            }
+            
+            val autoIncrement = columns.getString("IS_AUTOINCREMENT") match {
+                case "YES" => Some(AutoIncrement(true))
+                case "NO" => Some(AutoIncrement(false))
+                case "" => None
+            }
+            
+            val defaultValueFromDb =
+                columns.getString("COLUMN_DEF")
+            
+            val dataType = dataTypes.make(colType, colTypeSize,
+                    Seq[DataTypeOption]())
+            
+            val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
+            
+            val props = Seq[ColumnProperty]() ++ nullable ++ defaultValue ++ autoIncrement
+            new ColumnModel(colName, dataType, props)
+        }
+        
+        def extractTableColumns(tableName: String): Seq[ColumnModel] = metaData { data =>
+            val columns = data.getColumns(currentCatalog, currentSchema, tableName, "%")
+            read(columns)(parseTableColumn _)
+        }
         
         def extractTable(tableName: String): TableModel = {
-            val data = conn.getMetaData
-            val columns = data.getColumns(currentCatalog, currentSchema, tableName, "%")
-            
-            val mysqlColumns = getMysqlColumns(tableName)
-            
-            val columnsList = read(columns) { columns =>
-                val colName = columns.getString("COLUMN_NAME")
-                
-                val colType = columns.getString("TYPE_NAME")
-                
-                def getIntOption(rs: ResultSet, columnName: String) = {
-                    val v = rs.getInt(columnName)
-                    if (rs.wasNull) None
-                    else Some(v)
-                }
-                
-                val colTypeSize = getIntOption(columns, "COLUMN_SIZE")
-                    .filter { x => dataTypes.isLengthAllowed(colType) }
-
-                val nullable = columns.getString("IS_NULLABLE") match {
-                    case "YES" => Some(Nullability(true))
-                    case "NO" => Some(Nullability(false))
-                    case "" => None
-                }
-                
-                val autoIncrement = columns.getString("IS_AUTOINCREMENT") match {
-                    case "YES" => Some(AutoIncrement(true))
-                    case "NO" => Some(AutoIncrement(false))
-                    case "" => None
-                }
-                
-                val mysqlColumn = mysqlColumns.find(_.columnName == colName).get
-
-                val defaultValueFromDb =
-                    // http://bugs.mysql.com/36699
-                    if (true) mysqlColumn.columnDefault
-                    else columns.getString("COLUMN_DEF")
-                
-                val isUnsigned = false
-                val isZerofill = false
-                val characterSet = Some(mysqlColumn.characterSetName)
-                    .filter(x => x != null && x != "")
-                    .map(MysqlCharacterSet(_))
-                val collate = Some(mysqlColumn.collationName)
-                    .filter(x => x != null && x != "")
-                    .map(MysqlCollate(_))
-                
-                val dataType = dataTypes.make(colType, colTypeSize,
-                    new DataTypeOptions(List[DataTypeOption]() ++ characterSet ++ collate))
-                
-                val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
-                
-                val props = new ColumnProperties(List[ColumnProperty]() ++ nullable ++ defaultValue ++ autoIncrement)
-                new ColumnModel(colName, dataType, props)
-            }
+            val columnsList = extractTableColumns(tableName)
             
             val pk = getPrimaryKey(tableName)
             
@@ -227,13 +125,13 @@ object JdbcModelExtractor {
         }
         
         def getPrimaryKey(tableName: String): Option[PrimaryKeyModel] =
-            dao2.findPrimaryKey(currentCatalog, currentSchema, tableName)
+            dao.findPrimaryKey(currentCatalog, currentSchema, tableName)
         
         def getIndexes(tableName: String): Seq[IndexModel] =
-            dao2.findIndexes(currentCatalog, currentSchema, tableName)
+            dao.findIndexes(currentCatalog, currentSchema, tableName)
 
         def getFks(tableName: String): Seq[ForeignKeyModel] =
-            dao2.findImportedKeys(currentCatalog, currentSchema, tableName)
+            dao.findImportedKeys(currentCatalog, currentSchema, tableName)
         
         /** Not including PK */
         def getKeys(tableName: String): Seq[KeyModel] =
@@ -241,35 +139,27 @@ object JdbcModelExtractor {
 
         def getTableOptions(tableName: String): Seq[TableOption]
         
-        def getMysqlColumns(tableName: String): Seq[MysqlColumnInfo]
     }
     
-    class SingleTableSchemaExtractor(conn: Connection) extends SchemaExtractor(conn) {
+    protected class SingleTableSchemaExtractor(jt: JdbcTemplate) extends SchemaExtractor(jt) {
         override def getTableOptions(tableName: String) =
-            dao.findTableOptions(currentDb, tableName)
+            dao.findTableOptions(currentCatalog, currentSchema, tableName)
         
-        override def getMysqlColumns(tableName: String) =
-            dao.findMysqlColumns(currentDb, tableName)
     }
     
-    class AllTablesSchemaExtractor(conn: Connection) extends SchemaExtractor(conn) {
+    protected class AllTablesSchemaExtractor(jt: JdbcTemplate) extends SchemaExtractor(jt) {
     
         def extract(): DatabaseModel =
             new DatabaseModel(extractTables())
         
-        private val cachedTableNames = new Lazy(dao2.findTableNames(currentCatalog, currentSchema))
+        private val cachedTableNames = new Lazy(dao.findTableNames(currentCatalog, currentSchema))
         def tableNames = cachedTableNames.get
         
-        private val cachedTablesOptions = new Lazy(dao.findTablesOptions(currentDb))
+        private val cachedTablesOptions = new Lazy(dao.findTablesOptions(currentCatalog, currentSchema))
         
         def getTableOptions(tableName: String): Seq[TableOption] =
             cachedTablesOptions.get.find(_._1 == tableName).get._2
         
-        val cachedMysqlColumnDefaultValues = new Lazy(dao.findMysqlTablesColumns(currentDb))
-        
-        def getMysqlColumns(tableName: String) =
-            cachedMysqlColumnDefaultValues.get.find(_._1 == tableName).get._2
-    
         def extractTables(): Seq[TableModel] = {
             tableNames.map(extractTable _)
         }
@@ -294,23 +184,20 @@ object JdbcModelExtractor {
     }
     
     
-    // XXX: move to jdbc.MetaDao
-    def read[T](rs: ResultSet)(f: ResultSet => T) = {
-        val r = new ArrayBuffer[T]()
-        while (rs.next()) {
-            r += f(rs)
-        }
-        r
-    }
+    protected def newAllTablesSchemaExtractor(jt: JdbcTemplate) =
+        new AllTablesSchemaExtractor(jt)
+    
+    protected def newSingleTableSchemaExtractor(jt: JdbcTemplate) =
+        new SingleTableSchemaExtractor(jt)
     
     def extractTables(ds: LiteDataSource): Seq[TableModel] =
-        for (c <- new JdbcTemplate(ds)) yield new AllTablesSchemaExtractor(c).extractTables()
+        newAllTablesSchemaExtractor(ds).extractTables()
     
     def extractTable(tableName: String, ds: LiteDataSource): TableModel =
-        for (c <- new JdbcTemplate(ds)) yield new SingleTableSchemaExtractor(c).extractTable(tableName)
+        newSingleTableSchemaExtractor(ds).extractTable(tableName)
     
     def extract(ds: LiteDataSource): DatabaseModel =
-        for (c <- new JdbcTemplate(ds)) yield new AllTablesSchemaExtractor(c).extract()
+        newAllTablesSchemaExtractor(ds).extract()
     
     def search(url: String): Seq[TableModel] = {
         extractTables(LiteDataSource.driverManager(url))
@@ -320,8 +207,7 @@ object JdbcModelExtractor {
     def parse(jdbcUrl: String): DatabaseModel = new DatabaseModel(search(jdbcUrl))
     
     def parseTable(tableName: String, jdbcUrl: String) =
-        for (c <- new JdbcTemplate(LiteDataSource.driverManager(jdbcUrl)))
-            yield new SingleTableSchemaExtractor(c).extractTable(tableName)
+        newSingleTableSchemaExtractor(LiteDataSource.driverManager(jdbcUrl)).extractTable(tableName)
     
     def main(args: scala.Array[String]) {
         def usage() {
@@ -344,6 +230,8 @@ object JdbcModelExtractor {
 object JdbcModelExtractorTests extends org.specs.Specification {
     import vendor.mysql.MysqlTestDataSourceParameters._
     
+    import MysqlContext._
+    
     private def execute(q: String) {
         jdbcTemplate.execute(q)
     }
@@ -353,7 +241,7 @@ object JdbcModelExtractorTests extends org.specs.Specification {
     }
     
     def extractTable(name: String) =
-        for (c <- jdbcTemplate) yield new JdbcModelExtractor.SingleTableSchemaExtractor(c).extractTable(name)
+        jdbcModelExtractor.extractTable(name, ds)
     
     "Simple Table" in {
         dropTable("bananas")

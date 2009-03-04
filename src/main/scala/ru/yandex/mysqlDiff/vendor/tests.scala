@@ -40,7 +40,7 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
         val t = modelParser.parseCreateTableScript(script)
         jdbcTemplate.execute("DROP TABLE IF EXISTS " + t.name)
         jdbcTemplate.execute(script)
-        val d = JdbcModelExtractor.extractTable(t.name, ds)
+        val d = jdbcModelExtractor.extractTable(t.name, ds)
         diffMaker.compareTables(d, t) must beLike { case None => true }
         diffMaker.compareTables(t, d) must beLike { case None => true }
     }

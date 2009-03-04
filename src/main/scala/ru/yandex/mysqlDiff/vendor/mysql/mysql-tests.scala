@@ -25,13 +25,13 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         
         jdbcTemplate.execute("CREATE TABLE a (kk INT)")
         val nk = "CREATE TABLE a (id INT PRIMARY KEY AUTO_INCREMENT, kk INT)"
-        val oldModel = JdbcModelExtractor.extractTable("a", ds)
+        val oldModel = jdbcModelExtractor.extractTable("a", ds)
         val newModel = modelParser.parseCreateTableScript(nk)
         val diff = diffMaker.compareTables(oldModel, newModel).get
         val script = new Script(diffSerializer.alterScript(diff, newModel)).statements
         //script.foreach((s: ScriptStatement) => println(s.serialize))
         script.foreach((s: ScriptStatement) => jdbcTemplate.execute(s.serialize))
-        val gotModel = JdbcModelExtractor.extractTable("a", ds)
+        val gotModel = jdbcModelExtractor.extractTable("a", ds)
         // XXX: check model
         ()
     }
@@ -40,7 +40,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         jdbcTemplate.execute("DROP TABLE IF EXISTS b")
         
         jdbcTemplate.execute("CREATE TABLE b (x INT NOT NULL)")
-        val oldModel = JdbcModelExtractor.extractTable("b", ds)
+        val oldModel = jdbcModelExtractor.extractTable("b", ds)
         
         val newModel = modelParser.parseCreateTableScript("CREATE TABLE b (x INT NOT NULL DEFAULT 0)")
         
@@ -58,7 +58,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         jdbcTemplate.execute("DROP TABLE IF EXISTS c")
         
         jdbcTemplate.execute("CREATE TABLE c (idc BIGINT NOT NULL)")
-        val oldModel = JdbcModelExtractor.extractTable("c", ds)
+        val oldModel = jdbcModelExtractor.extractTable("c", ds)
         
         val newModel = modelParser.parseCreateTableScript("CREATE TABLE c (idc BIGINT NOT NULL)")
         
@@ -68,7 +68,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
     "diff, apply collate" in {
         jdbcTemplate.execute("DROP TABLE IF EXISTS collate_test")
         jdbcTemplate.execute("CREATE TABLE collate_test (id VARCHAR(10)) COLLATE=cp1251_bin")
-        val oldModel = JdbcModelExtractor.extractTable("collate_test", ds)
+        val oldModel = jdbcModelExtractor.extractTable("collate_test", ds)
         
         // checking properly extracted
         oldModel.options.properties must contain(MysqlCollateTableOption("cp1251_bin"))
@@ -89,7 +89,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
             jdbcTemplate.execute(scriptSerializer.serialize(s))
         }
         
-        val resultModel = JdbcModelExtractor.extractTable("collate_test", ds)
+        val resultModel = jdbcModelExtractor.extractTable("collate_test", ds)
         // checking patch properly applied
         resultModel.options.properties must contain(MysqlCollateTableOption("cp866_bin"))
     }
@@ -102,7 +102,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
     "change engine" in {
         jdbcTemplate.execute("DROP TABLE IF exists change_engine")
         jdbcTemplate.execute("CREATE TABLE change_engine (id INT) ENGINE=MyISAM")
-        val d = JdbcModelExtractor.extractTable("change_engine", ds)
+        val d = jdbcModelExtractor.extractTable("change_engine", ds)
         d.options.properties must contain(MysqlEngineTableOption("MyISAM"))
         val t = modelParser.parseCreateTableScript("CREATE TABLE change_engine (id INT) ENGINE=InnoDB")
         val script = new Script(diffMaker.compareTablesScript(d, t))
@@ -111,7 +111,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
             jdbcTemplate.execute(scriptSerializer.serialize(s))
         }
         
-        val resultModel = JdbcModelExtractor.extractTable("change_engine", ds)
+        val resultModel = jdbcModelExtractor.extractTable("change_engine", ds)
         resultModel.options.properties must contain(MysqlEngineTableOption("InnoDB"))
     }
     
@@ -125,7 +125,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         jdbcTemplate.execute("CREATE TABLE moderated_tags (tag VARCHAR(255) CHARACTER SET utf8 NOT NULL, type INT(11) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
         val s2 = "CREATE TABLE moderated_tags (tag VARCHAR(255) NOT NULL, type INT(11) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
         
-        val dbModel = JdbcModelExtractor.extractTable("moderated_tags", ds)
+        val dbModel = jdbcModelExtractor.extractTable("moderated_tags", ds)
         val localModel = modelParser.parseCreateTableScript(s2)
         
         // column collation is changed from utf8_bin to utf8_general_ci

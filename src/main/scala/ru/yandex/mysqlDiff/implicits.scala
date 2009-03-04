@@ -2,6 +2,7 @@ package ru.yandex.mysqlDiff
 
 import model._
 import script._
+import util._
 
 /** Global implicits conversions */
 object Implicits {
@@ -34,6 +35,10 @@ object Implicits {
     implicit def fromTableOptions(to: TableOptions) =
         to.properties
     
+    // JDBC
+    
+    implicit def jdbcTemplate(ds: LiteDataSource) =
+        new JdbcTemplate(ds)
 }
 
 // vim: set ts=4 sw=4 et:

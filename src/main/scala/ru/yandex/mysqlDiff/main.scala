@@ -14,7 +14,7 @@ object Utils {
     
     def getModelFromArgsLine(arg: String): DatabaseModel = {
         if (arg.startsWith("jdbc:"))
-            JdbcModelExtractor.parse(arg)
+            jdbcModelExtractor.parse(arg)
         else {
             var str = ReaderResource.file(arg).slurp
             modelParser.parseModel(str)
@@ -23,7 +23,7 @@ object Utils {
     
     def getModelFromArgsLine(arg: String, table: String) = {
         if (arg.startsWith("jdbc:"))
-            new DatabaseModel(List(JdbcModelExtractor.parseTable(table, arg)))
+            new DatabaseModel(List(jdbcModelExtractor.parseTable(table, arg)))
         else {
             var str = ReaderResource.file(arg).slurp
             val tableModel = modelParser.parseModel(str).declarations.filter(_.name == table).first
