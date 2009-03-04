@@ -95,7 +95,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
     }
     
     "same engine" in {
-        checkTableGeneratesNoDiff(
+        checkTable(
             "CREATE TABLE yaru_events (user_id BIGINT) ENGINE=InnoDB")
     }
     
@@ -116,7 +116,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
     }
     
     "bug with NULL PRIMARY KEY" in {
-        checkTableGeneratesNoDiff(
+        checkTable(
             "CREATE TABLE null_pk (id INT NULL DEFAULT NULL, PRIMARY KEY(id))")
     }
     
@@ -134,8 +134,13 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
     }
     
     "bug with data type options equivalence" in {
-        checkTableGeneratesNoDiff(
+        checkTable(
             "CREATE TABLE alive_apps (hostname VARCHAR(100) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8")
+    }
+    
+    "bug with COLLATE before CHARACTER SET" in {
+        checkTable(
+            "CREATE TABLE IF NOT EXISTS tag_cloud_global (tag varchar(64) collate utf8_bin) DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
     }
 }
 

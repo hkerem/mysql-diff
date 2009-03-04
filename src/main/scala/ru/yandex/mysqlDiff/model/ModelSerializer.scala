@@ -32,6 +32,9 @@ object ModelSerializer {
         CreateTableStatement(table.name, false,
             table.columns.map(serializeColumn _) ++ table.allKeys.map(serializeKey _), table.options.properties)
 
+    def serializeTableToText(table: TableModel) =
+        ScriptSerializer.serialize(serializeTable(table))
+    
     def serializeDatabaseDeclaration(dd: DatabaseDeclaration) = dd match {
         case table: TableModel => serializeTable(table)
     }

@@ -2,6 +2,9 @@ package ru.yandex.mysqlDiff.vendor
 
 import util._
 import jdbc._
+import model._
+
+import Implicits._
 
 trait TestDataSourceParameters {
     val defaultTestDsUrl: String
@@ -30,19 +33,39 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
     import context._
     import tdsp._
     
+    protected def checkTwoSimilarTableModels(a: TableModel, b: TableModel) = {
+        diffMaker.compareTables(a, b) must beLike { case None => true }
+        diffMaker.compareTables(b, a) must beLike { case None => true }
+        diffMaker.compareTables(a, a) must beLike { case None => true }
+        diffMaker.compareTables(b, b) must beLike { case None => true }
+    }
+    
     /**
-     * Execute script in database and execute diff between database model and model from script.
-     * Check that both diffs are empty.
+     * Perform various tests on CREATE TABLE script.
      *
      * @param script contains table creation script
      */
-    protected def checkTableGeneratesNoDiff(script: String) = {
+    protected def checkTable(script: String) = {
+        // parse model
         val t = modelParser.parseCreateTableScript(script)
-        jdbcTemplate.execute("DROP TABLE IF EXISTS " + t.name)
-        jdbcTemplate.execute(script)
-        val d = jdbcModelExtractor.extractTable(t.name, ds)
-        diffMaker.compareTables(d, t) must beLike { case None => true }
-        diffMaker.compareTables(t, d) must beLike { case None => true }
+        
+        {
+            // execute script, compare with parsed model
+            jdbcTemplate.execute("DROP TABLE IF EXISTS " + t.name)
+            jdbcTemplate.execute(script)
+            val d = jdbcModelExtractor.extractTable(t.name, ds)
+            checkTwoSimilarTableModels(t, d)
+        }
+        
+        {
+            // execute serialized parsed model, compare with parsed model
+            jdbcTemplate.execute("DROP TABLE IF EXISTS " + t.name)
+            val recreatedScript = modelSerializer.serializeTableToText(t)
+            jdbcTemplate.execute(recreatedScript)
+            val d = jdbcModelExtractor.extractTable(t.name, ds)
+            checkTwoSimilarTableModels(t, d)
+        }
+        
     }
 }
 

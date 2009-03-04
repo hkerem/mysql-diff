@@ -1,11 +1,14 @@
 package ru.yandex.mysqlDiff.script
 
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Sorting._
 
 import model._
 
 // XXX: drop MySQL
 import vendor.mysql._
+
+import Implicits._
 
 object ScriptSerializer {
     import script.{CreateTableStatement => cts}
@@ -182,7 +185,15 @@ object ScriptSerializer {
             var size = dataType.length.map("(" + _ + ")").getOrElse("")
             dataType.name + size
         }
-        words ++= dataType.options.properties.map(serializeDataTypeOption _)
+        
+        // Hack: MySQL requires CHARACTER SET before COLLATE
+        def dataTypeOptionOrder(o: DataTypeOption) = o match {
+            case x: MysqlCollate => 2
+            case x: MysqlCharacterSet => 1
+            case x => 0
+        }
+        words ++= stableSort(dataType.options.properties, dataTypeOptionOrder _).map(serializeDataTypeOption _)
+        
         words.mkString(" ")
     }
     
