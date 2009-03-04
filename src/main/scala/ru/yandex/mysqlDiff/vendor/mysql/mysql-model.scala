@@ -34,8 +34,11 @@ case object MysqlCollateType extends DataTypeOptionType {
 object MysqlDataTypes extends DataTypes {
     def int = make("INT")
 
+    // http://dev.mysql.com/doc/refman/5.0/en/numeric-type-overview.html
     override def normalize(dt: DataType) = super.normalize(dt) match {
+        // XXX: only before 5.0.3
         case DataType("BIT", _, options) => make("TINYINT", Some(1), options)
+        case DataType("BOOLEAN", _, options) => make("TINYINT", Some(1), options)
         case dt => dt
     }
     
@@ -111,6 +114,21 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         val defaultOptions: Seq[DataTypeOption] = List[DataTypeOption]() ++ defaultCharset ++ defaultCollation
         
         dataType.withOptions(dataType.options.withDefaultProperties(defaultOptions))
+    }
+    
+    private def fixDefaultValue(v: SqlValue) = v match {
+        case BooleanValue(true) => NumberValue(1)
+        case BooleanValue(false) => NumberValue(0)
+        case x => x
+    }
+    
+    private def fixDefaultValueProperty(v: DefaultValue) =
+        DefaultValue(fixDefaultValue(v.value))
+    
+    protected override def fixColumn(column: ColumnModel, table: TableModel) = {
+        val superFixed = super.fixColumn(column, table)
+        superFixed.overrideProperties(
+                superFixed.properties.find(DefaultValuePropertyType).map(fixDefaultValueProperty _).toList)
     }
 }
 

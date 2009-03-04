@@ -74,7 +74,9 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def stringValue: Parser[StringValue] = stringLit ^^
             { x => StringValue(x.replaceFirst("^[\"']", "").replaceFirst("[\"']$", "")) }
     
-    def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue
+    def booleanValue: Parser[BooleanValue] = ("TRUE" ^^^ BooleanValue(true)) | ("FALSE" ^^^ BooleanValue(false))
+    
+    def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | booleanValue
     
     def dataTypeOption: Parser[DataTypeOption] = failure("no data type option")
     
@@ -411,6 +413,11 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     
     "parseValue -1" in {
         parseValue("-1") must_== NumberValue(-1)
+    }
+    
+    "parseValue BOOLEAN" in {
+        parseValue("TRUE") must_== BooleanValue(true)
+        parseValue("FALSE") must_== BooleanValue(false)
     }
     
 }

@@ -61,6 +61,8 @@ case class NumberValue(value: Int) extends SqlValue
 
 case class StringValue(value: String) extends SqlValue
 
+case class BooleanValue(value: Boolean) extends SqlValue
+
 // used as default value
 case object NowValue extends SqlValue
 

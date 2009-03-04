@@ -73,6 +73,8 @@ object ScriptSerializer {
         case NullValue => "NULL"
         case NumberValue(number) => number.toString
         case StringValue(string) => "'" + string + "'" // XXX: escape
+        case BooleanValue(true) => "TRUE"
+        case BooleanValue(false) => "FALSE"
         case NowValue => "NOW()"
     }
     

@@ -142,6 +142,11 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         checkTable(
             "CREATE TABLE IF NOT EXISTS tag_cloud_global (tag varchar(64) collate utf8_bin) DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
     }
+    
+    "BOOLEAN with DEFAULT TRUE" in {
+        checkTable(
+            "CREATE TABLE boolean_with_default_true (available BOOLEAN NOT NULL default TRUE)")
+    }
 }
 
 // vim: set ts=4 sw=4 et:
