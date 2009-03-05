@@ -1,31 +1,18 @@
 MySQL diff project
 
+To build dist:
+ant dist
 
-How to build:
+To run all unit tests:
+ant run-tests
 
+To run tool:
+./mysql-diff.sh source target
 
-dist
-run: ant -Dscala.home={your path to scala JDK home} [dist]
-or: set your SCALA_HOME property and run ./compile.sh [dist]
-
-[dist] option will create new distr for mysqlDiff
-
-jars:
-run: ant -Dscala.home={your path to scala JDK home} jar
-
-tests:
-run: ant -Dscala.home={your path to scala JDK home} build-tests
-
-
-How to test tool by unit tests:
-run: ant -Dscala.home={your path to scala JDK home} run-tests
-
-How to run tool
-./mysqlDiff.sh file_from file_to
-output script will be show to standart output
-
-How to run simple test
+To run simple test
 ./test-diff.sh
-will be use files from ./src/test/sql/simple_from.sql && ./src/test/sql/simple_to.sql
+compares ./src/test/sql/simple_from.sql to ./src/test/sql/simple_to.sql
 
+To run complex demo:
+./demo.sh
 
