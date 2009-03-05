@@ -132,7 +132,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
     }
 }
 
-object MysqlModelParserTests extends org.specs.Specification {
+object MysqlModelParserTests extends ModelParserTests(MysqlContext) {
     import MysqlContext._
     
     "INT column must have no collation" in {
@@ -142,6 +142,15 @@ object MysqlModelParserTests extends org.specs.Specification {
         c.dataType.options.find(MysqlCollateType) must_== None
         c.dataType.options.find(MysqlCharacterSetType) must_== None
     }
+    
+    "parse CREATE TABLE LIKE" in {
+        val s = "CREATE TABLE a (id INT); CREATE TABLE b LIKE a"
+        val db = modelParser.parseModel(s)
+        db.table("a") must beLike { case TableModel("a", _, _, _, _) => true }
+        db.table("b") must beLike { case TableModel("b", _, _, _, _) => true }
+        db.table("b").columns must beLike { case Seq(ColumnModel("id", _, _)) => true }
+    }
+    
 }
 
 // vim: set ts=4 sw=4 et:

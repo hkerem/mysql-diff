@@ -8,18 +8,26 @@ import script._
 
 import scalax.io._
 
+/**
+ * Parse script into model.
+ */
 case class ModelParser(val context: Context) {
     import context._
     
     def parseModel(text: String): DatabaseModel =
         parseModel(parser.parse(text))
     
-    def parseModel(script: Script): DatabaseModel =
-        new DatabaseModel(script.ddlStatements.map(parseScriptElement _))
+    def parseModel(script: Script): DatabaseModel = {
+        var tables = new collection.mutable.ArrayBuffer[TableModel]
+        for (stmt <- script.ddlStatements) {
+            tables += parseScriptElement(stmt, new DatabaseModel(tables))
+        }
+        new DatabaseModel(tables)
+    }
     
-    def parseScriptElement(stmt: DdlStatement): TableModel = stmt match {
+    def parseScriptElement(stmt: DdlStatement, db: DatabaseModel): TableModel = stmt match {
         case ct: CreateTableStatement => parseCreateTable(ct)
-        case _ => throw new IllegalArgumentException
+        case CreateTableLikeStatement(name, _, like) => db.table(like).withName(name)
     }
     
     def parseCreateTable(ct: CreateTableStatement): TableModel = {
@@ -102,7 +110,7 @@ case class ModelParser(val context: Context) {
         dataType
     
     def parseCreateTableScript(text: String) =
-        parseCreateTable(sqlParserCombinator.parseCreateTable(text))
+        parseCreateTable(sqlParserCombinator.parseCreateTableRegular(text))
     
     def main(args: Array[String]) {
         val text = InputStreamResource.file(args(0)).reader.slurp()
@@ -111,8 +119,8 @@ case class ModelParser(val context: Context) {
     }
 }
 
-object ModelParserTests extends org.specs.Specification {
-    import Environment.defaultContext._
+class ModelParserTests(context: Context) extends org.specs.Specification {
+    import context._
     import modelParser._
     
     "unspecified nullability means nullable" in {
@@ -159,7 +167,7 @@ object ModelParserTests extends org.specs.Specification {
     */
     
     "Prohibit TIMESTAMP without DEFAULT value" in {
-        val ct = sqlParserCombinator.parseCreateTable(
+        val ct = sqlParserCombinator.parseCreateTableRegular(
             "CREATE TABLE x (a TIMESTAMP)")
         try {
             val t = parseCreateTable(ct)
@@ -168,6 +176,9 @@ object ModelParserTests extends org.specs.Specification {
             case e: Exception if e.getMessage contains "prohibited" =>
         }
     }
+    
 }
+
+object ModelParserTests extends ModelParserTests(Environment.defaultContext)
 
 // vim: set ts=4 sw=4 et:

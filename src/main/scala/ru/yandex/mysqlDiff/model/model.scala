@@ -314,6 +314,9 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel],
     def isPk(name: String) =
         primaryKey.isDefined && primaryKey.get.columns.contains(name)
     
+    def withName(n: String) =
+        new TableModel(n, columns, primaryKey, keys, options)
+    
     def withOptions(os: TableOptions) =
         new TableModel(name, columns, primaryKey, keys, os)
     

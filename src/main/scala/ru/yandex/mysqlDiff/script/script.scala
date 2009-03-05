@@ -36,6 +36,7 @@ abstract class DdlStatement extends ScriptStatement
 
 abstract class TableDdlStatement(name: String) extends DdlStatement
 
+// http://dev.mysql.com/doc/refman/5.1/en/create-table.html
 case class CreateTableStatement(name: String, ifNotExists: Boolean,
         entries: Seq[CreateTableStatement.Entry], options: Seq[TableOption])
     extends TableDdlStatement(name)
@@ -50,6 +51,12 @@ case class CreateTableStatement(name: String, ifNotExists: Boolean,
     def fks: Seq[ForeignKey] = entries.flatMap { case c: ForeignKey => Some(c); case _ => None }
     
     def column(name: String) = columns.find(_.name == name).get
+}
+
+// http://dev.mysql.com/doc/refman/5.1/en/create-table.html
+case class CreateTableLikeStatement(name: String, ifNotExists: Boolean, likeWhat: String)
+    extends TableDdlStatement(name)
+{
 }
 
 object CreateTableStatement {

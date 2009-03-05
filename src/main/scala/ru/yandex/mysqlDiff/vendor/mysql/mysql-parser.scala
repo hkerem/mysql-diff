@@ -1,6 +1,7 @@
 package ru.yandex.mysqlDiff.vendor.mysql
 
 import model._
+import script._
 import script.parser._
 
 class MysqlParserCombinator(context: Context) extends SqlParserCombinator(context) {
@@ -40,6 +41,11 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
       | tableCollate
     )
     
+    def createTableLike: Parser[CreateTableLikeStatement] =
+            "CREATE TABLE" ~> opt("IF NOT EXISTS") ~ name ~ ("LIKE" ~> name) ^^ {
+                case ifne ~ name ~ likeName => CreateTableLikeStatement(name, ifne.isDefined, likeName) }
+    
+    override def createTable = super.createTable | createTableLike
 }
 
 object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext) {
@@ -54,6 +60,11 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         parse(dataTypeOption)("COLLATE utf8bin") must_== new MysqlCollate("utf8bin")
     }
     
+    "parse CREATE TABLE ... LIKE" in {
+        parse(createTable)("CREATE TABLE oranges LIKE lemons") must beLike {
+            case CreateTableLikeStatement("oranges", false, "lemons") => true
+        }
+    }
 }
 
 // vim: set ts=4 sw=4 et:

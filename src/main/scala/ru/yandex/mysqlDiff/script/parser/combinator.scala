@@ -189,9 +189,11 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def tableOption: Parser[TableOption] = failure("no table options in standard parser")
     
-    def createTable = "CREATE TABLE" ~> opt(ifNotExists) ~ name ~
-            ("(" ~> repsep(tableEntry, ",") <~ ")") ~ rep(tableOption) ^^
-                    { case ifne ~ name ~ entries ~ options => CreateTableStatement(name, ifne.isDefined, entries, options) }
+    def createTableRegular = "CREATE TABLE" ~> opt(ifNotExists) ~ name ~
+             ("(" ~> repsep(tableEntry, ",") <~ ")") ~ rep(tableOption) ^^
+                     { case ifne ~ name ~ entries ~ options => CreateTableStatement(name, ifne.isDefined, entries, options) }
+     
+    def createTable: Parser[TableDdlStatement] = createTableRegular
     
     def createView = "CREATE VIEW" ~> opt(ifNotExists) ~> name ~ ("AS" ~> select) ^^
         { case name ~ select => CreateViewStatement(name, select) }
@@ -228,6 +230,9 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def parseCreateTable(text: String) =
         parse(createTable)(text)
+    
+    def parseCreateTableRegular(text: String) =
+        parse(createTableRegular)(text)
     
     def parseCreateView(text: String) =
         parse(createView)(text)
@@ -360,7 +365,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     }
     
     "quotes in identifiers" in {
-        val t = parseCreateTable("""CREATE TABLE `a` (`id` INT, "login" VARCHAR(100))""")
+        val t = parseCreateTableRegular("""CREATE TABLE `a` (`id` INT, "login" VARCHAR(100))""")
         t.name must_== "a"
         t.columns must beLike { case Seq(Column("id", _, _), Column("login", _, _)) => true }
     }
@@ -388,7 +393,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     }
     
     "case insensitive" in {
-        val t = parseCreateTable("CrEaTe TaBlE a (id InT nOt NuLl)")
+        val t = parseCreateTableRegular("CrEaTe TaBlE a (id InT nOt NuLl)")
         t.name must_== "a"
         t.columns must haveSize(1)
         t.columns must exist({ c: CreateTableStatement.Column => c.name == "id" })
@@ -397,7 +402,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     }
     
     "ignores spaces" in {
-        val t = parseCreateTable("  CREATE   TABLE  a (id INT NOT NULL) ")
+        val t = parseCreateTableRegular("  CREATE   TABLE  a (id INT NOT NULL) ")
         t.name must_== "a"
         t.columns must haveSize(1)
         t.columns must exist({ c: CreateTableStatement.Column => c.name == "id" })
@@ -406,7 +411,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     }
     
     "parse references from column" in {
-        val t = parseCreateTable(
+        val t = parseCreateTableRegular(
                 "CREATE TABLE a (id INT PRIMARY KEY, city_id INT REFERENCES city(id), name VARCHAR(10) UNIQUE)")
         t.column("city_id").properties must beSameSeqAs(List(InlineReferences("city", "id")))
         t.column("id").properties must beSameSeqAs(List(InlinePrimaryKey))
@@ -414,7 +419,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     }
     
     "parse indexes" in {
-        val t = parseCreateTable("CREATE TABLE a(id INT, UNIQUE(a), INDEX i2(b, c), UNIQUE KEY(d, e))")
+        val t = parseCreateTableRegular("CREATE TABLE a(id INT, UNIQUE(a), INDEX i2(b, c), UNIQUE KEY(d, e))")
         t.indexes must haveSize(3)
         t.indexes(0).index must beLike { case IndexModel(None, Seq("a"), true) => true; case _ => false }
         t.indexes(1).index must beLike { case IndexModel(Some("i2"), Seq("b", "c"), false) => true; case _ => false }
@@ -422,7 +427,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     }
     
     "parse FK" in {
-        val t = parseCreateTable(
+        val t = parseCreateTableRegular(
                 "CREATE TABLE a (id INT, " +
                 "FOREIGN KEY (x, y) REFERENCES b (x1, y1), " +
                 "FOREIGN KEY fk1 (z) REFERENCES c (z1))")
