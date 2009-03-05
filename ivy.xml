@@ -32,7 +32,13 @@
         <dependency org="mysql" name="mysql-connector-java" rev="5.1.6" conf="drivers->*"/>
         <dependency org="postgresql" name="postgresql" rev="8.3-603.jdbc4" conf="drivers->*"/>
         
-        <dependency org="org.scalaforge" name="scalax" rev="0.1" conf="compile->*"/>
+        <dependency org="org.scalaforge" name="scalax" rev="0.1" conf="compile->*">
+            <!--
+                Workaround ibiblio resolver: it does not cache maven-metadata.xml
+                See https://issues.apache.org/jira/browse/IVY-1039
+             -->
+            <exclude org="org.scala-lang"/>
+        </dependency>
         
         <!-- XXX: introduce conf name=tools -->
         <dependency org="jarjar" name="jarjar" rev="1.0rc8" conf="tools->*">
@@ -41,7 +47,7 @@
         
         <dependency org="org.apache.ant" name="ant" rev="1.7.0" conf="compile->*"/>
         
-        <dependency org="org.scala-lang" name="scala-library" rev="2.7.3" conf="runtime->*"/>
+        <dependency org="org.scala-lang" name="scala-library" rev="2.7.3" conf="api->*"/>
         
         <dependency org="org.scala-lang" name="scala-compiler" rev="2.7.3" conf="tools->*"/>
         
