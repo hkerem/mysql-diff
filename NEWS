@@ -6,6 +6,7 @@
   * fix standalone jar generation
   * download scala compiler and library from Ivy (no need in scala.home any more)
   * ALTER TABLE statements on single table are joined now
+  * BOOLEAN support
   * ...
 
 - 0.2 -
