@@ -335,8 +335,32 @@ abstract class DatabaseDeclaration(val name: String)
 
 case class DatabaseModel(declarations: Seq[TableModel])
 {
+    // no objects with same name
+    require(Set(declarations.map(_.name): _*).size == declarations.length)
+    
     def tables: Seq[TableModel] = declarations
-    def table(name: String) = tables.find(_.name == name).get
+    def table(name: String) = findTable(name).get
+    
+    def findTable(name: String) = tables.find(_.name == name)
+    
+    def dropTable(name: String) = {
+        table(name) // check exists
+        dropTableIfExists(name)
+    }
+    
+    def dropTableIfExists(name: String) =
+        new DatabaseModel(declarations.filter(_.name != name))
+    
+    def createTable(table: TableModel) =
+        new DatabaseModel(declarations ++ Seq(table))
+    
+    def alterTable(name: String, alter: TableModel => TableModel) = {
+        table(name) // check exists
+        new DatabaseModel(declarations.map {
+            case t if t.name == name => alter(t)
+            case t => t
+        })
+    }
 }
 
 abstract class ColumnProperty extends Property {

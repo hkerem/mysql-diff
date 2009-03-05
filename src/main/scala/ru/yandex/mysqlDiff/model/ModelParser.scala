@@ -18,16 +18,13 @@ case class ModelParser(val context: Context) {
         parseModel(parser.parse(text))
     
     def parseModel(script: Script): DatabaseModel = {
-        var tables = new collection.mutable.ArrayBuffer[TableModel]
-        for (stmt <- script.ddlStatements) {
-            tables += parseScriptElement(stmt, new DatabaseModel(tables))
-        }
-        new DatabaseModel(tables)
+        script.ddlStatements.foldLeft(new DatabaseModel(Nil))((db, stmt) => parseScriptElement(stmt, db))
     }
     
-    def parseScriptElement(stmt: DdlStatement, db: DatabaseModel): TableModel = stmt match {
-        case ct: CreateTableStatement => parseCreateTable(ct)
-        case CreateTableLikeStatement(name, _, like) => db.table(like).withName(name)
+    def parseScriptElement(stmt: DdlStatement, db: DatabaseModel) = stmt match {
+        // XXX: handle IF NOT EXISTS
+        case ct: CreateTableStatement => db.createTable(parseCreateTable(ct))
+        case CreateTableLikeStatement(name, _, like) => db.createTable(db.table(like).withName(name))
     }
     
     def parseCreateTable(ct: CreateTableStatement): TableModel = {
