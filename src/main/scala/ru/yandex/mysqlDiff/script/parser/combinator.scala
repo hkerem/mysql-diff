@@ -59,8 +59,21 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         acceptIf(itIs _)(elem => chars.toUpperCase + " expected, got " + elem.chars) ^^ ( _.chars )
     }
     
-    implicit override def keyword(chars: String): Parser[String] =
+    private def singleWordKeyword(chars: String): Parser[String] =
+        // avoiding keywords declaration
         (accept(lexical.Keyword(chars)) ^^ (_.chars)) | trueKeyword(chars)
+    
+    private def keywordSeq(kws: Seq[String]): Parser[String] = {
+        kws match {
+            case Seq(chars) => singleWordKeyword(chars)
+            case Seq(first, rest @ _*) =>
+                singleWordKeyword(first) ~ keywordSeq(rest) ^^ { case a ~ b => a + " " + b } // lies
+        }
+    }
+    
+    implicit override def keyword(chars: String): Parser[String] =
+        // trick: "CREATE TABLE" is treated almost as "CREATE" ~ "TABLE"
+        keywordSeq(chars.split(" "))
     
     // should be NullValue
     def nullValue: Parser[SqlValue] = "NULL" ^^^ NullValue
@@ -164,28 +177,28 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def index: Parser[Index] = indexUniquality ~ opt(name) ~ indexColNameList ^^
             { case unique ~ name ~ columnNames => Index(model.IndexModel(name, columnNames, unique)) }
     
-    def fk: Parser[ForeignKey] = ("FOREIGN" ~> "KEY" ~> opt(name)) ~ nameList ~ ("REFERENCES" ~> name) ~ nameList ^^
+    def fk: Parser[ForeignKey] = ("FOREIGN KEY" ~> opt(name)) ~ nameList ~ ("REFERENCES" ~> name) ~ nameList ^^
             { case k ~ lcs ~ et ~ ecs => ForeignKey(ForeignKeyModel(k, lcs, et, ecs)) }
     
-    def pk: Parser[PrimaryKey] = "PRIMARY" ~> "KEY" ~> opt(name) ~ indexColNameList ^^
+    def pk: Parser[PrimaryKey] = "PRIMARY KEY" ~> opt(name) ~ indexColNameList ^^
         { case name ~ nameList => PrimaryKey(PrimaryKeyModel(name, nameList)) }
     
     def tableEntry: Parser[Entry] = pk | fk | index | column
     
-    def ifNotExists: Parser[Any] = "IF" ~ "NOT" ~ "EXISTS"
+    def ifNotExists: Parser[Any] = "IF NOT EXISTS"
     
     def tableOption: Parser[TableOption] = failure("no table options in standard parser")
     
-    def createTable = "CREATE" ~ "TABLE" ~> opt(ifNotExists) ~ name ~
+    def createTable = "CREATE TABLE" ~> opt(ifNotExists) ~ name ~
             ("(" ~> repsep(tableEntry, ",") <~ ")") ~ rep(tableOption) ^^
                     { case ifne ~ name ~ entries ~ options => CreateTableStatement(name, ifne.isDefined, entries, options) }
     
-    def createView = "CREATE" ~ "VIEW" ~> opt(ifNotExists) ~> name ~ ("AS" ~> select) ^^
+    def createView = "CREATE VIEW" ~> opt(ifNotExists) ~> name ~ ("AS" ~> select) ^^
         { case name ~ select => CreateViewStatement(name, select) }
     
-    def dropTable = "DROP" ~ "TABLE" ~> name ^^ { name => DropTableStatement(name) }
+    def dropTable = "DROP TABLE" ~> name ^^ { name => DropTableStatement(name) }
     
-    def dropView = "DROP" ~ "VIEW" ~> name ^^ { name => DropViewStatement(name) }
+    def dropView = "DROP VIEW" ~> name ^^ { name => DropViewStatement(name) }
     
     def ddlStmt: Parser[DdlStatement] = createTable | createView | dropTable | dropView
     
@@ -376,6 +389,15 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     
     "case insensitive" in {
         val t = parseCreateTable("CrEaTe TaBlE a (id InT nOt NuLl)")
+        t.name must_== "a"
+        t.columns must haveSize(1)
+        t.columns must exist({ c: CreateTableStatement.Column => c.name == "id" })
+        //t.column("id").dataType must_== dataTypes.int
+        t.column("id").dataType.name must_== "INT"
+    }
+    
+    "ignores spaces" in {
+        val t = parseCreateTable("  CREATE   TABLE  a (id INT NOT NULL) ")
         t.name must_== "a"
         t.columns must haveSize(1)
         t.columns must exist({ c: CreateTableStatement.Column => c.name == "id" })

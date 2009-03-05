@@ -12,7 +12,9 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
       | ("COLLATE" ~> name ^^ (name => MysqlCollate(name)))
     )
     
-    def nowValue: Parser[SqlValue] = (("NOW" ~ "(" ~ ")") | "CURRENT_TIMESTAMP") ^^^ NowValue
+    def nowValue: Parser[SqlValue] =
+        // please keep spaces
+        ("NOW ( )" | "CURRENT_TIMESTAMP") ^^^ NowValue
     
     override def sqlValue = super.sqlValue | nowValue
     
@@ -24,9 +26,8 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
         super.columnProperty | autoIncrementability | onUpdateCurrentTimestamp
     
     def tableDefaultCharset: Parser[TableOption] =
-        opt("DEFAULT") ~> ("CHARSET" | ("CHARACTER" ~ "SET")) ~> opt("=") ~> ident ^^
-            { MysqlCharacterSetTableOption(_) }
-    
+        opt("DEFAULT") ~> ("CHARSET" | ("CHARACTER SET")) ~> opt("=") ~> ident ^^
+            { MysqlCharacterSetTableOption(_) } 
     def tableCollate: Parser[TableOption] =
         "COLLATE" ~> opt("=") ~> ident ^^ { MysqlCollateTableOption(_) }
     
