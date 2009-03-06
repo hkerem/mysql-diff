@@ -25,6 +25,17 @@ case class ModelParser(val context: Context) {
         // XXX: handle IF NOT EXISTS
         case ct: CreateTableStatement => db.createTable(parseCreateTable(ct))
         case CreateTableLikeStatement(name, _, like) => db.createTable(db.table(like).withName(name))
+        case DropTableStatement(name, _) => db.dropTable(name)
+        case st @ AlterTableStatement(name, _) => db.alterTable(name, alterTable(st, _))
+    }
+    
+    private def parseColumn(c: CreateTableStatement.Column) = {
+        val CreateTableStatement.Column(name, dataType, attrs) = c
+        if (dataType.name == "TIMESTAMP" && c.modelProperties.defaultValue.isEmpty)
+            // because of MySQL-specifc features that are hard to deal with
+            throw new Exception(
+                    "TIMESTAMP without DEFAULT value is prohibited, column " + name) // XXX: report table
+        new ColumnModel(name, dataType, c.modelProperties)
     }
     
     def parseCreateTable(ct: CreateTableStatement): TableModel = {
@@ -36,12 +47,8 @@ case class ModelParser(val context: Context) {
         val keys = new ArrayBuffer[KeyModel]
         ct.entries.map {
             case column @ c.Column(name, dataType, attrs) =>
-                if (dataType.name == "TIMESTAMP" && column.modelProperties.defaultValue.isEmpty)
-                    // because of MySQL-specifc features that are hard to deal with
-                    throw new Exception(
-                            "TIMESTAMP without DEFAULT value is prohibited, column " + name + ", table " + ct.name)
                 
-                columns += ColumnModel(name, dataType, column.modelProperties)
+                columns += parseColumn(column)
                 
                 attrs foreach {
                     case c.InlinePrimaryKey => pks += PrimaryKeyModel(None, List(column.name))
@@ -109,6 +116,32 @@ case class ModelParser(val context: Context) {
     def parseCreateTableScript(text: String) =
         parseCreateTable(sqlParserCombinator.parseCreateTableRegular(text))
     
+    // XXX: not tested
+    private def alterTableOperation(op: AlterTableStatement.Operation, table: TableModel): TableModel = {
+        import AlterTableStatement._
+        op match {
+            case AddColumn(column) => table.addColumn(parseColumn(column))
+            case ChangeColumn(oldName, model) => table.alterColumn(oldName, ignored => model)
+            case ModifyColumn(model) => table.alterColumn(model.name, ignored => model)
+            case DropColumn(name) => table.dropColumn(name)
+            case AddPrimaryKey(pk) => table.addPrimaryKey(pk)
+            case DropPrimaryKey => table.dropPrimaryKey
+            case AddIndex(id) => table.addKey(id)
+            case DropIndex(name) => table.dropKey(name)
+            /*
+            case DropForeignKey(name) =>
+            case AddForeignKey(fk) => 
+            */
+            case TableOption(option) => table.overrideOptions(Seq(option))
+        }
+    }
+    
+    private def alterTable(stmt: AlterTableStatement, table: TableModel): TableModel = {
+        val AlterTableStatement(name, ops) = stmt
+        require(name == table.name)
+        ops.foldLeft(table)((table, op) => alterTableOperation(op, table))
+    }
+    
     def main(args: Array[String]) {
         val text = InputStreamResource.file(args(0)).reader.slurp()
         val model = parseModel(text)
@@ -172,6 +205,11 @@ class ModelParserTests(context: Context) extends org.specs.Specification {
         } catch {
             case e: Exception if e.getMessage contains "prohibited" =>
         }
+    }
+    
+    "DROP TABLE" in {
+        val db = modelParser.parseModel("CREATE TABLE a (id INT); CREATE TABLE b (id INT); DROP TABLE a")
+        db.tables must beLike { case Seq(TableModel("b", _, _, _, _)) => true }
     }
     
 }

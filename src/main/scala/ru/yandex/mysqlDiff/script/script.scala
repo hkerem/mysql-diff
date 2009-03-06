@@ -137,7 +137,7 @@ object AlterTableStatement {
     
     case class AddForeignKey(fk: ForeignKeyModel) extends AddOperation with KeyOperation
     
-    // XXX: rename model.TableOption -> model.TableOptionModel
+    // XXX: rename to ChangeTableOption
     case class TableOption(o: model.TableOption) extends Operation
 }
 
