@@ -164,7 +164,7 @@ class MysqlJdbcModelExtractor(context: Context) extends JdbcModelExtractor(conte
         new SingleTableSchemaExtractor(jt) with MysqlSchemaExtrator {
             val cachedMysqlColumns = new Lazy(dao.findMysqlTablesColumns(currentCatalog, currentSchema))
             
-            def getMysqlColumns(tableName: String) =
+            override def getMysqlColumns(tableName: String) =
                 cachedMysqlColumns.get.find(_._1 == tableName).get._2
         }
 
