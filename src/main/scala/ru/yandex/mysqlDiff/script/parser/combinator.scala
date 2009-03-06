@@ -455,7 +455,6 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
 
 object SqlParserCombinatorTests extends SqlParserCombinatorTests(Environment.defaultContext)
 
-// XXX: make class depending on context
 class Parser(context: Context) {
     import context._
 
