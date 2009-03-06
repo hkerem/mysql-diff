@@ -8,6 +8,7 @@
   * ALTER TABLE statements on single table are joined now
   * BOOLEAN support
   * CREATE TABLE ... LIKE
+  * model parser now understands ALTER and DROP
   * ...
 
 - 0.2 -
