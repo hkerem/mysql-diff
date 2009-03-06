@@ -117,7 +117,7 @@ class DiffSerializer(val context: Context) {
         ModelSerializer.serializeTable(c.table) :: Nil
     
     def serializeDropTableDiff(d: DropTableDiff) =
-        DropTableStatement(d.name) :: Nil
+        DropTableStatement(d.name, false) :: Nil
     
     def serializeChangeTableDiff(d: ChangeTableDiff, newTable: TableModel)
         : Seq[ScriptElement] =

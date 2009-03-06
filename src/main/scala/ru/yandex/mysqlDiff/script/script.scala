@@ -89,7 +89,7 @@ object CreateTableStatement {
     case class ForeignKey(fk: model.ForeignKeyModel) extends Entry
 }
 
-case class DropTableStatement(name: String) extends TableDdlStatement(name)
+case class DropTableStatement(name: String, ifExists: Boolean) extends TableDdlStatement(name)
 
 case class RenameTableStatement(name: String, newName: String) extends TableDdlStatement(name)
 

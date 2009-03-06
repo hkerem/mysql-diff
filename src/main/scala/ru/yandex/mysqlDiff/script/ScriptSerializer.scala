@@ -60,7 +60,7 @@ object ScriptSerializer {
     
     def serializeTableStatement(stmt: TableDdlStatement, options: Options): String = stmt match {
         case st: CreateTableStatement => serializeCreateTable(st, options)
-        case DropTableStatement(n) => serializeDropTable(n)
+        case dt: DropTableStatement => serializeDropTable(dt)
         case st: AlterTableStatement => serializeChangeTable(st)
     }
     
@@ -146,8 +146,14 @@ object ScriptSerializer {
         // XXX: untested
     }
     
-    def serializeDropTable(tableName: String) =
-        "DROP TABLE " + tableName
+    def serializeDropTable(dt: DropTableStatement) = {
+        val DropTableStatement(name, ifExists) = dt
+        val words = new ArrayBuffer[String]
+        words += "DROP TABLE"
+        if (ifExists) words += "IF EXISTS"
+        words += name
+        words.mkString(" ")
+    }
     
     def serializeChangeTable(st: AlterTableStatement) =
         "ALTER TABLE " + st.name + " " +
@@ -236,7 +242,7 @@ object ScriptSerializerTests extends org.specs.Specification {
     import ScriptSerializer._
     
     "serialize semi singleline" in {
-        val dt = DropTableStatement("users")
+        val dt = DropTableStatement("users", false)
         val c = CommentElement("/* h */")
         
         val script = List(dt, c, dt, dt, c, c, dt)

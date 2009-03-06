@@ -187,6 +187,8 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def ifNotExists: Parser[Any] = "IF NOT EXISTS"
     
+    def ifExists: Parser[Any] = "IF EXISTS"
+    
     def tableOption: Parser[TableOption] = failure("no table options in standard parser")
     
     def createTableRegular = "CREATE TABLE" ~> opt(ifNotExists) ~ name ~
@@ -198,7 +200,9 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def createView = "CREATE VIEW" ~> opt(ifNotExists) ~> name ~ ("AS" ~> select) ^^
         { case name ~ select => CreateViewStatement(name, select) }
     
-    def dropTable = "DROP TABLE" ~> name ^^ { name => DropTableStatement(name) }
+    def dropTable =
+        "DROP TABLE" ~> opt(ifExists) ~ name ^^
+                { case ifExists ~ name => DropTableStatement(name, ifExists.isDefined) }
     
     def dropView = "DROP VIEW" ~> name ^^ { name => DropViewStatement(name) }
     
@@ -295,7 +299,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     }
     
     "parse DROP TABLE" in {
-        parse(dropTable)("DROP TABLE users") must beLike { case DropTableStatement("users") => true }
+        parse(dropTable)("DROP TABLE users") must beLike { case DropTableStatement("users", false) => true }
     }
     
     "parse SELECT" in {
