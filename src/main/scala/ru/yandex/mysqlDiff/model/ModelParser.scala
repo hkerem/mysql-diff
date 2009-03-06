@@ -116,7 +116,6 @@ case class ModelParser(val context: Context) {
     def parseCreateTableScript(text: String) =
         parseCreateTable(sqlParserCombinator.parseCreateTableRegular(text))
     
-    // XXX: not tested
     private def alterTableOperation(op: AlterTableStatement.Operation, table: TableModel): TableModel = {
         import AlterTableStatement._
         op match {
@@ -210,6 +209,19 @@ class ModelParserTests(context: Context) extends org.specs.Specification {
     "DROP TABLE" in {
         val db = modelParser.parseModel("CREATE TABLE a (id INT); CREATE TABLE b (id INT); DROP TABLE a")
         db.tables must beLike { case Seq(TableModel("b", _, _, _, _)) => true }
+    }
+    
+    "ALTER TABLE" in {
+        val db = modelParser.parseModel(
+            "CREATE TABLE a (id INT, name VARCHAR(20), password VARCHAR(11)); " +
+            "ALTER TABLE a ADD COLUMN login VARCHAR(10); " +
+            "ALTER TABLE a CHANGE COLUMN name user_name VARCHAR(20) NOT NULL, DROP COLUMN password")
+        val a = db.table("a")
+        a.column("id").dataType must beLike { case DataType("INT", None, _) => true }
+        a.column("login").dataType must beLike { case DataType("VARCHAR", Some(10), _) => true }
+        a.column("user_name").dataType must beLike { case DataType("VARCHAR", Some(20), _) => true }
+        a.findColumn("name") must_== None
+        a.findColumn("password") must_== None
     }
     
 }

@@ -296,10 +296,12 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel],
     require(Set(columnNames: _*).size == columns.size, "repeating column names in table " + name + " model")
     require(Set(keyNames: _*).size == keyNames.size, "repeating key names in table " + name + " model")
     
-    def column(name: String) = columns.find(_.name == name).get
+    def findColumn(name: String) = columns.find(_.name == name)
+    def column(name: String) = findColumn(name).get
     def columnNames = columns.map(_.name)
     
-    def key(name: String) = columns.find(_.name == Some(name)).get
+    def findKey(name: String) = columns.find(_.name == Some(name))
+    def key(name: String) = findKey(name).get
     def keyNames = keys.flatMap(_.name)
     
     /** Regular indexes */
@@ -359,7 +361,7 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel],
         new TableModel(name, columns, pk, keys, options)
     
     def withKeys(ks: Seq[KeyModel]) =
-        new TableModel(name, columns, primaryKey, keys, options)
+        new TableModel(name, columns, primaryKey, ks, options)
     
     def withColumns(cs: Seq[ColumnModel]) =
         new TableModel(name, cs, primaryKey, keys, options)
