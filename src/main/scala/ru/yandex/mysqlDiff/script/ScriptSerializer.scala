@@ -11,7 +11,9 @@ import vendor.mysql._
 import Implicits._
 
 object ScriptSerializer {
+    // XXX: import without cts
     import script.{CreateTableStatement => cts}
+    import script.AlterTableStatement._
     
     /** Serializer options */
     abstract class Options {
@@ -176,7 +178,7 @@ object ScriptSerializer {
             case DropForeignKey(name) => "DROP FOREIGN KEY " + name
             case AddForeignKey(fk) => "ADD " + serializeForeignKey(fk)
             
-            case TableOption(o) => serializeTableOption(o)
+            case ChangeTableOption(o) => serializeTableOption(o)
         }
     }
     

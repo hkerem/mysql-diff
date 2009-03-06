@@ -123,6 +123,10 @@ object AlterTableStatement {
     
     case class ModifyColumn(model: ColumnModel) extends ModifyOperation with ColumnOperation
     
+    /** @param value None means DROP DEFAULT */
+    case class AlterColumnSetDefault(name: String, value: Option[SqlValue])
+        extends ModifyOperation with ColumnOperation
+    
     case class DropColumn(name: String) extends DropOperation with ColumnOperation
     
     case class AddPrimaryKey(pk: PrimaryKeyModel) extends AddOperation with KeyOperation
@@ -137,8 +141,14 @@ object AlterTableStatement {
     
     case class AddForeignKey(fk: ForeignKeyModel) extends AddOperation with KeyOperation
     
-    // XXX: rename to ChangeTableOption
-    case class TableOption(o: model.TableOption) extends Operation
+    case class ChangeTableOption(o: model.TableOption) extends Operation
+    
+    case object EnableKeys extends Operation
+    case object DisableKeys extends Operation
+    
+    case class Rename(newName: String) extends Operation
+    
+    case class OrderBy(colNames: Seq[String]) extends Operation
 }
 
 abstract class ViewDdlStatement(name: String) extends DdlStatement

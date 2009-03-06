@@ -41,6 +41,17 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
       | tableCollate
     )
     
+    def convertToCharacterSet =
+        "CONVERT TO CHARACTER SET" ~> name ~ opt("COLLATE" ~> name) ^^
+            { case cs ~ coll => MysqlAlterTableStatement.ConvertToCharacterSet(cs, coll) }
+    
+    def changeCharacterSet =
+        opt("DEFAULT") ~> "CHARACTER SET" ~> opt("=") ~> name ~ opt("COLLATE" ~> opt("=") ~> name) ^^
+            { case cs ~ coll => MysqlAlterTableStatement.ChangeCharacterSet(cs, coll) }
+    
+    // http://dev.mysql.com/doc/refman/5.1/en/alter-table.html
+    override def alterSpecification = super.alterSpecification | convertToCharacterSet | changeCharacterSet
+    
     def createTableLike: Parser[CreateTableLikeStatement] =
             "CREATE TABLE" ~> opt("IF NOT EXISTS") ~ name ~ ("LIKE" ~> name) ^^ {
                 case ifne ~ name ~ likeName => CreateTableLikeStatement(name, ifne.isDefined, likeName) }

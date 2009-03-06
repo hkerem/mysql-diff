@@ -9,11 +9,11 @@ import scala.util.parsing.combinator.syntactical._
 import scala.util.parsing.combinator.lexical._
 import java.util.regex.{Pattern, Matcher}
 
-import scalax.io._
-
 import model._
 
 import Implicits._
+
+import scalax.io._
 
 class CombinatorParserException(msg: String, cause: Throwable) extends Exception(msg, cause) {
     def this(msg: String) = this(msg, null)
@@ -115,6 +115,9 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def columnAttr: Parser[ColumnPropertyDecl] =
         columnProperty ^^ { p => ModelColumnProperty(p) } | uniqueAttr | pkAttr | referencesAttr
     
+    def columnModel: Parser[ColumnModel] = name ~ dataType ~ rep(columnProperty) ^^
+            { case name ~ dataType ~ ps => ColumnModel(name, dataType, ps) }
+    
     def column: Parser[Column] = name ~ dataType ~ rep(columnAttr) ^^
             { case name ~ dataType ~ attrs => Column(name, dataType, attrs) }
     
@@ -174,16 +177,24 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def indexColNameList: Parser[Seq[String]] = "(" ~> repsep(indexColName, ",") <~ ")"
     
-    def index: Parser[Index] = indexUniquality ~ opt(name) ~ indexColNameList ^^
-            { case unique ~ name ~ columnNames => Index(model.IndexModel(name, columnNames, unique)) }
+    def indexModel: Parser[IndexModel] =
+        indexUniquality ~ opt(name) ~ indexColNameList ^^
+            { case unique ~ name ~ columnNames => model.IndexModel(name, columnNames, unique) }
     
-    def fk: Parser[ForeignKey] = ("FOREIGN KEY" ~> opt(name)) ~ nameList ~ ("REFERENCES" ~> name) ~ nameList ^^
-            { case k ~ lcs ~ et ~ ecs => ForeignKey(ForeignKeyModel(k, lcs, et, ecs)) }
+    def fkModel: Parser[ForeignKeyModel] =
+        ("FOREIGN KEY" ~> opt(name)) ~ nameList ~ ("REFERENCES" ~> name) ~ nameList ^^
+            { case k ~ lcs ~ et ~ ecs => ForeignKeyModel(k, lcs, et, ecs) }
     
-    def pk: Parser[PrimaryKey] = "PRIMARY KEY" ~> opt(name) ~ indexColNameList ^^
-        { case name ~ nameList => PrimaryKey(PrimaryKeyModel(name, nameList)) }
+    def pkModel: Parser[PrimaryKeyModel] =
+        "PRIMARY KEY" ~> opt(name) ~ indexColNameList ^^
+            { case name ~ nameList => PrimaryKeyModel(name, nameList) }
     
-    def tableEntry: Parser[Entry] = pk | fk | index | column
+    def tableEntry: Parser[Entry] = 
+      ( (pkModel ^^ { p => PrimaryKey(p) })
+      | (fkModel ^^ { f => ForeignKey(f) })
+      | (indexModel ^^ { i => Index(i) })
+      | column
+      )
     
     def ifNotExists: Parser[Any] = "IF NOT EXISTS"
     
@@ -206,7 +217,51 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def dropView = "DROP VIEW" ~> name ^^ { name => DropViewStatement(name) }
     
-    def ddlStmt: Parser[DdlStatement] = createTable | createView | dropTable | dropView
+    // XXX: add multiple column
+    // XXX: use FIRST, AFTER
+    def addColumn = "ADD" ~> opt("COLUMN") ~> column <~ opt("FIRST" | ("AFTER" ~ name)) ^^
+            { column => AlterTableStatement.AddColumn(column) }
+    
+    def addKey = "ADD" ~> indexModel ^^ { ind => AlterTableStatement.AddIndex(ind) }
+    
+    def alterColumn = "ALTER" ~> opt("COLUMN") ~> name ~
+        (("SET DEFAULT" ~> sqlValue ^^ { x => Some(x) }) | ("DROP DEFAULT" ^^^ None)) ^^
+            { case n ~ v => AlterTableStatement.AlterColumnSetDefault(n, v) }
+    
+    def changeColumn = "CHANGE" ~> opt("COLUMN") ~> name ~ columnModel ^^
+        { case n ~ c => AlterTableStatement.ChangeColumn(n, c) }
+    
+    def modifyColumn = "MODIFY" ~> opt("COLUMN") ~> columnModel ^^
+        { case c => AlterTableStatement.ModifyColumn(c) }
+    
+    def dropColumn = "DROP" ~> opt("COLUMN") ~> name ^^ { n => AlterTableStatement.DropColumn(n) }
+    
+    def dropPk = "DROP PRIMARY KEY" ^^^ AlterTableStatement.DropPrimaryKey
+    
+    def dropKey = "DROP" ~> ("INDEX" | "KEY") ~> name ^^ { n => AlterTableStatement.DropIndex(n) }
+    
+    def dropFk = "DROP FOREIGN KEY" ~> name ^^ { n => AlterTableStatement.DropForeignKey(n) }
+    
+    def disableEnableKeys =
+        ("DISABLE KEYS" ^^^ AlterTableStatement.DisableKeys) |
+        ("ENABLE KEYS" ^^^ AlterTableStatement.EnableKeys)
+    
+    def alterTableRename = "RENAME" ~> opt("TO") ~> name ^^ { n => AlterTableStatement.Rename(n) }
+    
+    def alterTableOrderBy = "ORDER BY" ~> rep1sep(name, ",") ^^ { l => AlterTableStatement.OrderBy(l) }
+    
+    def alterTableOption = tableOption ^^ { o => AlterTableStatement.ChangeTableOption(o) }
+    
+    def alterSpecification: Parser[AlterTableStatement.Operation] = addColumn | addKey |
+        alterColumn | changeColumn | modifyColumn |
+        dropColumn | dropPk | dropKey |
+        dropFk | disableEnableKeys | alterTableRename | alterTableOrderBy | alterTableOption
+    
+    // http://dev.mysql.com/doc/refman/5.1/en/alter-table.html
+    def alterTable: Parser[AlterTableStatement] = "ALTER TABLE" ~> name ~ rep1sep(alterSpecification, ",") ^^
+        { case name ~ ops => AlterTableStatement(name, ops) }
+    
+    def ddlStmt: Parser[DdlStatement] = createTable | createView | dropTable | dropView | alterTable
     
     /// DML
     
@@ -440,6 +495,33 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
             case ForeignKeyModel(None, Seq("x", "y"), "b", Seq("x1", "y1")) => true; case _ => false }
         t.fks(1).fk must beLike {
             case ForeignKeyModel(Some("fk1"), Seq("z"), "c", Seq("z1")) => true; case _ => false }
+    }
+    
+    "parse ALTER TABLE ADD INDEX" in {
+        import AlterTableStatement._
+        val a = parse(alterTable)("ALTER TABLE users ADD INDEX (login)")
+        a must beLike {
+            case AlterTableStatement("users", Seq(AddIndex(IndexModel(None, Seq("login"), false)))) => true }
+    }
+    
+    "parser ALTER TABLE ADD UNIQUE" in {
+        import AlterTableStatement._
+        val a = parse(alterTable)("ALTER TABLE convert_queue ADD UNIQUE(user_id, file_id)")
+        a must beLike {
+            case AlterTableStatement("convert_queue",
+                    Seq(AddIndex(IndexModel(None, Seq("user_id", "file_id"), true)))) => true }
+    }
+    
+    "parse ALTER TABLE ALTER COLUMN SET DEFAULT" in {
+        import AlterTableStatement._
+        val a = parse(alterTable)(
+            "ALTER TABLE users ALTER COLUMN password DROP DEFAULT, ALTER film_count SET DEFAULT 0")
+        a must beLike {
+            case AlterTableStatement("users",
+                    Seq(
+                        AlterColumnSetDefault("password", None),
+                        AlterColumnSetDefault("film_count", Some(NumberValue(0)))))
+                => true }
     }
     
     "parseValue -1" in {

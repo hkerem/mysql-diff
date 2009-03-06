@@ -132,7 +132,7 @@ case class ModelParser(val context: Context) {
             case DropForeignKey(name) =>
             case AddForeignKey(fk) => 
             */
-            case TableOption(option) => table.overrideOptions(Seq(option))
+            case ChangeTableOption(option) => table.overrideOptions(Seq(option))
         }
     }
     

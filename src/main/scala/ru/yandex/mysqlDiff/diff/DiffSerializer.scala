@@ -44,7 +44,7 @@ class DiffSerializer(val context: Context) {
             case CreateTableOptionDiff(o) => o
             case ChangeTableOptionDiff(o, n) => n
         }
-        ats.TableOption(o)
+        ats.ChangeTableOption(o)
     }
     
     def alterKeyScript(d: KeyDiff, table: TableModel) =
