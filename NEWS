@@ -9,6 +9,7 @@
   * BOOLEAN support
   * CREATE TABLE ... LIKE
   * model parser now understands ALTER and DROP
+  * Basic PostgreSQL support
   * ...
 
 - 0.2 -
