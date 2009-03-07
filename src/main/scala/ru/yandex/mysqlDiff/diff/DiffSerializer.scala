@@ -3,6 +3,9 @@ package ru.yandex.mysqlDiff.diff
 import model._
 import script._
 
+/**
+ * Serialize diff model to script.
+ */
 class DiffSerializer(val context: Context) {
     import context._
     

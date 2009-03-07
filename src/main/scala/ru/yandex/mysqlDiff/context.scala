@@ -1,5 +1,8 @@
 package ru.yandex.mysqlDiff
 
+/**
+ * Context holds references to DB-specific implementations of algorithms.
+ */
 class Context(val dataTypes: model.DataTypes) {
     val diffMaker = new diff.DiffMaker(this)
     val diffSerializer = new diff.DiffSerializer(this)
@@ -10,6 +13,8 @@ class Context(val dataTypes: model.DataTypes) {
     val scriptSerializer = script.ScriptSerializer
     val jdbcModelExtractor = new jdbc.JdbcModelExtractor(this)
 }
+
+// XXX: create basic context
 
 object Environment {
     val defaultContext = vendor.mysql.MysqlContext

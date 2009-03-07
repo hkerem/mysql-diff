@@ -18,9 +18,7 @@ import Implicits._
 class JdbcModelExtractorException(msg: String, cause: Throwable) extends Exception(msg, cause)
 
 /*
- * TBD:
- * Extract table engine, default charset
- * Extract keys
+ * Table model from the live database.
  */
 class JdbcModelExtractor(context: Context) {
     import JdbcUtils._
@@ -35,12 +33,16 @@ class JdbcModelExtractor(context: Context) {
     // http://bugs.mysql.com/36699
     private val PROPER_COLUMN_DEF_MIN_MYSQL_VERSION = MysqlServerVersion.parse("5.0.51")
     
+    /**
+     * Like lazy keyword, but has isCreated method.
+     */
     class Lazy[T](create: => T) {
         var value: Option[T] = None
         def get = {
             if (value.isEmpty) value = Some(create)
             value.get
         }
+        /** If already initialized */
         def isCreated = value.isDefined
     }
     
@@ -54,6 +56,7 @@ class JdbcModelExtractor(context: Context) {
         
         protected val dao = createMetaDao(jt)
         
+        /** Database name from JDBC URL */
         lazy val currentDb = {
             val db = metaData(_.getURL.replaceFirst("\\?.*", "").replaceFirst(".*/", ""))
             require(db.length > 0)
@@ -63,11 +66,13 @@ class JdbcModelExtractor(context: Context) {
         def currentCatalog: String = null
         def currentSchema: String = currentDb
         
+        /** Uses only JDBC API, can be overriden by subclasses */
         protected def parseTableColumn(columns: ResultSet) = {
             val colName = columns.getString("COLUMN_NAME")
             
             val colType = columns.getString("TYPE_NAME")
             
+            // None if NULL
             def getIntOption(rs: ResultSet, columnName: String) = {
                 val v = rs.getInt(columnName)
                 if (rs.wasNull) None
@@ -141,12 +146,14 @@ class JdbcModelExtractor(context: Context) {
         
     }
     
+    /** Schema extractor optimized for single table extraction */
     protected class SingleTableSchemaExtractor(jt: JdbcTemplate) extends SchemaExtractor(jt) {
         override def getTableOptions(tableName: String) =
             dao.findTableOptions(currentCatalog, currentSchema, tableName)
         
     }
     
+    /** Schema extractor optimized for extraction of all schema */
     protected class AllTablesSchemaExtractor(jt: JdbcTemplate) extends SchemaExtractor(jt) {
     
         def extract(): DatabaseModel =
@@ -166,6 +173,7 @@ class JdbcModelExtractor(context: Context) {
     
     }
     
+    /** Convert value from DB to specified database type */
     protected def parseDefaultValueFromDb(s: String, dataType: DataType): Option[SqlValue] = {
         if (s == null) Some(NullValue) // None
         else if (dataTypes.isAnyChar(dataType.name)) {

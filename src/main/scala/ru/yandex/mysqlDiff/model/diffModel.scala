@@ -57,6 +57,9 @@ case class ChangeTableDiff(override val name: String, override val renameTo: Opt
 }
 
 
+/**
+ * Model of a difference between two databases.
+ */
 case class DatabaseDiff(tableDiff: Seq[TableDiff])
 
 // vim: set ts=4 sw=4 et:

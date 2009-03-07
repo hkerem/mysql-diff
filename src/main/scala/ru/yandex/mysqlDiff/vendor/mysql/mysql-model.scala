@@ -79,6 +79,7 @@ object MysqlCollateTableOptionType extends TableOptionType {
 class MysqlModelParser(override val context: Context) extends ModelParser(context) {
     import context._
     
+    /** Unspecified collation can be computed from charset */
     private def tableCollation(table: TableModel): Option[String] = {
         def defaultCollation =
             table.options.find(MysqlCharacterSetTableOptionType).flatMap(
@@ -86,6 +87,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         table.options.find(MysqlCollateTableOptionType).map(_.name).orElse(defaultCollation)
     }
     
+    /** Unspecified charset can be computed from collation */
     private def tableCharacterSet(table: TableModel): Option[String] = {
         def defaultCharset = 
             table.options.find(MysqlCollateTableOptionType).flatMap(
@@ -94,6 +96,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
     }
     
     protected override def fixDataType(dataType: DataType, column: ColumnModel, table: TableModel) = {
+        // Unspecified collation and charset are taken from table defaults
         // http://dev.mysql.com/doc/refman/5.1/en/charset-column.html
         
         val defaultCharset: Option[MysqlCharacterSet] =
@@ -117,6 +120,8 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
     }
     
     private def fixDefaultValue(v: SqlValue) = v match {
+        // MySQL boolean is actually int:
+        // http://dev.mysql.com/doc/refman/5.0/en/boolean-values.html
         case BooleanValue(true) => NumberValue(1)
         case BooleanValue(false) => NumberValue(0)
         case x => x

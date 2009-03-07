@@ -39,12 +39,15 @@ object MysqlMetaDao {
 
 import MysqlMetaDao._
 
+/**
+ * MySQL specific implementation of MetaDao. Uses INFORMATION_SCHEMA
+ */
 class MysqlMetaDao(jt: JdbcTemplate) extends MetaDao(jt) {
     import MetaDao._
     
     import jt._
     
-    // MySQL does not store default charset:
+    // MySQL does not store default charset, collation only
     // http://dev.mysql.com/doc/refman/5.1/en/tables-table.html
     def mapTableOptions(rs: ResultSet) =
         (rs.getString("TABLE_NAME"), Seq(
@@ -68,6 +71,7 @@ class MysqlMetaDao(jt: JdbcTemplate) extends MetaDao(jt) {
     override def findTableOptions(catalog: String, schema: String, tableName: String): Seq[TableOption] =
         findMysqlTableOptions(schema, tableName)
     
+    /** Supermagic utility, even author does not understand how it works */
     protected def groupBy[A, B](seq: Seq[A])(f: A => B): Seq[(B, Seq[A])] = {
         def g(seq: Seq[(B, A)]): Seq[(B, Seq[A])] = seq match {
             case Seq() => List()
@@ -131,6 +135,7 @@ class MysqlJdbcModelExtractor(context: Context) extends JdbcModelExtractor(conte
                     if (true) mysqlColumn.columnDefault
                     else columns.getString("COLUMN_DEF")
                 
+                // XXX: fetch
                 val isUnsigned = false
                 val isZerofill = false
                 val characterSet = Some(mysqlColumn.characterSetName)

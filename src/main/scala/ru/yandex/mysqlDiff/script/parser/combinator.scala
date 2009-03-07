@@ -23,8 +23,10 @@ class SqlLexical extends StdLexical {
     // ?
     import scala.util.parsing.input.CharArrayReader.EofCh
     
+    // XXX: % is a hack for Yandex.Video
     override def letter = elem("letter", x => x.isLetter || x == '_' || x == '%') // ?
     
+    /** Token with SQL-specific quotes */
     override def token: Parser[Token] =
         ( '`' ~ rep( chrExcept('`', '\n', EofCh) ) ~ '`' ^^ { case '`' ~ chars ~ '`' => Identifier(chars mkString "") }
         | '"' ~ rep( chrExcept('"', '\n', EofCh) ) ~ '"' ^^ { case '"' ~ chars ~ '"' => Identifier(chars mkString "") }
@@ -33,6 +35,9 @@ class SqlLexical extends StdLexical {
     //override def token: Parser[Token] =
     //    letter ~ rep(letter | digit)
     
+    /**
+     * SQL comments are whitespaces.
+     */
     override def whitespace: Parser[Any] = rep(
         whitespaceChar
       | '/' ~ '*' ~ comment
@@ -52,7 +57,8 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     import CreateTableStatement._
     
-    lexical.delimiters += ("(", ")", "=", ",", ";", "=", "!=", "-", "*") // hack
+    // All operators must be listed here
+    lexical.delimiters += ("(", ")", "=", ",", ";", "=", "!=", "-", "*")
     
     def trueKeyword(chars: String): Parser[String] = {
         def itIs(elem: Elem) = elem.isInstanceOf[lexical.Identifier] && elem.chars.equalsIgnoreCase(chars)
@@ -91,6 +97,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | booleanValue
     
+    // Data type options are defined in subclasses */
     def dataTypeOption: Parser[DataTypeOption] = failure("no data type option")
     
     def dataTypeName = name

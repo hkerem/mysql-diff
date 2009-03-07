@@ -2,6 +2,8 @@ package ru.yandex.mysqlDiff.vendor.mysql
 
 import script._
 
+/** MySQL specific ALTER TABLE operations */
+// http://dev.mysql.com/doc/refman/5.1/en/alter-table.html
 object MysqlAlterTableStatement {
     import AlterTableStatement._
     

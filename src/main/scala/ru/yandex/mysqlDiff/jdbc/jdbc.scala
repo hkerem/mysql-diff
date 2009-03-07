@@ -5,11 +5,15 @@ import scalax.control.ManagedResource
 import java.sql.DriverManager
 
 object JdbcUtils {
+    // XXX: drop it: we are using JDK 1.6
     Class.forName("com.mysql.jdbc.Driver")
     
     def connection(jdbcUrl: String) = ManagedResource(DriverManager.getConnection(jdbcUrl))
 }
 
+/**
+ * Commandline query tool.
+ */
 object QueryTool {
     def main(args: Array[String]) {
         def usage() {

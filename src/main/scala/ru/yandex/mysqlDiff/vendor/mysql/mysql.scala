@@ -10,7 +10,8 @@ object MysqlContext extends Context(MysqlDataTypes) {
 }
 
 object MysqlCharsets {
-    // SHOW COLLATION
+    // SHOW COLLATION saved here
+    // this table may not reflect real collations used by system
     private val collations = Seq(
         ("big5_chinese_ci",      "big5",     true),
         ("big5_bin",             "big5",     false),
@@ -151,8 +152,10 @@ object MysqlCharsets {
         collations.map { case (a, b, _) => (a, b) } : _*
     )
     
+    /** Default collection for charset */
     def defaultCollation(charset: String) = defaultCollations.get(charset.toLowerCase)
     
+    /** Charset for collation */
     def defaultCharset(collation: String) = defaultCharsets.get(collation.toLowerCase)
 
 }

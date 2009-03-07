@@ -10,6 +10,9 @@ import scala.collection.mutable.ArrayBuffer
 
 import vendor.mysql._
     
+/**
+ * DAO to query database information.
+ */
 class MetaDao(jt: JdbcTemplate) {
     def this(ds: () => Connection) = this(new JdbcTemplate(ds))
     def this(ds: LiteDataSource) = this(new JdbcTemplate(ds))
@@ -46,6 +49,9 @@ class MetaDao(jt: JdbcTemplate) {
             }
         }
     
+    /**
+     * Find all tables in specified catalog and schema.
+     */
     def findTableNames(catalog: String, schema: String) = execute { conn =>
         val data = conn.getMetaData
         
@@ -132,6 +138,9 @@ class MetaDao(jt: JdbcTemplate) {
 
 object MetaDao {
 
+    /**
+     * Utility to read rows from ResultSet.
+     */
     def read[T](rs: ResultSet)(f: ResultSet => T) = {
         val r = new ArrayBuffer[T]()
         while (rs.next()) {

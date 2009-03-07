@@ -6,9 +6,16 @@ import model._
 
 import Implicits._
 
+/**
+ * Tool that compares two database models.
+ */
 case class DiffMaker(val context: Context) {
     import context._
 
+    /**
+     * Find common elements in two seqs.
+     * @return (elementsOnlyInA, elementsOnlyInB, pairsOfElementsInBothSeqs)
+     */
     def compareSeqs[A, B](a: Seq[A], b: Seq[B], comparator: (A, B) => Boolean): (Seq[A], Seq[B], Seq[(A, B)]) = {
         var onlyInA = List[A]()
         var onlyInB = List[B]()
@@ -29,9 +36,13 @@ case class DiffMaker(val context: Context) {
             }
         }
         
+        // inBothA must_== inBothB
         (onlyInA, onlyInB, inBothA)
     }
     
+    /**
+     * Are the values equivalent from DB point of view. For example, 1 and '1' are equivalent.
+     */
     def defaultValuesEquivalent(a: SqlValue, b: SqlValue) = {
         def e1(a: SqlValue, b: SqlValue) = (a, b) match {
             case (NumberValue(x), StringValue(y)) if x.toString == y => true
@@ -103,19 +114,23 @@ case class DiffMaker(val context: Context) {
             case _ => None
         }
     
+    /** Are indexes equivalent? */
     def indexesEquivalent(a: IndexModel, b: IndexModel) =
         (a.columns.toList == b.columns.toList) && (a.isUnique == b.isUnique) &&
             (a.name == b.name || a.name == None || b.name == None)
     
+    /** Are foreign keys equivalent? */
     def fksEquivalent(a: ForeignKeyModel, b: ForeignKeyModel) =
         (a.localColumns.toList == b.columns.toList) &&
                 (a.externalTableName == b.externalTableName) && (a.externalColumns == b.externalColumns) &&
                 (a.name == b.name || a.name == None || b.name == None)
     
+    /** Are keys equivalent */
     def keysEquivalent(a: KeyModel, b: KeyModel) = (a, b) match {
         case (a: IndexModel, b: IndexModel) => indexesEquivalent(a, b)
         case (a: ForeignKeyModel, b: ForeignKeyModel) => fksEquivalent(a, b)
-        case _ => false
+        case (_: IndexModel, _) => false
+        case (_: ForeignKeyModel, _) => false
     }
         
     def compareTableOptions(a: TableOption, b: TableOption) = {
@@ -181,6 +196,7 @@ case class DiffMaker(val context: Context) {
         compareTables(fromModel, toModel)
     }
 
+    /** Compare two database models */
     def compareDatabases(from: DatabaseModel, to: DatabaseModel): DatabaseDiff = {
         val (toIsEmpty, fromIsEmpty, tablesForCompare) = compareSeqs(from.declarations, to.declarations, (x: TableModel, y: TableModel) => x.name == y.name)
         val dropTables = toIsEmpty.map(tbl => new DropTableDiff(tbl.name))
@@ -253,6 +269,7 @@ object DiffMakerTests extends org.specs.Specification {
     }
     
     "compareColumn drop AutoIncrement(false) to none" in {
+        // we must not output ALTER because we are unsure that result is not AUTO_INCREMENT
         val oldC = new ColumnModel("user", dataTypes.varchar(10), new ColumnProperties(List(AutoIncrement(false))))
         val newC = new ColumnModel("user", dataTypes.varchar(10), new ColumnProperties(List()))
         diffMaker.compareColumns(oldC, newC) must_== None
@@ -264,7 +281,7 @@ object DiffMakerTests extends org.specs.Specification {
         diffMaker.compareColumns(oldC, newC) must_== None
     }
     
-    "ignore index name change" in {
+    "ignore index name change to none" in {
         val columns = List(new ColumnModel("id", dataTypes.int), new ColumnModel("b", dataTypes.int))
         val i1 = new IndexModel(Some("my_index"), List("b"), true)
         val i2 = new IndexModel(None, List("b"), true)

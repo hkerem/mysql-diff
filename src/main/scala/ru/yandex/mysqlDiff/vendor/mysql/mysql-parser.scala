@@ -5,6 +5,7 @@ import script._
 import script.parser._
 
 class MysqlParserCombinator(context: Context) extends SqlParserCombinator(context) {
+    // http://dev.mysql.com/doc/refman/5.1/en/create-table.html
     override def dataTypeOption = (
         super.dataTypeOption
       | ("UNSIGNED" ^^^ MysqlUnsigned(true))

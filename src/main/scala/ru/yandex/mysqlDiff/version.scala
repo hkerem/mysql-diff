@@ -4,6 +4,7 @@ class MysqlDiffVersion(version: String, buildDate: String) {
     override def toString = version + " (" + buildDate + ")"
 }
 
+/** Version of mysql-diff */
 object MysqlDiffVersion {
     val version = try {
         val ps = new java.util.Properties

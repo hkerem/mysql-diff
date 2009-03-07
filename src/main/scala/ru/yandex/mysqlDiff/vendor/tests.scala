@@ -27,13 +27,16 @@ trait TestDataSourceParameters {
     val jdbcTemplate = new util.JdbcTemplate(ds)
 }
 
+/**
+ * Base for online tests
+ */
 abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSourceParameters)
     extends org.specs.Specification
 {
     import context._
     import tdsp._
     
-    protected def checkTwoSimilarTableModels(a: TableModel, b: TableModel) = {
+    private def checkTwoSimilarTableModels(a: TableModel, b: TableModel) = {
         diffMaker.compareTables(a, b) must beLike { case None => true }
         diffMaker.compareTables(b, a) must beLike { case None => true }
         diffMaker.compareTables(a, a) must beLike { case None => true }

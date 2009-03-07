@@ -2,6 +2,8 @@ package ru.yandex.mysqlDiff.script
 
 import model._
 
+import Implicits._
+
 class Script(val stmts: Seq[ScriptElement]) {
     def statements = stmts.flatMap {
         case s: ScriptStatement => Some(s)
@@ -30,6 +32,7 @@ case class CommentElement(comment: String) extends ScriptElement
 
 abstract class ScriptStatement extends ScriptElement
 
+/** Output as in into the result text */
 case class Unparsed(q: String) extends ScriptElement
 
 abstract class DdlStatement extends ScriptStatement
@@ -62,10 +65,13 @@ case class CreateTableLikeStatement(name: String, ifNotExists: Boolean, likeWhat
 object CreateTableStatement {
     abstract class Entry
     
+    /** Something can be specified with column */
     abstract class ColumnPropertyDecl
     
+    /** Either column property */
     case class ModelColumnProperty(columnProperty: ColumnProperty) extends ColumnPropertyDecl
     
+    // Or shortcuts
     case object InlinePrimaryKey extends ColumnPropertyDecl
     case object InlineUnique extends ColumnPropertyDecl
     case class InlineReferences(tableName: String, columnName: String) extends ColumnPropertyDecl
@@ -75,7 +81,7 @@ object CreateTableStatement {
             this(model.name, model.dataType, model.properties.properties.map(new ModelColumnProperty(_)))
         
         def modelProperties =
-            ColumnProperties(properties.flatMap { case ModelColumnProperty(p) => Some(p); case _ => None })
+            properties.flatMap { case ModelColumnProperty(p) => Some(p); case _ => None }
         def defaultValue = modelProperties.defaultValue
         def isNotNull = modelProperties.isNotNull
         

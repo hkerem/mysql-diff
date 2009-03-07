@@ -1,5 +1,7 @@
 package ru.yandex.mysqlDiff.vendor.postgresql
 
+// PostgreSQL support is far from complete
+
 object PostgresqlContext extends Context(PostgresqlDataTypes) {
     override val sqlParserCombinator = new PostgresqlParserCombinator(this)
 }

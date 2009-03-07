@@ -10,6 +10,9 @@ import vendor.mysql._
 
 import Implicits._
 
+/**
+ * Serialize Script objects to text (String).
+ */
 object ScriptSerializer {
     // XXX: import without cts
     import script.{CreateTableStatement => cts}
@@ -183,10 +186,12 @@ object ScriptSerializer {
     }
     
     def serializeDataTypeOption(o: DataTypeOption) = o match {
-        case MysqlUnsigned(true) => "UNSIGNED"
-        case MysqlZerofill(true) => "ZEROFILL"
-        case MysqlCharacterSet(cs) => "CHARACTER SET " + cs
-        case MysqlCollate(collate) => "COLLATE " + collate
+        case MysqlUnsigned(true) => Some("UNSIGNED")
+        case MysqlUnsigned(false) => None
+        case MysqlZerofill(true) => Some("ZEROFILL")
+        case MysqlZerofill(false) => None
+        case MysqlCharacterSet(cs) => Some("CHARACTER SET " + cs)
+        case MysqlCollate(collate) => Some("COLLATE " + collate)
     }
    
     def serializeDataType(dataType: DataType) = {
@@ -202,7 +207,8 @@ object ScriptSerializer {
             case x: MysqlCharacterSet => 1
             case x => 0
         }
-        words ++= stableSort(dataType.options.properties, dataTypeOptionOrder _).map(serializeDataTypeOption _)
+        words ++= stableSort(dataType.options.properties, dataTypeOptionOrder _)
+                .flatMap(serializeDataTypeOption _)
         
         words.mkString(" ")
     }

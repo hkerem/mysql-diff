@@ -6,6 +6,9 @@ import scalax.io.Implicits._
 
 import diff._
 
+/**
+ * Ant task to compare databases.
+ */
 class DiffTask extends Task {
     // XXX: make context dependent on DB vendor
     import Environment.defaultContext._
@@ -14,8 +17,11 @@ class DiffTask extends Task {
     private var to: String = _
     private var output: File = _
     
+    /** Soruce database, either file or JDBC URL */
     def setFrom(from: String) { this.from = from; }
+    /** Target database, either file or JDBC URL */
     def setTo(to: String) { this.to = to; }
+    /** Where to save output */
     def setOutput(output: File) { this.output = output; }
     
     override def execute() {

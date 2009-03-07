@@ -4,38 +4,62 @@ import java.sql._
 import javax.sql.DataSource
 import scala.collection.mutable.ArrayBuffer
 
+/**
+ * Slightly different variant of <code>javax.sql.DataSource</code>
+ * 
+ * @see http://jira.springframework.org/browse/SPR-5532
+ */
 trait LiteDataSource {
+    /** Obtain new connection */
     def openConnection(): Connection
+    /**
+      * Release connection obtained by this data source,
+      * just delegate to <code>Connection.close()</code> in this impl
+      */
     def closeConnection(c: Connection) = c.close()
-    /** Close data source */
+    /** Close data source, do nothing by default */
     def close() = ()
 }
 
+/**
+ * Factories to create data source
+ */
 object LiteDataSource extends Logging {
+    /** Create from function, returning connection */
     def apply(f: () => Connection): LiteDataSource = new LiteDataSource {
         override def openConnection() = f()
     }
     
+    /** Wrap <code>javax.sql.DataSource</code> */
     def apply(ds: DataSource): LiteDataSource = apply(() => ds.getConnection())
     
+    /** Obtain from <code>DriverManager</code> using specified URL, login and password */
     def driverManager(url: String, user: String, password: String): LiteDataSource = {
         require(url != null && url.length > 0, "url must be not empty")
         apply(() => DriverManager.getConnection(url, user, password))
     }
     
+    /** Obtain from <code>DriverManager</code> by URL */
     def driverManager(url: String): LiteDataSource = {
         require(url != null && url.length > 0, "url must be not empty")
         apply(() => DriverManager.getConnection(url))
     }
     
+    /** Data source that always feeds same connection. Connection is never closed by data source */
     def singleConnection(c: Connection) = new SingleConnectionLiteDataSource(c)
 }
 
+/**
+ * Simple data source that shares same connection
+ */
 class SingleConnectionLiteDataSource(c: Connection) extends LiteDataSource {
     override def openConnection() = c
     override def closeConnection(c: Connection) = ()
 }
 
+/**
+ * Data source that obtains connection from the given data souce and caches it.
+ */
 class CacheConnectionLiteDataSource(ds: LiteDataSource) extends LiteDataSource {
     private var cached: Option[Connection] = None
     
@@ -51,6 +75,7 @@ class CacheConnectionLiteDataSource(ds: LiteDataSource) extends LiteDataSource {
     
     override def closeConnection(c: Connection) = ()
     
+    /** Release cached connection */
     override def close() = synchronized {
         cached match {
             case Some(c) =>
@@ -61,6 +86,7 @@ class CacheConnectionLiteDataSource(ds: LiteDataSource) extends LiteDataSource {
     }
 }
 
+/** JdbcTemplate implementation */
 trait JdbcOperations extends Logging {
     val ds: LiteDataSource
     import ds._
@@ -112,16 +138,27 @@ trait JdbcOperations extends Logging {
         
         def ints(): Seq[Int] = singleColumnSeq { rs => rs.getInt(1) }
         
+        /** Internal helper utility */
         private class SqlResultSeq[T](s: Seq[T]) {
+            /** @return first element, or throws */
             def singleRow: T = {
-                if (s.length != 1) throw new Exception("expecting 1 row")
-                s.first
+                if (s.length == 1) s.first
+                else throw new Exception("expecting 1 row, got " + s.length)
+            }
+            
+            /** @return None, or Some(first), or throws if more then one element */
+            def optionRow: Option[T] = {
+                if (s.length == 0) None
+                else if (s.length == 1) Some(s.first)
+                else throw new Exception("expecting 0 or 1 row, got " + s.length)
             }
         }
         
         implicit private def sqlResultSeq[T](s: Seq[T]) = new SqlResultSeq[T](s)
         
         def single[T](rm: ResultSet => T): T = seq(rm).singleRow
+        
+        def option[T](rm: ResultSet => T): Option[T] = seq(rm).optionRow
         
         def int() = ints().singleRow
     }
@@ -184,11 +221,14 @@ trait JdbcOperations extends Logging {
         }
     }
     
+    /** Specify SQL and params for query, result object can be used to actually query the data */
     def query(q: String, params: Any*) = new ParamsQuery(q, params: _*)
     
+    /** Fetch meta data in the safe way */
     def metaData[T](cb: DatabaseMetaData => T) = acquireFor { c: Connection => cb(c.getMetaData) }
 }
 
+/** Canonical JdbcTemplate */
 class JdbcTemplate(override val ds: LiteDataSource) extends JdbcOperations {
     
     def this(ds: () => Connection) = this(LiteDataSource(ds))
