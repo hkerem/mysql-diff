@@ -54,15 +54,8 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         }
     }
     
-    "identical" in {
-        jdbcTemplate.execute("DROP TABLE IF EXISTS c")
-        
-        jdbcTemplate.execute("CREATE TABLE c (idc BIGINT NOT NULL)")
-        val oldModel = jdbcModelExtractor.extractTable("c", ds)
-        
-        val newModel = modelParser.parseCreateTableScript("CREATE TABLE c (idc BIGINT NOT NULL)")
-        
-        diffMaker.compareTables(oldModel, newModel) must_== None
+    "identical, simple table" in {
+        checkTable("CREATE TABLE c (idc BIGINT NOT NULL)")
     }
     
     "diff, apply collate" in {

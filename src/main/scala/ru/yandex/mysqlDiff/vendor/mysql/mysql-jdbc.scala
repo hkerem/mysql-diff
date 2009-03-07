@@ -112,7 +112,7 @@ class MysqlJdbcModelExtractor(context: Context) extends JdbcModelExtractor(conte
     
     protected class MysqlSingleTableSchemaExtractor(jt: JdbcTemplate) extends SingleTableSchemaExtractor(jt)
     
-    trait MysqlSchemaExtrator extends SchemaExtractor {
+    trait MysqlSchemaExtractor extends SchemaExtractor {
         
         import jt._
         
@@ -160,19 +160,174 @@ class MysqlJdbcModelExtractor(context: Context) extends JdbcModelExtractor(conte
     }
 
     protected override def newAllTablesSchemaExtractor(jt: JdbcTemplate) =
-        new AllTablesSchemaExtractor(jt) with MysqlSchemaExtrator {
+        new AllTablesSchemaExtractor(jt) with MysqlSchemaExtractor {
             override def getMysqlColumns(tableName: String) =
                 dao.findMysqlTableColumns(currentCatalog, currentSchema, tableName)
         }
     
     protected override def newSingleTableSchemaExtractor(jt: JdbcTemplate) =
-        new SingleTableSchemaExtractor(jt) with MysqlSchemaExtrator {
+        new SingleTableSchemaExtractor(jt) with MysqlSchemaExtractor {
             val cachedMysqlColumns = new Lazy(dao.findMysqlTablesColumns(currentCatalog, currentSchema))
             
             override def getMysqlColumns(tableName: String) =
                 cachedMysqlColumns.get.find(_._1 == tableName).get._2
         }
 
+}
+
+object MysqlJdbcModelExtractorTests extends JdbcModelExtractorTests(MysqlContext, MysqlTestDataSourceParameters) {
+    import MysqlContext._
+    import MysqlTestDataSourceParameters._
+    
+    import jdbcTemplate.execute
+    
+    "Simple Table" in {
+        dropTable("bananas")
+        execute("CREATE TABLE bananas (id INT, color VARCHAR(100), PRIMARY KEY(id))")
+        
+        val table = extractTable("bananas")
+        
+        assert("bananas" == table.name)
+        
+        assert("id" == table.columns(0).name)
+        assert("INT" == table.columns(0).dataType.name)
+        
+        assert("color" == table.columns(1).name)
+        assert("VARCHAR" == table.columns(1).dataType.name)
+        assert(100 == table.columns(1).dataType.length.get)
+        
+        assert(List("id") == table.primaryKey.get.columns.toList)
+    }
+    
+    "Indexes" in {
+        dropTable("users")
+        execute("CREATE TABLE users (first_name VARCHAR(20), last_name VARCHAR(20), age INT, INDEX age_k(age), UNIQUE KEY(first_name, last_name), KEY(age, last_name))")
+        
+        val table = extractTable("users")
+        
+        val ageK = table.indexes.find(_.name.get == "age_k").get
+        List("age") must_== ageK.columns.toList
+        ageK.isUnique must_== false
+        
+        val firstLastK = table.indexWithColumns("first_name", "last_name")
+        firstLastK.isUnique must_== true
+        
+        val ageLastK = table.indexWithColumns("age", "last_name")
+        ageLastK.isUnique must_== false
+    }
+    
+    "PK is not in indexes list" in {
+        dropTable("files")
+        execute("CREATE TABLE files (id INT, PRIMARY KEY(id))")
+        
+        val table = extractTable("files")
+        table.indexes.length must_== 0
+        table.primaryKey.get.columns.toList must_== List("id")
+    }
+    
+    "Foreign keys" in {
+        dropTable("citizen")
+        dropTable("city")
+        dropTable("person")
+        
+        execute("CREATE TABLE city (id INT PRIMARY KEY, name VARCHAR(10)) ENGINE=InnoDB")
+        execute("CREATE TABLE person(id1 INT, id2 INT, PRIMARY KEY(id1, id2)) ENGINE=InnoDB")
+        // http://community.livejournal.com/levin_matveev/20802.html
+        execute("CREATE TABLE citizen (id INT PRIMARY KEY, city_id INT, pid1 INT, pid2 INT, " +
+                "FOREIGN KEY (city_id) REFERENCES city(id), " +
+                "FOREIGN KEY (pid1, pid2) REFERENCES person(id1, id2)" +
+                ") ENGINE=InnoDB")
+        
+        val citizen = extractTable("citizen")
+        val city = extractTable("city")
+        val person = extractTable("person")
+        
+        citizen.fks must haveSize(2)
+        
+        val fkc = citizen.fks.find(_.localColumns.toList == List("city_id")).get
+        fkc.localColumns must beLike { case Seq("city_id") => true }
+        fkc.externalColumns must beLike { case Seq("id") => true }
+        fkc.externalTableName must_== "city"
+        
+        val fkp = citizen.fks.find(_.localColumns.toList == List("pid1", "pid2")).get
+        fkp.localColumns must beLike { case Seq("pid1", "pid2") => true }
+        fkp.externalColumns must beLike { case Seq("id1", "id2") => true }
+        fkp.externalTableName must_== "person"
+        
+        // no sure
+        //citizen.indexes must haveSize(0)
+        
+        city.fks must haveSize(0)
+        person.fks must haveSize(0)
+    }
+    
+    "fetch table option ENGINE" in {
+        dropTable("dogs")
+        execute("CREATE TABLE dogs (id INT) ENGINE=InnoDB")
+        val table = extractTable("dogs")
+        table.options.properties must contain(MysqlEngineTableOption("InnoDB"))
+    }
+    
+    "fetch table option COLLATE" in {
+        dropTable("cats")
+        execute("CREATE TABLE cats (id INT) COLLATE=cp1251_bin")
+        val table = extractTable("cats")
+        table.options.properties must contain(MysqlCollateTableOption("cp1251_bin"))
+    }
+    
+    "DEFAULT NOW()" in {
+        dropTable("cars")
+        execute("CREATE TABLE cars (id INT, created TIMESTAMP DEFAULT NOW())")
+        
+        val table = extractTable("cars")
+        val created = table.column("created")
+        created.defaultValue must_== Some(NowValue)
+    }
+    
+    "MySQL string DEFAULT values" in {
+        dropTable("jets")
+        execute("CREATE TABLE jets (a VARCHAR(2), b VARCHAR(2) DEFAULT '', c VARCHAR(2) DEFAULT 'x', " +
+            "d VARCHAR(2) NOT NULL, e VARCHAR(2) NOT NULL DEFAULT '', f VARCHAR(2) NOT NULL DEFAULT 'y')")
+        
+        val table = extractTable("jets")
+        //table.column("a").defaultValue must_== None
+        table.column("b").defaultValue must_== Some(StringValue(""))
+        table.column("c").defaultValue must_== Some(StringValue("x"))
+        //table.column("d").defaultValue must_== None
+        table.column("e").defaultValue must_== Some(StringValue(""))
+        table.column("f").defaultValue must_== Some(StringValue("y"))
+    }
+    
+    "unspecified AUTO_INCREMENT" in {
+        dropTable("ships")
+        execute("CREATE TABLE ships (id INT NOT NULL, name VARCHAR(10), PRIMARY KEY(id))")
+        
+        val t = extractTable("ships")
+        t.column("id").properties.autoIncrement must_== Some(false)
+        //t.column("name").properties.autoIncrement must_== None
+    }
+    
+    "fetch column CHARACTER SET and COLLATE" in {
+        dropTable("qwqw")
+        execute("CREATE TABLE qwqw (a VARCHAR(2), b VARCHAR(2) CHARACTER SET utf8 COLLATE utf8_bin)")
+        
+        val table = extractTable("qwqw")
+        val a = table.column("a")
+        val b = table.column("b")
+        
+        b.dataType.options.properties must contain(MysqlCharacterSet("utf8"))
+        b.dataType.options.properties must contain(MysqlCollate("utf8_bin"))
+    }
+    
+    "DATETIME without length" in {
+        for (t <- List("DATETIME", "TEXT")) {
+            val table = t + "_without_length_test"
+            dropTable(table)
+            execute("CREATE TABLE " + table + "(a " + t + ")")
+            val tp = extractTable(table).column("a").dataType
+            (tp.name, tp.length) must_== (t, None)
+        }
+    }
 }
 
 // vim: set ts=4 sw=4 et:
