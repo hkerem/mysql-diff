@@ -5,7 +5,7 @@ import model._
 object PostgresqlDataTypes extends DataTypes {
     override def int = make("INTEGER")
     
-    override def resolveTypeNameAlias(name: String) = name match {
+    override def resolveTypeNameAlias(name: String) = name.toUpperCase match {
         case "INT8" => "BIGINT"
         case "SERIAL8" => "BIGSERIAL"
         case "VARBIT" => "BIT VARYING"

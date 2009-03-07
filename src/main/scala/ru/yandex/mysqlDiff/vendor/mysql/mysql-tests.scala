@@ -54,10 +54,6 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         }
     }
     
-    "identical, simple table" in {
-        checkTable("CREATE TABLE c (idc BIGINT NOT NULL)")
-    }
-    
     "diff, apply collate" in {
         jdbcTemplate.execute("DROP TABLE IF EXISTS collate_test")
         jdbcTemplate.execute("CREATE TABLE collate_test (id VARCHAR(10)) COLLATE=cp1251_bin")
@@ -106,11 +102,6 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         
         val resultModel = jdbcModelExtractor.extractTable("change_engine", ds)
         resultModel.options.properties must contain(MysqlEngineTableOption("InnoDB"))
-    }
-    
-    "bug with NULL PRIMARY KEY" in {
-        checkTable(
-            "CREATE TABLE null_pk (id INT NULL DEFAULT NULL, PRIMARY KEY(id))")
     }
     
     "bug with character set implies collation" in {

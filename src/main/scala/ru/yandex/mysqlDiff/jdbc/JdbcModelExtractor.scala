@@ -58,13 +58,21 @@ class JdbcModelExtractor(context: Context) {
         
         /** Database name from JDBC URL */
         lazy val currentDb = {
-            val db = metaData(_.getURL.replaceFirst("\\?.*", "").replaceFirst(".*/", ""))
-            require(db.length > 0)
+            val db = metaData(_.getURL.replaceFirst("\\?.*", "").replaceFirst(".*[/:]", ""))
+            require(db.matches("\\w+"), "could not extract database name from URL")
             db
         }
         
-        def currentCatalog: String = null
-        def currentSchema: String = currentDb
+        /**
+         * True iff last part of URL denotes DB catalog (PostgreSQL),
+         * and false iff denotes schema (MySQL).
+         */
+        val urlDbIsCatalog = false
+        
+        /** Value to be passed as first param to <code>DatabaseMetaData</code> methods */
+        def currentCatalog: String = if (urlDbIsCatalog) currentDb else null
+        /** Value to be passed as second param to <code>DatabaseMetaData</code> methods */
+        def currentSchema: String = if (urlDbIsCatalog) null else currentDb
         
         /** Uses only JDBC API, can be overriden by subclasses */
         protected def parseTableColumn(columns: ResultSet) = {

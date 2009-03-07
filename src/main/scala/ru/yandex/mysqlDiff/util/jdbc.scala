@@ -47,6 +47,9 @@ object LiteDataSource extends Logging {
     
     /** Data source that always feeds same connection. Connection is never closed by data source */
     def singleConnection(c: Connection) = new SingleConnectionLiteDataSource(c)
+    
+    implicit def jdbcTemplate(ds: LiteDataSource) =
+        new JdbcTemplate(ds)
 }
 
 /**

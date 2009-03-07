@@ -70,6 +70,15 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
         }
         
     }
+    
+    "identical, simple table" in {
+        checkTable("CREATE TABLE c (idc INT NOT NULL)")
+    }
+    
+    "bug with NULL PRIMARY KEY" in {
+        checkTable("CREATE TABLE null_pk (id INT NULL DEFAULT NULL, PRIMARY KEY(id))")
+    }
+
 }
 
 // vim: set ts=4 sw=4 et:

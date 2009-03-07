@@ -26,4 +26,9 @@ object PostgresqlTestDataSourceParameters extends TestDataSourceParameters {
     
 }
 
+object PostgresqlOnlineTests extends OnlineTestsSupport(PostgresqlContext, PostgresqlTestDataSourceParameters) {
+    import tdsp._
+    import context._
+}
+
 // vim: set ts=4 sw=4 et:

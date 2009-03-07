@@ -82,7 +82,7 @@ case class DataTypeOptions(ps: Seq[DataTypeOption])
 }
 
 case class DataType(name: String, length: Option[Int], options: DataTypeOptions) {
-    require(name.toUpperCase == name)
+    require(name.toUpperCase == name, "data type name must be upper-case")
     
     def this(name: String, length: Option[Int]) =
         this(name, length, new DataTypeOptions(Nil))
@@ -118,7 +118,7 @@ abstract class DataTypes {
         make(name, length, new DataTypeOptions(Nil))
 
     def make(name: String, length: Option[Int], options: DataTypeOptions) =
-        new DataType(name, length, options)
+        new DataType(name.toUpperCase, length, options)
     
     def resolveTypeNameAlias(name: String) = name.toUpperCase
     
@@ -126,7 +126,7 @@ abstract class DataTypes {
     
     def isAnyChar(name: String) = resolveTypeNameAlias(name).matches(".*CHAR")
     def isAnyDateTime(name: String) = List("DATE", "TIME", "DATETIME", "TIMESTAMP") contains resolveTypeNameAlias(name)
-    def isAnyNumber(name: String) = resolveTypeNameAlias(name).matches("(|TINY|SMALL|BIG)INT") ||
+    def isAnyNumber(name: String) = resolveTypeNameAlias(name).matches("(|TINY|SMALL|BIG)INT(EGER)?") ||
         (List("NUMBER", "FLOAT", "REAL", "DOUBLE", "DECIMAL", "NUMERIC") contains resolveTypeNameAlias(name))
     
     def isLengthIgnored(name: String) = false
@@ -292,7 +292,8 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel],
     def this(name: String, columns: Seq[ColumnModel]) =
         this(name, columns, None, Nil)
 
-    require(columns.length > 0)
+    require(name.length > 0, "table name must not be empty")
+    require(columns.length > 0, "table " + name + " must have at least one column")
     require(Set(columnNames: _*).size == columns.size, "repeating column names in table " + name + " model")
     require(Set(keyNames: _*).size == keyNames.size, "repeating key names in table " + name + " model")
     
