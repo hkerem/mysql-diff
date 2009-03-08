@@ -1,4 +1,4 @@
-package ru.yandex.mysqlDiff.script.parser
+package ru.yandex.mysqlDiff.script
 
 import scala.collection.mutable.ArrayBuffer
 

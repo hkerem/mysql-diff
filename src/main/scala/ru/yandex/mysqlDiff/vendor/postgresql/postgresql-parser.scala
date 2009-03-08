@@ -1,7 +1,7 @@
 package ru.yandex.mysqlDiff.vendor.postgresql
 
 import model._
-import script.parser._
+import script._
 
 class PostgresqlParserCombinator(context: Context) extends SqlParserCombinator(context) {
     override def dataTypeName = (("DOUBLE" ~ "PRECISION") ^^ { case x ~ y => x + " " + y }) | super.dataTypeName

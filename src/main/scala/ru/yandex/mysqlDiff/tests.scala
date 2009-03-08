@@ -18,7 +18,7 @@ object OfflineTestsSelector extends TestsSelector {
 }
 
 class SomeTests(testsSelector: TestsSelector) extends org.specs.Specification {
-    include(script.parser.SqlParserCombinatorTests)
+    include(script.SqlParserCombinatorTests)
     include(model.ModelTests)
     include(model.ModelParserTests)
     include(script.ScriptSerializerTests)
