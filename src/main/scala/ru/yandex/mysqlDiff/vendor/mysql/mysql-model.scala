@@ -151,8 +151,8 @@ object MysqlModelParserTests extends ModelParserTests(MysqlContext) {
     "parse CREATE TABLE LIKE" in {
         val s = "CREATE TABLE a (id INT); CREATE TABLE b LIKE a"
         val db = modelParser.parseModel(s)
-        db.table("a") must beLike { case TableModel("a", _, _, _, _) => true }
-        db.table("b") must beLike { case TableModel("b", _, _, _, _) => true }
+        db.table("a") must beLike { case TableModel("a", _, _, _) => true }
+        db.table("b") must beLike { case TableModel("b", _, _, _) => true }
         db.table("b").columns must beLike { case Seq(ColumnModel("id", _, _)) => true }
     }
     

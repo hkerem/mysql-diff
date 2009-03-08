@@ -207,13 +207,11 @@ object MysqlJdbcModelExtractorTests extends JdbcModelExtractorTests(MysqlContext
         
         val ageK = table.indexes.find(_.name.get == "age_k").get
         List("age") must_== ageK.columns.toList
-        ageK.isUnique must_== false
         
-        val firstLastK = table.indexWithColumns("first_name", "last_name")
-        firstLastK.isUnique must_== true
+        val firstLastK = table.uniqueKeyWithColumns("first_name", "last_name")
         
         val ageLastK = table.indexWithColumns("age", "last_name")
-        ageLastK.isUnique must_== false
+        ()
     }
     
     "PK is not in indexes list" in {
@@ -221,7 +219,6 @@ object MysqlJdbcModelExtractorTests extends JdbcModelExtractorTests(MysqlContext
         execute("CREATE TABLE files (id INT, PRIMARY KEY(id))")
         
         val table = extractTable("files")
-        table.indexes.length must_== 0
         table.primaryKey.get.columns.toList must_== List("id")
     }
     
@@ -242,23 +239,23 @@ object MysqlJdbcModelExtractorTests extends JdbcModelExtractorTests(MysqlContext
         val city = extractTable("city")
         val person = extractTable("person")
         
-        citizen.fks must haveSize(2)
+        citizen.foreignKeys must haveSize(2)
         
-        val fkc = citizen.fks.find(_.localColumns.toList == List("city_id")).get
+        val fkc = citizen.foreignKeys.find(_.localColumns.toList == List("city_id")).get
         fkc.localColumns must beLike { case Seq("city_id") => true }
         fkc.externalColumns must beLike { case Seq("id") => true }
-        fkc.externalTableName must_== "city"
+        fkc.externalTable must_== "city"
         
-        val fkp = citizen.fks.find(_.localColumns.toList == List("pid1", "pid2")).get
+        val fkp = citizen.foreignKeys.find(_.localColumns.toList == List("pid1", "pid2")).get
         fkp.localColumns must beLike { case Seq("pid1", "pid2") => true }
         fkp.externalColumns must beLike { case Seq("id1", "id2") => true }
-        fkp.externalTableName must_== "person"
+        fkp.externalTable must_== "person"
         
         // no sure
         //citizen.indexes must haveSize(0)
         
-        city.fks must haveSize(0)
-        person.fks must haveSize(0)
+        city.foreignKeys must haveSize(0)
+        person.foreignKeys must haveSize(0)
     }
     
     "fetch table option ENGINE" in {

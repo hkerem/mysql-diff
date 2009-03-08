@@ -14,6 +14,8 @@ import scalax.io._
 case class ModelParser(val context: Context) {
     import context._
     
+    import TableDdlStatement._
+    
     def parseModel(text: String): DatabaseModel =
         parseModel(parser.parse(text))
     
@@ -29,8 +31,8 @@ case class ModelParser(val context: Context) {
         case st @ AlterTableStatement(name, _) => db.alterTable(name, alterTable(st, _))
     }
     
-    private def parseColumn(c: CreateTableStatement.Column) = {
-        val CreateTableStatement.Column(name, dataType, attrs) = c
+    private def parseColumn(c: Column) = {
+        val Column(name, dataType, attrs) = c
         if (dataType.name == "TIMESTAMP" && c.modelProperties.defaultValue.isEmpty)
             // because of MySQL-specifc features that are hard to deal with
             throw new Exception(
@@ -39,29 +41,31 @@ case class ModelParser(val context: Context) {
     }
     
     def parseCreateTable(ct: CreateTableStatement): TableModel = {
-        val c = CreateTableStatement
         
         val name = ct.name
         val columns = new ArrayBuffer[ColumnModel]
-        val pks = new ArrayBuffer[PrimaryKeyModel]
-        val keys = new ArrayBuffer[KeyModel]
+        val extras = new ArrayBuffer[TableExtra]
         ct.entries.map {
-            case column @ c.Column(name, dataType, attrs) =>
+            case column @ Column(name, dataType, attrs) =>
                 
                 columns += parseColumn(column)
                 
                 attrs foreach {
-                    case c.InlinePrimaryKey => pks += PrimaryKeyModel(None, List(column.name))
+                    case InlinePrimaryKey =>
+                        extras += PrimaryKeyModel(None, IndexModel(None, List(column.name)))
+                    
                     // XXX: other inline properties
                     
-                    case c.ModelColumnProperty(_) =>
+                    case ModelColumnProperty(_) =>
                 }
                 
-            case c.PrimaryKey(pk) => pks += pk
-            case c.Index(index) => keys += index
-            case c.ForeignKey(fk) => keys += fk
+            case Index(index) => extras += index
+            case PrimaryKey(pk) => extras += pk
+            case ForeignKey(fk) => extras += fk
+            case UniqueKey(uk) => extras += uk
         }
         
+        val pks = extras.flatMap { case pk: PrimaryKeyModel => Some(pk); case _ => None }
         require(pks.length <= 1)
         
         val pk = pks.firstOption
@@ -77,12 +81,12 @@ case class ModelParser(val context: Context) {
                 ColumnModel(c.name, c.dataType, properties)
         }
         
-        fixTable(TableModel(name, columns2.toList, pk, keys.toList, ct.options))
+        fixTable(TableModel(name, columns2.toList, extras, ct.options))
     }
     
     protected def fixTable(table: TableModel) = {
-        val TableModel(name, columns, pk, keys, options) = table
-        TableModel(name, columns.map(fixColumn(_, table)), pk, keys, options)
+        val TableModel(name, columns, extras, options) = table
+        TableModel(name, columns.map(fixColumn(_, table)), extras, options)
     }
     
     protected def fixColumn(column: ColumnModel, table: TableModel) =
@@ -116,17 +120,20 @@ case class ModelParser(val context: Context) {
     def parseCreateTableScript(text: String) =
         parseCreateTable(sqlParserCombinator.parseCreateTableRegular(text))
     
-    private def alterTableOperation(op: AlterTableStatement.Operation, table: TableModel): TableModel = {
+    private def alterTableOperation(op: Operation, table: TableModel): TableModel = {
         import AlterTableStatement._
         op match {
-            case AddColumn(column) => table.addColumn(parseColumn(column))
+            case AddEntry(c: Column) => table.addColumn(parseColumn(c))
+            case AddEntry(Index(i)) => table.addExtra(i)
+            case AddEntry(PrimaryKey(pk)) => table.addExtra(pk)
+            case AddEntry(ForeignKey(fk)) => table.addExtra(fk)
+            case AddEntry(UniqueKey(uk)) => table.addExtra(uk)
+            
             case ChangeColumn(oldName, model) => table.alterColumn(oldName, ignored => model)
             case ModifyColumn(model) => table.alterColumn(model.name, ignored => model)
             case DropColumn(name) => table.dropColumn(name)
-            case AddPrimaryKey(pk) => table.addPrimaryKey(pk)
             case DropPrimaryKey => table.dropPrimaryKey
-            case AddIndex(id) => table.addKey(id)
-            case DropIndex(name) => table.dropKey(name)
+            case DropIndex(name) => table.dropIndex(name)
             /*
             case DropForeignKey(name) =>
             case AddForeignKey(fk) => 
@@ -153,7 +160,7 @@ class ModelParserTests(context: Context) extends org.specs.Specification {
     import modelParser._
     
     "unspecified nullability means nullable" in {
-        val ctc = CreateTableStatement.Column("age", dataTypes.int,
+        val ctc = TableDdlStatement.Column("age", dataTypes.int,
             new ColumnProperties(List(DefaultValue(NumberValue(0)))))
         val ct = CreateTableStatement("x", false, List(ctc), Nil)
         val t = parseCreateTable(ct)
@@ -208,7 +215,7 @@ class ModelParserTests(context: Context) extends org.specs.Specification {
     
     "DROP TABLE" in {
         val db = modelParser.parseModel("CREATE TABLE a (id INT); CREATE TABLE b (id INT); DROP TABLE a")
-        db.tables must beLike { case Seq(TableModel("b", _, _, _, _)) => true }
+        db.tables must beLike { case Seq(TableModel("b", _, _, _)) => true }
     }
     
     "ALTER TABLE" in {

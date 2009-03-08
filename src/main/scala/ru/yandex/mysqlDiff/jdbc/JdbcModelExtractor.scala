@@ -134,20 +134,21 @@ class JdbcModelExtractor(context: Context) {
                     .filter(pk.isEmpty || _.columns.toList != pk.get.columns.toList)
                     .filter(i => !(fks.map(_.localColumns.toList) contains i.columns.toList))
             
-            new TableModel(tableName, columnsList.toList, pk, indexes ++ fks, getTableOptions(tableName))
+            new TableModel(tableName, columnsList.toList, indexes ++ pk ++ fks, getTableOptions(tableName))
         }
         
         def getPrimaryKey(tableName: String): Option[PrimaryKeyModel] =
             dao.findPrimaryKey(currentCatalog, currentSchema, tableName)
         
-        def getIndexes(tableName: String): Seq[IndexModel] =
+        /** Indexes plus unique constraints */
+        def getIndexes(tableName: String): Seq[HasIndexModel] =
             dao.findIndexes(currentCatalog, currentSchema, tableName)
 
         def getFks(tableName: String): Seq[ForeignKeyModel] =
             dao.findImportedKeys(currentCatalog, currentSchema, tableName)
         
         /** Not including PK */
-        def getKeys(tableName: String): Seq[KeyModel] =
+        def getKeys(tableName: String): Seq[TableExtra] =
             getIndexes(tableName) ++ getFks(tableName)
 
         def getTableOptions(tableName: String): Seq[TableOption]

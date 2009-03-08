@@ -5,7 +5,7 @@ import script._
 /** MySQL specific ALTER TABLE operations */
 // http://dev.mysql.com/doc/refman/5.1/en/alter-table.html
 object MysqlAlterTableStatement {
-    import AlterTableStatement._
+    import TableDdlStatement._
     
     case class ConvertToCharacterSet(name: String, collate: Option[String]) extends Operation
     case class ChangeCharacterSet(name: String, collate: Option[String]) extends Operation

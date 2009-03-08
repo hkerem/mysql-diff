@@ -105,32 +105,41 @@ case class DiffMaker(val context: Context) {
         else None
     }
     
-    def comparePrimaryKeys(fromO: Option[PrimaryKeyModel], toO: Option[PrimaryKeyModel]): Option[KeyDiff] =
+    def comparePrimaryKeys(fromO: Option[PrimaryKeyModel], toO: Option[PrimaryKeyModel]): Option[ExtraDiff] =
         (fromO, toO) match {
-            case (Some(from), None) => Some(DropKeyDiff(from))
-            case (None, Some(to)) => Some(CreateKeyDiff(to))
+            case (Some(from), None) => Some(DropExtraDiff(from))
+            case (None, Some(to)) => Some(CreateExtraDiff(to))
             case (Some(from), Some(to)) if from.columns.toList != to.columns.toList =>
-                Some(new ChangeKeyDiff(from, to))
+                Some(new ChangeExtraDiff(from, to))
             case _ => None
         }
     
     /** Are indexes equivalent? */
     def indexesEquivalent(a: IndexModel, b: IndexModel) =
-        (a.columns.toList == b.columns.toList) && (a.isUnique == b.isUnique) &&
+        (a.columns.toList == b.columns.toList) &&
             (a.name == b.name || a.name == None || b.name == None)
     
     /** Are foreign keys equivalent? */
     def fksEquivalent(a: ForeignKeyModel, b: ForeignKeyModel) =
         (a.localColumns.toList == b.columns.toList) &&
-                (a.externalTableName == b.externalTableName) && (a.externalColumns == b.externalColumns) &&
+                (a.externalTable == b.externalTable) && (a.externalColumns == b.externalColumns) &&
                 (a.name == b.name || a.name == None || b.name == None)
     
-    /** Are keys equivalent */
-    def keysEquivalent(a: KeyModel, b: KeyModel) = (a, b) match {
+    def uksEquivalent(a: UniqueKeyModel, b: UniqueKeyModel) =
+        indexesEquivalent(a.index, b.index)
+    
+    def pksEquivalent(a: PrimaryKeyModel, b: PrimaryKeyModel) =
+        indexesEquivalent(a.index, b.index)
+    
+    def extrasEquivalent(a: TableExtra, b: TableExtra) = (a, b) match {
         case (a: IndexModel, b: IndexModel) => indexesEquivalent(a, b)
+        case (a: PrimaryKeyModel, b: PrimaryKeyModel) => pksEquivalent(a, b)
         case (a: ForeignKeyModel, b: ForeignKeyModel) => fksEquivalent(a, b)
+        case (a: UniqueKeyModel, b: UniqueKeyModel) => uksEquivalent(a, b)
         case (_: IndexModel, _) => false
+        case (_: PrimaryKeyModel, _) => false
         case (_: ForeignKeyModel, _) => false
+        case (_: UniqueKeyModel, _) => false
     }
         
     def compareTableOptions(a: TableOption, b: TableOption) = {
@@ -149,17 +158,15 @@ case class DiffMaker(val context: Context) {
 
         val alterColumnDiff = dropColumnDiff ++ createColumnDiff ++ alterOnlyColumnDiff
 
-        val primaryKeyDiff: Seq[KeyDiff] = comparePrimaryKeys(from.primaryKey, to.primaryKey).toList
+        
+        val (fromExtras, toExtras, _) = // XXX: check third argument
+            compareSeqs(from.extras, to.extras, extrasEquivalent _)
 
+        val dropExtrasDiff = fromExtras.map(k => DropExtraDiff(k))
+        val createExtrasDiff = toExtras.map(k => CreateExtraDiff(k))
+        val changeExtrasDiff = Nil // we have no alter index
 
-        val (fromKeys, toKeys, _) = // XXX: check third argument
-            compareSeqs(from.keys, to.keys, keysEquivalent _)
-
-        val dropKeysDiff = fromKeys.map(k => DropKeyDiff(k))
-        val createKeysDiff = toKeys.map(k => CreateKeyDiff(k))
-        val alterKeysDiff = Nil // we have no alter index
-
-        val alterKeyDiff = primaryKeyDiff ++ createKeysDiff ++ dropKeysDiff ++ alterKeysDiff
+        val alterExtrasDiff = dropExtrasDiff ++ createExtrasDiff ++ changeExtrasDiff
         
         
         val (fromOptions, toOptions, changeOptionPairs) =
@@ -173,9 +180,9 @@ case class DiffMaker(val context: Context) {
         val alterTableOptionDiff = dropOptionDiff ++ createOptionDiff ++ alterOptionDiff
         
         if (from.name != to.name)
-            Some(new ChangeTableDiff(from.name, Some(to.name), alterColumnDiff, alterKeyDiff, alterTableOptionDiff))
-        else if (alterColumnDiff.size > 0 || alterKeyDiff.size > 0 || alterTableOptionDiff.size > 0)
-            Some(new ChangeTableDiff(from.name, None, alterColumnDiff, alterKeyDiff, alterTableOptionDiff))
+            Some(new ChangeTableDiff(from.name, Some(to.name), alterColumnDiff, alterExtrasDiff, alterTableOptionDiff))
+        else if (alterColumnDiff.size > 0 || alterExtrasDiff.size > 0 || alterTableOptionDiff.size > 0)
+            Some(new ChangeTableDiff(from.name, None, alterColumnDiff, alterExtrasDiff, alterTableOptionDiff))
         else
             None
     }
@@ -309,10 +316,10 @@ object DiffMakerTests extends org.specs.Specification {
     
     "ignore index name change to none" in {
         val columns = List(new ColumnModel("id", dataTypes.int), new ColumnModel("b", dataTypes.int))
-        val i1 = new IndexModel(Some("my_index"), List("b"), true)
-        val i2 = new IndexModel(None, List("b"), true)
-        val t1 = new TableModel("a", columns, None, List(i1), new TableOptions(Nil))
-        val t2 = new TableModel("a", columns, None, List(i2), new TableOptions(Nil))
+        val i1 = new IndexModel(Some("my_index"), List("b"))
+        val i2 = new IndexModel(None, List("b"))
+        val t1 = new TableModel("a", columns, Seq(i1), Nil)
+        val t2 = new TableModel("a", columns, Seq(i2), Nil)
         compareTables(t1, t2) must_== None
     }
     

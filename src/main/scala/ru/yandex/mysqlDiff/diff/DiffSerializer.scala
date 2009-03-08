@@ -9,37 +9,36 @@ import script._
 class DiffSerializer(val context: Context) {
     import context._
     
-    import script.{AlterTableStatement => ats}
-    import script.{CreateTableStatement => cts}
-
     def alterColumnScript(cd: ColumnDiff, table: TableModel) =
         AlterTableStatement(table.name, List(alterColumnStmt(cd, table)))
     
     def alterColumnStmt(cd: ColumnDiff, table: TableModel) = cd match {
-        case CreateColumnDiff(c) => new ats.AddColumn(c)
-        case DropColumnDiff(name) => ats.DropColumn(name)
+        case CreateColumnDiff(c) => TableDdlStatement.AddColumn(c)
+        case DropColumnDiff(name) => TableDdlStatement.DropColumn(name)
         case ChangeColumnDiff(name, Some(newName), diff) =>
-                ats.ChangeColumn(name, table.column(newName))
+                TableDdlStatement.ChangeColumn(name, table.column(newName))
         case ChangeColumnDiff(name, None, diff) =>
-                ats.ModifyColumn(table.column(name))
+                TableDdlStatement.ModifyColumn(table.column(name))
     }
     
-    def dropKeyStmt(k: KeyModel) = k match {
-        case _: PrimaryKeyModel => ats.DropPrimaryKey
-        case i: IndexModel => ats.DropIndex(i.name.get)
-        case f: ForeignKeyModel => ats.DropForeignKey(f.name.get)
+    def dropExtraStmt(k: TableExtra) = k match {
+        case i: IndexModel => TableDdlStatement.DropIndex(i.name.get)
+        case _: PrimaryKeyModel => TableDdlStatement.DropPrimaryKey
+        case u: UniqueKeyModel => TableDdlStatement.DropUniqueKey(u.name.get)
+        case f: ForeignKeyModel => TableDdlStatement.DropForeignKey(f.name.get)
     }
     
-    def createKeyStmt(k: KeyModel) = k match {
-        case p: PrimaryKeyModel => ats.AddPrimaryKey(p)
-        case i: IndexModel => ats.AddIndex(i)
-        case f: ForeignKeyModel => ats.AddForeignKey(f)
+    def createExtraStmt(k: TableExtra) = k match {
+        case i: IndexModel => TableDdlStatement.AddIndex(i)
+        case u: UniqueKeyModel => TableDdlStatement.AddUniqueKey(u)
+        case p: PrimaryKeyModel => TableDdlStatement.AddPrimaryKey(p)
+        case f: ForeignKeyModel => TableDdlStatement.AddForeignKey(f)
     }
     
-    def alterKeyStmts(d: KeyDiff) = d match {
-        case DropKeyDiff(k) => List(dropKeyStmt(k))
-        case CreateKeyDiff(k) => List(createKeyStmt(k))
-        case ChangeKeyDiff(ok, nk) => List(dropKeyStmt(ok), createKeyStmt(nk))
+    def alterExtraStmts(d: ExtraDiff) = d match {
+        case DropExtraDiff(k) => List(dropExtraStmt(k))
+        case CreateExtraDiff(k) => List(createExtraStmt(k))
+        case ChangeExtraDiff(ok, nk) => List(dropExtraStmt(ok), createExtraStmt(nk))
     }
     
     def alterTableOptionStmt(od: TableOptionDiff, table: TableModel) = {
@@ -47,28 +46,28 @@ class DiffSerializer(val context: Context) {
             case CreateTableOptionDiff(o) => o
             case ChangeTableOptionDiff(o, n) => n
         }
-        ats.ChangeTableOption(o)
+        TableDdlStatement.ChangeTableOption(o)
     }
     
-    def alterKeyScript(d: KeyDiff, table: TableModel) =
-        AlterTableStatement(table.name, alterKeyStmts(d))
+    def alterExtraScript(d: ExtraDiff, table: TableModel) =
+        AlterTableStatement(table.name, alterExtraStmts(d))
     
     def alterTableEntryStmts(d: TableEntryDiff, table: TableModel) = d match {
-        case kd: KeyDiff => alterKeyStmts(kd)
+        case kd: ExtraDiff => alterExtraStmts(kd)
         case cd: ColumnDiff => List(alterColumnStmt(cd, table))
         case od: TableOptionDiff => List(alterTableOptionStmt(od, table))
     }
     
-    private def operationOrder(op: ats.Operation) = op match {
-        case _: ats.DropOperation => op match {
-            case _: ats.KeyOperation => 11
-            case _: ats.ColumnOperation => 12
+    private def operationOrder(op: TableDdlStatement.Operation) = op match {
+        case _: TableDdlStatement.DropOperation => op match {
+            case _: TableDdlStatement.ExtraOperation => 11
+            case _: TableDdlStatement.ColumnOperation => 12
             case _ => 13
         }
-        case _: ats.ModifyOperation => 20
-        case _: ats.AddOperation => op match {
-            case _: ats.ColumnOperation => 31
-            case _: ats.KeyOperation => 32
+        case _: TableDdlStatement.ModifyOperation => 20
+        case TableDdlStatement.AddEntry(e) => e match {
+            case _: TableDdlStatement.Column => 31
+            case _ => 32
         }
         case _ => 99
     }
@@ -83,14 +82,15 @@ class DiffSerializer(val context: Context) {
         {
             // for CAP-101
             // XXX: simplify
-            val (addPks, rest) = diff.entriesDiff.partition {
-                case CreateKeyDiff(_: PrimaryKeyModel) => true
+            val (addPks, rest) = diff.entriesDiff.toList.partition {
+                case CreateExtraDiff(_: PrimaryKeyModel) => true
                 case _ => false
             }
             
             require(addPks.length <= 1)
             
-            val addPk = addPks.firstOption.map(_.asInstanceOf[CreateKeyDiff])
+            val addPk: Option[PrimaryKeyModel] =
+                addPks.firstOption.map { case CreateExtraDiff(pk: PrimaryKeyModel) => pk }
             val addPkSingleColumn = addPk.filter(_.index.columns.length == 1).map(_.index.columns.first)
             
             val (addPkSingleColumnDiffs, rest2) = rest.partition {
@@ -101,15 +101,15 @@ class DiffSerializer(val context: Context) {
             require(addPkSingleColumnDiffs.length <= 1)
             
             val addPkSingleColumnDiffProper = addPkSingleColumnDiffs.firstOption
-                    .map(x => new ats.AddColumn(new cts.Column(x.asInstanceOf[CreateColumnDiff].column) addProperty cts.InlinePrimaryKey))
+                    .map(x => new TableDdlStatement.AddEntry(new TableDdlStatement.Column(x.asInstanceOf[CreateColumnDiff].column) addProperty TableDdlStatement.InlinePrimaryKey))
             
             // end of CAP-101
             
-            import ats._
+            import TableDdlStatement._
             val ops = rest2.flatMap(alterTableEntryStmts(_, table)) ++ addPkSingleColumnDiffProper
             val sorted = scala.util.Sorting.stableSort(ops, operationOrder _)
             // XXX: make configurable
-            if (false) sorted.map { op: ats.Operation => AlterTableStatement(table.name, List(op)) } 
+            if (false) sorted.map { op: TableDdlStatement.Operation => AlterTableStatement(table.name, List(op)) } 
             else List(AlterTableStatement(table.name, sorted))
         }
         
@@ -161,8 +161,11 @@ object DiffSerializerTests extends org.specs.Specification {
     import AlterTableStatement._
     import CreateTableStatement._
 
+    // XXX: import basic context
     import Environment.defaultContext._
     import diffSerializer._
+    
+    import TableDdlStatement._
     
     /** Partial function to predicate */
     private def pftp[T](f: PartialFunction[T, Any]) =
@@ -178,10 +181,17 @@ object DiffSerializerTests extends org.specs.Specification {
         script(0) must beLike { case AlterTableStatement(_, _) => true }
         val altStmt = script(0).asInstanceOf[AlterTableStatement].ops
 
-        val dropNameI = altStmt.findIndexOf(pftp { case DropColumn("name") => true })
-        val dropNiI = altStmt.findIndexOf(pftp { case DropIndex("ni") => true })
-        val addLoginI = altStmt.findIndexOf(pftp { case AddColumn(c: Column) if c.name == "login" => true })
-        val addLiI = altStmt.findIndexOf(pftp { case AddIndex(c: IndexModel) if c.name == Some("li") => true })
+        val dropNameI = altStmt.findIndexOf(
+            pftp { case DropColumn("name") => true })
+        
+        val dropNiI = altStmt.findIndexOf(
+            pftp { case DropIndex("ni") => true })
+        
+        val addLoginI = altStmt.findIndexOf(
+            pftp { case AddEntry(c: Column) if c.name == "login" => true })
+        
+        val addLiI = altStmt.findIndexOf(
+            pftp { case AddEntry(Index(c: IndexModel)) if c.name == Some("li") => true })
         
         dropNiI must be_>=(0)
         dropNameI must be_>=(0)

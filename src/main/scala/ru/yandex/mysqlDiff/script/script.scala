@@ -41,17 +41,18 @@ abstract class TableDdlStatement(name: String) extends DdlStatement
 
 // http://dev.mysql.com/doc/refman/5.1/en/create-table.html
 case class CreateTableStatement(name: String, ifNotExists: Boolean,
-        entries: Seq[CreateTableStatement.Entry], options: Seq[TableOption])
+        entries: Seq[TableDdlStatement.Entry], options: Seq[TableOption])
     extends TableDdlStatement(name)
 {
-    def this(name: String, ifNotExists: Boolean, entries: Seq[CreateTableStatement.Entry]) =
+    def this(name: String, ifNotExists: Boolean, entries: Seq[TableDdlStatement.Entry]) =
         this(name, ifNotExists, entries, Nil)
 
-    import CreateTableStatement._
+    import TableDdlStatement._
     
     def columns: Seq[Column] = entries.flatMap { case c: Column => Some(c); case _ => None }
     def indexes: Seq[Index] = entries.flatMap { case c: Index => Some(c); case _=> None }
-    def fks: Seq[ForeignKey] = entries.flatMap { case c: ForeignKey => Some(c); case _ => None }
+    def uniqueKeys: Seq[UniqueKey] = entries.flatMap { case c: UniqueKey => Some(c); case _ => None }
+    def foreignKeys: Seq[ForeignKey] = entries.flatMap { case c: ForeignKey => Some(c); case _ => None }
     
     def column(name: String) = columns.find(_.name == name).get
 }
@@ -62,7 +63,8 @@ case class CreateTableLikeStatement(name: String, ifNotExists: Boolean, likeWhat
 {
 }
 
-object CreateTableStatement {
+object TableDdlStatement {
+    /** Object inside table */
     abstract class Entry
     
     /** Something can be specified with column */
@@ -88,42 +90,34 @@ object CreateTableStatement {
         def addProperty(c: ColumnPropertyDecl) = new Column(name, dataType, properties ++ List(c))
     }
     
+    trait Constraint extends Entry
+    
     case class Index(index: model.IndexModel) extends Entry
     
-    case class PrimaryKey(pk: model.PrimaryKeyModel) extends Entry
+    case class UniqueKey(uk: model.UniqueKeyModel) extends Constraint
     
-    case class ForeignKey(fk: model.ForeignKeyModel) extends Entry
-}
-
-case class DropTableStatement(name: String, ifExists: Boolean) extends TableDdlStatement(name)
-
-case class RenameTableStatement(name: String, newName: String) extends TableDdlStatement(name)
-
-case class AlterTableStatement(name: String, ops: Seq[AlterTableStatement.Operation])
-        extends TableDdlStatement(name)
-{
-    require(ops.length > 0)
+    case class PrimaryKey(pk: model.PrimaryKeyModel) extends Constraint
     
-    def this(name: String, op: AlterTableStatement.Operation) = this(name, List(op))
+    case class ForeignKey(fk: model.ForeignKeyModel) extends Constraint
     
-    def flatten = ops.map(new AlterTableStatement(name, _))
-}
-
-object AlterTableStatement {
-    import script.{CreateTableStatement => cts}
+    case class Check(expr: Any) extends Entry
     
+    /** Operation on table */
     trait Operation
     
     trait DropOperation extends Operation
-    trait AddOperation extends Operation
     trait ModifyOperation extends Operation
     
     trait ColumnOperation extends Operation
-    trait KeyOperation extends Operation
+    trait ExtraOperation extends Operation
     
-    case class AddColumn(column: cts.Column) extends AddOperation with ColumnOperation {
-        def this(model: ColumnModel) = this(new cts.Column(model))
-    }
+    case class AddEntry(e: Entry) extends Operation
+    
+    def AddColumn(c: ColumnModel) = AddEntry(new Column(c))
+    def AddPrimaryKey(pk: PrimaryKeyModel) = AddEntry(new PrimaryKey(pk))
+    def AddForeignKey(fk: ForeignKeyModel) = AddEntry(new ForeignKey(fk))
+    def AddUniqueKey(un: UniqueKeyModel) = AddEntry(new UniqueKey(un))
+    def AddIndex(index: IndexModel) = AddEntry(new Index(index))
     
     case class ChangeColumn(oldName: String, model: ColumnModel) extends ModifyOperation with ColumnOperation
     
@@ -135,17 +129,13 @@ object AlterTableStatement {
     
     case class DropColumn(name: String) extends DropOperation with ColumnOperation
     
-    case class AddPrimaryKey(pk: PrimaryKeyModel) extends AddOperation with KeyOperation
+    case object DropPrimaryKey extends DropOperation with ExtraOperation
     
-    case object DropPrimaryKey extends DropOperation with KeyOperation
+    case class DropIndex(name: String) extends DropOperation with ExtraOperation
     
-    case class AddIndex(id: IndexModel) extends AddOperation with KeyOperation
+    case class DropUniqueKey(name: String) extends DropOperation with ExtraOperation
     
-    case class DropIndex(name: String) extends DropOperation with KeyOperation
-    
-    case class DropForeignKey(name: String) extends DropOperation with KeyOperation
-    
-    case class AddForeignKey(fk: ForeignKeyModel) extends AddOperation with KeyOperation
+    case class DropForeignKey(name: String) extends DropOperation with ExtraOperation
     
     case class ChangeTableOption(o: model.TableOption) extends Operation
     
@@ -156,6 +146,21 @@ object AlterTableStatement {
     
     case class OrderBy(colNames: Seq[String]) extends Operation
 }
+
+case class DropTableStatement(name: String, ifExists: Boolean) extends TableDdlStatement(name)
+
+case class RenameTableStatement(name: String, newName: String) extends TableDdlStatement(name)
+
+case class AlterTableStatement(name: String, ops: Seq[TableDdlStatement.Operation])
+        extends TableDdlStatement(name)
+{
+    require(ops.length > 0)
+    
+    def this(name: String, op: TableDdlStatement.Operation) = this(name, List(op))
+    
+    def flatten = ops.map(new AlterTableStatement(name, _))
+}
+
 
 abstract class ViewDdlStatement(name: String) extends DdlStatement
 

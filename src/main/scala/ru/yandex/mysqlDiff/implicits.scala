@@ -8,11 +8,11 @@ import util._
 object Implicits {
     // ?
     implicit def toDecls(ps: ColumnProperties) =
-        ps.properties.map(CreateTableStatement.ModelColumnProperty(_))
+        ps.properties.map(TableDdlStatement.ModelColumnProperty(_))
     
     // ?
     implicit def modelCpToCpDecl(cp: ColumnProperty) =
-        CreateTableStatement.ModelColumnProperty(cp)
+        TableDdlStatement.ModelColumnProperty(cp)
     
     /// script
     

@@ -111,22 +111,22 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def defaultValue: Parser[DefaultValue] = "DEFAULT" ~> sqlValue ^^ { value => DefaultValue(value) }
     
-    def uniqueAttr = "UNIQUE" ^^^ InlineUnique
-    def pkAttr = "PRIMARY" ~ "KEY" ^^^ InlinePrimaryKey
+    def uniqueAttr = "UNIQUE" ^^^ TableDdlStatement.InlineUnique
+    def pkAttr = "PRIMARY" ~ "KEY" ^^^ TableDdlStatement.InlinePrimaryKey
     
-    def referencesAttr: Parser[InlineReferences] = ("REFERENCES" ~> name <~ "(") ~ name <~ ")" ^^
-        { case t ~ c => InlineReferences(t, c) }
+    def referencesAttr = ("REFERENCES" ~> name <~ "(") ~ name <~ ")" ^^
+        { case t ~ c => TableDdlStatement.InlineReferences(t, c) }
     
     def columnProperty: Parser[ColumnProperty] = nullability | defaultValue
     
-    def columnAttr: Parser[ColumnPropertyDecl] =
-        columnProperty ^^ { p => ModelColumnProperty(p) } | uniqueAttr | pkAttr | referencesAttr
+    def columnAttr: Parser[TableDdlStatement.ColumnPropertyDecl] =
+        columnProperty ^^ { p => TableDdlStatement.ModelColumnProperty(p) } | uniqueAttr | pkAttr | referencesAttr
     
     def columnModel: Parser[ColumnModel] = name ~ dataType ~ rep(columnProperty) ^^
             { case name ~ dataType ~ ps => ColumnModel(name, dataType, ps) }
     
-    def column: Parser[Column] = name ~ dataType ~ rep(columnAttr) ^^
-            { case name ~ dataType ~ attrs => Column(name, dataType, attrs) }
+    def column: Parser[TableDdlStatement.Column] = name ~ dataType ~ rep(columnAttr) ^^
+            { case name ~ dataType ~ attrs => TableDdlStatement.Column(name, dataType, attrs) }
     
     def name: Parser[String] = ident
     
@@ -174,32 +174,35 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def select: Parser[SelectStatement] = ("SELECT" ~> rep1sep(selectExpr, ",")) ~ from ~ opt("WHERE" ~> selectCondition) ^^
         { case exprs ~ names ~ where => SelectStatement(exprs, names, where) }
     
-    /** True iff unique */
-    def indexUniquality: Parser[Boolean] =
-        (opt("UNIQUE") <~ ("INDEX" | "KEY") ^^ { x => x.isDefined }) |
-        ("UNIQUE" ^^^ true)
-    
     // XXX: length ignored
     def indexColName: Parser[String] = name <~ opt("(" ~> naturalNumber <~ ")") <~ opt("ASC" | "DESC")
     
     def indexColNameList: Parser[Seq[String]] = "(" ~> repsep(indexColName, ",") <~ ")"
     
     def indexModel: Parser[IndexModel] =
-        indexUniquality ~ opt(name) ~ indexColNameList ^^
-            { case unique ~ name ~ columnNames => model.IndexModel(name, columnNames, unique) }
+        ("KEY" | "INDEX") ~> opt(name) ~ indexColNameList ^^
+            { case n ~ cs => model.IndexModel(n, cs) }
+    
+    def constraint: Parser[Option[String]] = opt("CONSTRAINT" ~> name)
+    
+    def ukModel: Parser[UniqueKeyModel] =
+        (constraint <~ "UNIQUE" <~ opt("INDEX" | "KEY")) ~ opt(name) ~ nameList ^^
+            { case cn ~ n ~ cs => model.UniqueKeyModel(cn, new IndexModel(n, cs)) }
     
     def fkModel: Parser[ForeignKeyModel] =
-        ("FOREIGN KEY" ~> opt(name)) ~ nameList ~ ("REFERENCES" ~> name) ~ nameList ^^
-            { case k ~ lcs ~ et ~ ecs => ForeignKeyModel(k, lcs, et, ecs) }
+        (constraint <~ "FOREIGN KEY") ~ opt(name) ~ nameList ~ ("REFERENCES" ~> name) ~ nameList ^^
+            { case cn ~ k ~ lcs ~ et ~ ecs => ForeignKeyModel(cn, new IndexModel(k, lcs), et, ecs) }
     
     def pkModel: Parser[PrimaryKeyModel] =
-        "PRIMARY KEY" ~> opt(name) ~ indexColNameList ^^
-            { case name ~ nameList => PrimaryKeyModel(name, nameList) }
+        (constraint <~ "PRIMARY KEY") ~ opt(name) ~ indexColNameList ^^
+            { case cn ~ name ~ nameList => PrimaryKeyModel(cn, new IndexModel(name, nameList)) }
     
-    def tableEntry: Parser[Entry] = 
-      ( (pkModel ^^ { p => PrimaryKey(p) })
-      | (fkModel ^^ { f => ForeignKey(f) })
-      | (indexModel ^^ { i => Index(i) })
+    // XXX: constraint name
+    def tableEntry: Parser[TableDdlStatement.Entry] = 
+      ( (pkModel ^^ { p => TableDdlStatement.PrimaryKey(p) })
+      | (fkModel ^^ { f => TableDdlStatement.ForeignKey(f) })
+      | (ukModel ^^ { f => TableDdlStatement.UniqueKey(f) })
+      | (indexModel ^^ { i => TableDdlStatement.Index(i) })
       | column
       )
     
@@ -227,39 +230,45 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     // XXX: add multiple column
     // XXX: use FIRST, AFTER
     def addColumn = "ADD" ~> opt("COLUMN") ~> column <~ opt("FIRST" | ("AFTER" ~ name)) ^^
-            { column => AlterTableStatement.AddColumn(column) }
+            { column => TableDdlStatement.AddEntry(column) }
     
-    def addKey = "ADD" ~> indexModel ^^ { ind => AlterTableStatement.AddIndex(ind) }
+    def addIndex = "ADD" ~> indexModel ^^ { ind => TableDdlStatement.AddIndex(ind) }
+    
+    def addUk = "ADD" ~> ukModel ^^ { uk => TableDdlStatement.AddUniqueKey(uk) }
+    
+    def addPk = "ADD" ~> pkModel ^^ { pk => TableDdlStatement.AddPrimaryKey(pk) }
+    
+    def addFk = "ADD" ~> fkModel ^^ { fk => TableDdlStatement.AddForeignKey(fk) }
     
     def alterColumn = "ALTER" ~> opt("COLUMN") ~> name ~
         (("SET DEFAULT" ~> sqlValue ^^ { x => Some(x) }) | ("DROP DEFAULT" ^^^ None)) ^^
-            { case n ~ v => AlterTableStatement.AlterColumnSetDefault(n, v) }
+            { case n ~ v => TableDdlStatement.AlterColumnSetDefault(n, v) }
     
     def changeColumn = "CHANGE" ~> opt("COLUMN") ~> name ~ columnModel ^^
-        { case n ~ c => AlterTableStatement.ChangeColumn(n, c) }
+        { case n ~ c => TableDdlStatement.ChangeColumn(n, c) }
     
     def modifyColumn = "MODIFY" ~> opt("COLUMN") ~> columnModel ^^
-        { case c => AlterTableStatement.ModifyColumn(c) }
+        { case c => TableDdlStatement.ModifyColumn(c) }
     
-    def dropColumn = "DROP" ~> opt("COLUMN") ~> name ^^ { n => AlterTableStatement.DropColumn(n) }
+    def dropColumn = "DROP" ~> opt("COLUMN") ~> name ^^ { n => TableDdlStatement.DropColumn(n) }
     
-    def dropPk = "DROP PRIMARY KEY" ^^^ AlterTableStatement.DropPrimaryKey
+    def dropPk = "DROP PRIMARY KEY" ^^^ TableDdlStatement.DropPrimaryKey
     
-    def dropKey = "DROP" ~> ("INDEX" | "KEY") ~> name ^^ { n => AlterTableStatement.DropIndex(n) }
+    def dropKey = "DROP" ~> ("INDEX" | "KEY") ~> name ^^ { n => TableDdlStatement.DropIndex(n) }
     
-    def dropFk = "DROP FOREIGN KEY" ~> name ^^ { n => AlterTableStatement.DropForeignKey(n) }
+    def dropFk = "DROP FOREIGN KEY" ~> name ^^ { n => TableDdlStatement.DropForeignKey(n) }
     
     def disableEnableKeys =
-        ("DISABLE KEYS" ^^^ AlterTableStatement.DisableKeys) |
-        ("ENABLE KEYS" ^^^ AlterTableStatement.EnableKeys)
+        ("DISABLE KEYS" ^^^ TableDdlStatement.DisableKeys) |
+        ("ENABLE KEYS" ^^^ TableDdlStatement.EnableKeys)
     
-    def alterTableRename = "RENAME" ~> opt("TO") ~> name ^^ { n => AlterTableStatement.Rename(n) }
+    def alterTableRename = "RENAME" ~> opt("TO") ~> name ^^ { n => TableDdlStatement.Rename(n) }
     
-    def alterTableOrderBy = "ORDER BY" ~> rep1sep(name, ",") ^^ { l => AlterTableStatement.OrderBy(l) }
+    def alterTableOrderBy = "ORDER BY" ~> rep1sep(name, ",") ^^ { l => TableDdlStatement.OrderBy(l) }
     
-    def alterTableOption = tableOption ^^ { o => AlterTableStatement.ChangeTableOption(o) }
+    def alterTableOption = tableOption ^^ { o => TableDdlStatement.ChangeTableOption(o) }
     
-    def alterSpecification: Parser[AlterTableStatement.Operation] = addColumn | addKey |
+    def alterSpecification: Parser[TableDdlStatement.Operation] = addColumn | addIndex | addPk | addUk | addFk |
         alterColumn | changeColumn | modifyColumn |
         dropColumn | dropPk | dropKey |
         dropFk | disableEnableKeys | alterTableRename | alterTableOrderBy | alterTableOption
@@ -334,7 +343,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     import context._
     import sqlParserCombinator._
     
-    import CreateTableStatement._
+    import TableDdlStatement._
     
     "parseScript" in {
         parse("CREATE TABLE a (id INT); CREATE TABLE b (name VARCHAR(10))")
@@ -462,7 +471,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         val t = parseCreateTableRegular("CrEaTe TaBlE a (id InT nOt NuLl)")
         t.name must_== "a"
         t.columns must haveSize(1)
-        t.columns must exist({ c: CreateTableStatement.Column => c.name == "id" })
+        t.columns must exist({ c: Column => c.name == "id" })
         //t.column("id").dataType must_== dataTypes.int
         t.column("id").dataType.name must_== "INT"
     }
@@ -471,7 +480,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         val t = parseCreateTableRegular("  CREATE   TABLE  a (id INT NOT NULL) ")
         t.name must_== "a"
         t.columns must haveSize(1)
-        t.columns must exist({ c: CreateTableStatement.Column => c.name == "id" })
+        t.columns must exist({ c: Column => c.name == "id" })
         //t.column("id").dataType must_== dataTypes.int
         t.column("id").dataType.name must_== "INT"
     }
@@ -486,10 +495,14 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     
     "parse indexes" in {
         val t = parseCreateTableRegular("CREATE TABLE a(id INT, UNIQUE(a), INDEX i2(b, c), UNIQUE KEY(d, e))")
-        t.indexes must haveSize(3)
-        t.indexes(0).index must beLike { case IndexModel(None, Seq("a"), true) => true; case _ => false }
-        t.indexes(1).index must beLike { case IndexModel(Some("i2"), Seq("b", "c"), false) => true; case _ => false }
-        t.indexes(2).index must beLike { case IndexModel(None, Seq("d", "e"), true) => true; case _ => false }
+        t.indexes must haveSize(1)
+        t.indexes(0).index must beLike { case IndexModel(Some("i2"), Seq("b", "c")) => true; case _ => false }
+        
+        t.uniqueKeys must haveSize(2)
+        t.uniqueKeys(0).uk must beLike {
+            case UniqueKeyModel(None, IndexModel(None, Seq("a"))) => true }
+        t.uniqueKeys(1).uk must beLike {
+            case UniqueKeyModel(None, IndexModel(None, Seq("d", "e"))) => true }
     }
     
     "parse FK" in {
@@ -497,18 +510,19 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
                 "CREATE TABLE a (id INT, " +
                 "FOREIGN KEY (x, y) REFERENCES b (x1, y1), " +
                 "FOREIGN KEY fk1 (z) REFERENCES c (z1))")
-        t.fks must haveSize(2)
-        t.fks(0).fk must beLike {
-            case ForeignKeyModel(None, Seq("x", "y"), "b", Seq("x1", "y1")) => true; case _ => false }
-        t.fks(1).fk must beLike {
-            case ForeignKeyModel(Some("fk1"), Seq("z"), "c", Seq("z1")) => true; case _ => false }
+        t.foreignKeys must haveSize(2)
+        t.foreignKeys(0).fk must beLike {
+            case ForeignKeyModel(None, IndexModel(None, Seq("x", "y")), "b", Seq("x1", "y1")) => true }
+        t.foreignKeys(1).fk must beLike {
+            case ForeignKeyModel(None, IndexModel(Some("fk1"), Seq("z")), "c", Seq("z1")) => true }
     }
     
     "parse ALTER TABLE ADD INDEX" in {
         import AlterTableStatement._
         val a = parse(alterTable)("ALTER TABLE users ADD INDEX (login)")
         a must beLike {
-            case AlterTableStatement("users", Seq(AddIndex(IndexModel(None, Seq("login"), false)))) => true }
+            case AlterTableStatement("users",
+                    Seq(AddEntry(Index(IndexModel(None, Seq("login")))))) => true }
     }
     
     "parser ALTER TABLE ADD UNIQUE" in {
@@ -516,7 +530,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         val a = parse(alterTable)("ALTER TABLE convert_queue ADD UNIQUE(user_id, file_id)")
         a must beLike {
             case AlterTableStatement("convert_queue",
-                    Seq(AddIndex(IndexModel(None, Seq("user_id", "file_id"), true)))) => true }
+                    Seq(AddEntry(UniqueKey(UniqueKeyModel(None, IndexModel(None, Seq("user_id", "file_id"))))))) => true }
     }
     
     "parse ALTER TABLE ALTER COLUMN SET DEFAULT" in {

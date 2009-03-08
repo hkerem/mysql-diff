@@ -11,26 +11,31 @@ import Implicits._
 object ModelSerializer {
     
     def serializeColumn(column: ColumnModel) =
-        new CreateTableStatement.Column(column.name, column.dataType, column.properties)
+        new TableDdlStatement.Column(column.name, column.dataType, column.properties)
     
     def serializePk(pk: PrimaryKeyModel) =
-        new CreateTableStatement.PrimaryKey(pk)
+        new TableDdlStatement.PrimaryKey(pk)
     
     def serializeRegularIndex(index: IndexModel) =
-        new CreateTableStatement.Index(index)
+        new TableDdlStatement.Index(index)
     
     def serializeForeignKey(fk: ForeignKeyModel) =
-        new CreateTableStatement.ForeignKey(fk)
+        new TableDdlStatement.ForeignKey(fk)
     
-    def serializeKey(index: KeyModel) = index match {
-        case pk: PrimaryKeyModel => serializePk(pk)
+    def serializeUniqueKey(uk: UniqueKeyModel) =
+        new TableDdlStatement.UniqueKey(uk)
+    
+    def serializeTableEntry(e: TableEntry) = e match {
+        case c: ColumnModel => serializeColumn(c)
         case i: IndexModel => serializeRegularIndex(i)
+        case uk: UniqueKeyModel => serializeUniqueKey(uk)
+        case pk: PrimaryKeyModel => serializePk(pk)
         case fk: ForeignKeyModel => serializeForeignKey(fk)
     }
     
     def serializeTable(table: TableModel) =
         CreateTableStatement(table.name, false,
-            table.columns.map(serializeColumn _) ++ table.allKeys.map(serializeKey _), table.options.properties)
+            table.entries.map(serializeTableEntry _), table.options.properties)
 
     def serializeTableToText(table: TableModel) =
         ScriptSerializer.serialize(serializeTable(table))

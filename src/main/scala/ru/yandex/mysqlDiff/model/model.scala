@@ -244,27 +244,43 @@ case object Index extends KeyType
 case object ForeignKey extends KeyType
 */
 
-abstract class KeyModel(val name: Option[String], val columns: Seq[String]) extends TableEntry
-{
+/**
+ * Everything except column and table option.
+ * Stupid name, but I cannot think better.
+ */
+abstract class TableExtra extends TableEntry
+
+abstract class HasIndexModel extends TableExtra {
+    def index: IndexModel
+    def columns: Seq[String] = index.columns
+}
+
+case class IndexModel(name: Option[String], override val columns: Seq[String]) extends HasIndexModel {
     require(columns.length > 0)
     require(Set(columns: _*).size == columns.length)
+    
+    override def index = this
 }
 
-case class IndexModel(override val name: Option[String], override val columns: Seq[String], isUnique: Boolean)
-    extends KeyModel(name, columns)
+abstract case class ConstraintModel(name: Option[String], override val index: IndexModel) extends HasIndexModel {
+}
+case class UniqueKeyModel(override val name: Option[String], override val index: IndexModel)
+    extends ConstraintModel(name, index)
 
-case class PrimaryKeyModel(override val name: Option[String], override val columns: Seq[String])
-    extends KeyModel(name, columns)
+case class PrimaryKeyModel(override val name: Option[String], override val index: IndexModel)
+    extends ConstraintModel(name, index)
 
 case class ForeignKeyModel(override val name: Option[String],
-        val localColumns: Seq[String],
-        val externalTableName: String,
-        val externalColumns: Seq[String])
-    extends KeyModel(name, localColumns)
+        override val index: IndexModel,
+        externalTable: String,
+        externalColumns: Seq[String])
+    extends ConstraintModel(name, index)
 {
-    require(!localColumns.isEmpty)
+    def localColumns = index.columns
     require(localColumns.length == externalColumns.length)
+    // XXX: check externalColumns unique
 }
+
 
 abstract class TableOption extends Property {
     override def propertyType: TableOptionType
@@ -281,51 +297,45 @@ case class TableOptions(ps: Seq[TableOption])
     override def copy(options: Seq[TableOption]) = new TableOptions(options).asInstanceOf[this.type]
 }
 
-case class TableModel(override val name: String, columns: Seq[ColumnModel],
-        primaryKey: Option[PrimaryKeyModel], keys: Seq[KeyModel], options: TableOptions)
+case class TableModel(override val name: String, columns: Seq[ColumnModel], extras: Seq[TableExtra], options: TableOptions)
     extends DatabaseDeclaration(name: String)
 {
-    
-    def this(name: String, columns: Seq[ColumnModel], pk: Option[PrimaryKeyModel], keys: Seq[KeyModel]) =
-        this(name, columns, pk, keys, Nil)
-    
-    def this(name: String, columns: Seq[ColumnModel]) =
-        this(name, columns, None, Nil)
 
     require(name.length > 0, "table name must not be empty")
     require(columns.length > 0, "table " + name + " must have at least one column")
-    require(Set(columnNames: _*).size == columns.size, "repeating column names in table " + name + " model")
-    require(Set(keyNames: _*).size == keyNames.size, "repeating key names in table " + name + " model")
+    require(Set(columnNames: _*).size == columns.size,
+        "repeating column names in table " + name + " model")
+    require(Set(constraintNames: _*).size == constraintNames.size,
+        "repeating constraint names in table " + name + " model")
+    require(Set(allIndexNames: _*).size == allIndexNames.size,
+        "repeating index names in table " + name + " model")
+    require(primaryKeys.length <= 1)
+    
+    def entries = columns ++ extras
+    
+    private def primaryKeys = extras.flatMap { case p: PrimaryKeyModel => Some(p); case _ => None }
+    def primaryKey = primaryKeys.firstOption
+    def foreignKeys = extras.flatMap { case f: ForeignKeyModel => Some(f); case _ => None }
+    def uniqueKeys = extras.flatMap { case u: UniqueKeyModel => Some(u); case _ => None }
+    
+    def indexes = extras.flatMap { case i: IndexModel => Some(i); case _ => None }
+    def findIndex(name: String) = indexes.find(_.name == Some(name))
+    def index(name: String) = findIndex(name).get
+    
+    /** All indexes including those used in PKs, FKs, UKs */
+    def allIndexes = extras.flatMap { case h: HasIndexModel => Some(h.index); case _ => None }
+    def allIndexNames = allIndexes.flatMap(_.name)
     
     def findColumn(name: String) = columns.find(_.name == name)
     def column(name: String) = findColumn(name).get
     def columnNames = columns.map(_.name)
     
-    def findKey(name: String) = columns.find(_.name == Some(name))
-    def key(name: String) = findKey(name).get
-    def keyNames = keys.flatMap(_.name)
-    
-    /** Regular indexes */
-    def indexes = keys.flatMap { case i: IndexModel => Some(i); case _ => None }
-    def fks = keys.flatMap { case f: ForeignKeyModel => Some(f); case _ => None }
-    
-    /** PK then regular indexes then foreign keys */
-    def allKeys = primaryKey.toList ++ keys
+    def constraints = extras.flatMap { case c: ConstraintModel => Some(c); case _ => None }
+    def constraintNames = constraints.flatMap(_.name)
     
     def indexWithColumns(columns: String*) = indexes.find(_.columns.toList == columns.toList).get
+    def uniqueKeyWithColumns(columns: String*) = uniqueKeys.find(_.columns.toList == columns.toList).get
     
-    def createLikeThis(newName: String) =
-        TableModel(newName, columns, primaryKey, keys, options)
-    
-    def addPrimaryKey(pk: PrimaryKeyModel) = {
-        require(primaryKey.isEmpty)
-        withPrimaryKey(Some(pk))
-    }
-    
-    def dropPrimaryKey = {
-        require(primaryKey.isDefined)
-        withPrimaryKey(None)
-    }
     
     def addColumn(c: ColumnModel) =
         withColumns(columns ++ Seq(c))
@@ -337,38 +347,48 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel],
     
     def alterColumn(name: String, alter: ColumnModel => ColumnModel) = {
         column(name) // check exists
-        withColumns(columns.map{
+        withColumns(columns.map {
             case c if c.name == name => alter(c)
             case c => c
         })
     }
     
-    def addKey(key: KeyModel) =
-        withKeys(keys ++ Seq(key))
     
-    def dropKey(name: String) = {
-        key(name)
-        withKeys(keys.filter(_.name == Some(name)))
+    def addIndex(i: IndexModel) =
+        addExtra(i)
+    
+    def dropIndex(name: String) = {
+        index(name)
+        withExtras(extras.filter { case IndexModel(Some(`name`), _) => false; case _ => true })
     }
+    
+    def addPrimaryKeu(pk: PrimaryKeyModel) =
+        addExtra(pk)
+    
+    def dropPrimaryKey = {
+        primaryKey.get
+        withExtras(extras.filter { case p: PrimaryKeyModel => false; case _ => true })
+    }
+    
+    def addExtra(e: TableExtra) =
+        withExtras(extras ++ Seq(e))
     
     /** Columns is contained in PK */
     def isPk(name: String) =
         primaryKey.isDefined && primaryKey.get.columns.contains(name)
     
     def withName(n: String) =
-        new TableModel(n, columns, primaryKey, keys, options)
-    
-    def withPrimaryKey(pk: Option[PrimaryKeyModel]) =
-        new TableModel(name, columns, pk, keys, options)
-    
-    def withKeys(ks: Seq[KeyModel]) =
-        new TableModel(name, columns, primaryKey, ks, options)
+        new TableModel(n, columns, extras, options)
     
     def withColumns(cs: Seq[ColumnModel]) =
-        new TableModel(name, cs, primaryKey, keys, options)
+        new TableModel(name, cs, extras, options)
+    
+    def withExtras(es: Seq[TableExtra]) =
+        new TableModel(name, columns, es, options)
     
     def withOptions(os: TableOptions) =
-        new TableModel(name, columns, primaryKey, keys, os)
+        new TableModel(name, columns, extras, os)
+        
     
     def overrideOptions(os: Seq[TableOption]) =
         withOptions(this.options.overrideProperties(os))
@@ -483,7 +503,7 @@ object ModelTests extends org.specs.Specification {
     
     "model with repeating column names are not allowed" in {
         try {
-            new TableModel("users", List(new ColumnModel("id", dataTypes.int), new ColumnModel("id", dataTypes.varchar(9))))
+            new TableModel("users", List(new ColumnModel("id", dataTypes.int), new ColumnModel("id", dataTypes.varchar(9))), Nil, Nil)
             fail("two id columns should not be allowed")
         } catch {
             case e: IllegalArgumentException =>
@@ -492,7 +512,7 @@ object ModelTests extends org.specs.Specification {
     
     "keys with repeating column names must not be allowed" in {
         try {
-            new IndexModel(None, List("a", "b", "a"), false)
+            new IndexModel(None, List("a", "b", "a"))
             fail("two columns with same name should not be allowed in key")
         } catch {
             case e: IllegalArgumentException =>
