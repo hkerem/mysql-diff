@@ -95,6 +95,24 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         table.options.find(MysqlCharacterSetTableOptionType).map(_.name).orElse(defaultCharset)
     }
     
+    override def parseCreateTable(ct: script.CreateTableStatement): TableModel = {
+        ct.columns.flatMap(_.properties).foreach {
+            case f: script.TableDdlStatement.InlineReferences =>
+                // http://dev.mysql.com/doc/refman/5.1/en/create-table.html
+                throw new UnsupportedFeatureException("inline REFERENCES is not supported by MySQL")
+            case _ =>
+        }
+        val t = super.parseCreateTable(ct)
+        t.options.find(MysqlEngineTableOptionType) match {
+            // XXX: ignore case
+            case Some(MysqlEngineTableOption("InnoDB")) =>
+            case _ =>
+                if (!t.foreignKeys.isEmpty)
+                    throw new UnsupportedFeatureException("FOREIGN KEY is supported only by InnoDB")
+        }
+        t
+    }
+    
     protected override def fixDataType(dataType: DataType, column: ColumnModel, table: TableModel) = {
         // Unspecified collation and charset are taken from table defaults
         // http://dev.mysql.com/doc/refman/5.1/en/charset-column.html
@@ -154,6 +172,32 @@ object MysqlModelParserTests extends ModelParserTests(MysqlContext) {
         db.table("a") must beLike { case TableModel("a", _, _, _) => true }
         db.table("b") must beLike { case TableModel("b", _, _, _) => true }
         db.table("b").columns must beLike { case Seq(ColumnModel("id", _, _)) => true }
+    }
+    
+    // http://dev.mysql.com/doc/refman/5.1/en/create-table.html
+    "disable inline REFERENCES (stupid MySQL)" in {
+        try {
+            modelParser.parseModel("CREATE TABLE a (b_id INT REFERENCES b(id))")
+            fail("inline REFERENCES is not supported by MySQL")
+        } catch {
+            case _: UnsupportedFeatureException =>
+        }
+    }
+    
+    // http://dev.mysql.com/doc/refman/5.1/en/create-table.html
+    "FOREIGN KEY is not supported by MySQL in MyISAM" in {
+        try {
+            modelParser.parseModel("CREATE TABLE a (b_id INT, FOREIGN KEY (id) REFERENCES b(b_id)) ENGINE=MyISAM")
+            fail("FOREIGN KEY is not supported by MyISAM")
+        } catch {
+            case _: UnsupportedFeatureException =>
+        }
+    }
+    
+    "FOREIGN KEY" in {
+        val t = modelParser.parseCreateTableScript(
+            "CREATE TABLE a (b_id INT, FOREIGN KEY (id) REFERENCES b(b_id)) ENGINE=InnoDB")
+        t.foreignKeys must haveSize(1)
     }
     
 }

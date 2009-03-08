@@ -52,7 +52,10 @@ case class ModelParser(val context: Context) {
                 
                 attrs foreach {
                     case InlinePrimaryKey =>
-                        extras += PrimaryKeyModel(None, IndexModel(None, List(column.name)))
+                        extras += PrimaryKeyModel(None, IndexModel(None, Seq(column.name)))
+                    
+                    case InlineReferences(table, tColumn) =>
+                        extras += ForeignKeyModel(None, IndexModel(None, Seq(column.name)), table, Seq(tColumn))
                     
                     // XXX: other inline properties
                     
