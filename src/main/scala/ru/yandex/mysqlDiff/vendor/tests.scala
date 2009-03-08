@@ -31,7 +31,7 @@ trait TestDataSourceParameters {
  * Base for online tests
  */
 abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSourceParameters)
-    extends org.specs.Specification
+    extends org.specs.Specification with diff.DiffMakerMatchers
 {
     import context._
     import tdsp._
@@ -69,6 +69,47 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
             checkTwoSimilarTableModels(t, d)
         }
         
+    }
+    
+    /**
+     * Perform various tests comparing two <b>different</b> tables
+     * @return database model of the second table after applying patch from first to second
+     */
+    protected def checkTwoTables(script1: String, script2: String) = {
+        checkTable(script1)
+        checkTable(script2)
+        
+        // perform asymmetric table comparison, treat script1 as source and script2 as target
+        def checkTwoTables12(script1: String, script2: String) = {
+            val t1 = modelParser.parseCreateTableScript(script1)
+            val t2 = modelParser.parseCreateTableScript(script2)
+            
+            // tables are required to be different
+            diffMaker.compareTables(t1, t2) must beLike { case Some(_) => true }
+            
+            jdbcTemplate.execute("DROP TABLE IF EXISTS " + t1.name)
+            jdbcTemplate.execute("DROP TABLE IF EXISTS " + t2.name)
+            jdbcTemplate.execute(script1)
+            val d1 = jdbcModelExtractor.extractTable(t1.name, ds)
+            
+            checkTwoSimilarTableModels(t1, d1)
+            
+            // compare and then apply difference
+            val diff = diffMaker.compareTables(d1, t2)
+            diff must beSomething
+            for (st <- diffSerializer.serializeChangeTableDiff(diff.get, t2).ddlStatements) {
+                jdbcTemplate.execute(scriptSerializer.serialize(st))
+            }
+            val d2 = jdbcModelExtractor.extractTable(t2.name, ds)
+            
+            // check result
+            checkTwoSimilarTableModels(t2, d2)
+            
+            d2
+        }
+        
+        checkTwoTables12(script2, script1)
+        checkTwoTables12(script1, script2)
     }
     
     "identical, simple table" in {

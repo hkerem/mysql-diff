@@ -21,37 +21,19 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
     import context._
     
     "CAP-101" in {
-        jdbcTemplate.execute("DROP TABLE IF EXISTS a")
-        
-        jdbcTemplate.execute("CREATE TABLE a (kk INT)")
-        val nk = "CREATE TABLE a (id INT PRIMARY KEY AUTO_INCREMENT, kk INT)"
-        val oldModel = jdbcModelExtractor.extractTable("a", ds)
-        val newModel = modelParser.parseCreateTableScript(nk)
-        val diff = diffMaker.compareTables(oldModel, newModel).get
-        val script = new Script(diffSerializer.alterScript(diff, newModel)).statements
-        //script.foreach((s: ScriptStatement) => println(s.serialize))
-        script.foreach((s: ScriptStatement) => jdbcTemplate.execute(s.serialize))
-        val gotModel = jdbcModelExtractor.extractTable("a", ds)
-        // XXX: check model
-        ()
+        val t2 = checkTwoTables(
+            "CREATE TABLE a (kk INT)",
+            "CREATE TABLE a (id INT PRIMARY KEY AUTO_INCREMENT, kk INT)")
+        // extra checks
+        t2.primaryKey.get.columns must beLike { case Seq("id") => true }
+        t2.column("id").properties.find(AutoIncrementPropertyType) must_== Some(AutoIncrement(true))
     }
     
     "diff unspecified default to script with default 0" in {
-        jdbcTemplate.execute("DROP TABLE IF EXISTS b")
-        
-        jdbcTemplate.execute("CREATE TABLE b (x INT NOT NULL)")
-        val oldModel = jdbcModelExtractor.extractTable("b", ds)
-        
-        val newModel = modelParser.parseCreateTableScript("CREATE TABLE b (x INT NOT NULL DEFAULT 0)")
-        
-        val diff = diffMaker.compareTables(oldModel, newModel).get
-        
-        val ChangeTableDiff("b", None, Seq(columnDiff), Seq(), Seq()) = diff
-        val ChangeColumnDiff("x", None, Seq(propertyDiff)) = columnDiff
-        propertyDiff match { // must be any of
-            case ChangeColumnPropertyDiff(oldP, newP) =>
-            case CreateColumnPropertyDiff(p) =>
-        }
+        val t2 = checkTwoTables(
+            "CREATE TABLE b (x INT NOT NULL)",
+            "CREATE TABLE b (x INT NOT NULL DEFAULT 0)")
+        t2.column("x").properties.find(DefaultValuePropertyType) must_== Some(DefaultValue(NumberValue(0)))
     }
     
     "diff, apply collate" in {

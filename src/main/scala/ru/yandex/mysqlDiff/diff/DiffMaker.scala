@@ -204,7 +204,33 @@ case class DiffMaker(val context: Context) {
         val alterTable = tablesForCompare.map(tbl => compareTables(tbl._1, tbl._2))
         new DatabaseDiff(dropTables ++ createTables ++ alterTable.flatMap(tbl => tbl.toList))
     }
-}        
+}
+
+trait DiffMakerMatchers {
+    import org.specs.matcher.Matcher
+    
+    val context: Context
+    
+    // Useless
+    /*
+    case class beSameTableModelAs(ref: TableModel) extends Matcher[TableModel] {
+        override def apply(table0: => TableModel) = {
+            val table = table0
+            val diff1 = diffMaker.compareTables(table, ref)
+            val diff2 = diffMaker.compareTables(table, ref)
+            (diff1, diff2) match {
+                case (None, None) =>
+                    (true, table + " has no difference with " + ref, "unreachable")
+                case (Some(diff), _) => 
+                    (false, "unreachable", table + " is different from " + ref + ", diff is " + diff)
+                case (_, Some(diff)) =>
+                    (false, "unreachable", "ref" + table + " is different from " + table + ", diff is " + diff)
+            }
+        }
+    }
+    */
+
+}
 
 object DiffMakerTests extends org.specs.Specification {
     import Environment.defaultContext._

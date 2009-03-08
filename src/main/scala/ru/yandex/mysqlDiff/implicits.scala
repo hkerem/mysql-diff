@@ -14,6 +14,11 @@ object Implicits {
     implicit def modelCpToCpDecl(cp: ColumnProperty) =
         CreateTableStatement.ModelColumnProperty(cp)
     
+    /// script
+    
+    implicit def toScript(stmts: Seq[ScriptElement]) =
+        new Script(stmts)
+    
     ///
     // PropertyMap converters
     
