@@ -232,7 +232,7 @@ object MysqlJdbcModelExtractorTests extends JdbcModelExtractorTests(MysqlContext
         // http://community.livejournal.com/levin_matveev/20802.html
         execute("CREATE TABLE citizen (id INT PRIMARY KEY, city_id INT, pid1 INT, pid2 INT, " +
                 "FOREIGN KEY (city_id) REFERENCES city(id), " +
-                "FOREIGN KEY (pid1, pid2) REFERENCES person(id1, id2)" +
+                "CONSTRAINT fk2c FOREIGN KEY fk2i(pid1, pid2) REFERENCES person(id1, id2)" +
                 ") ENGINE=InnoDB")
         
         val citizen = extractTable("citizen")
@@ -250,6 +250,8 @@ object MysqlJdbcModelExtractorTests extends JdbcModelExtractorTests(MysqlContext
         fkp.localColumns must beLike { case Seq("pid1", "pid2") => true }
         fkp.externalColumns must beLike { case Seq("id1", "id2") => true }
         fkp.externalTable must_== "person"
+        fkp.name must_== Some("fk2c")
+        fkp.index.name must_== Some("fk2i")
         
         // no sure
         //citizen.indexes must haveSize(0)

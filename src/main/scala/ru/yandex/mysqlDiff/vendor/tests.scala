@@ -43,6 +43,15 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
         diffMaker.compareTables(b, b) must beLike { case None => true }
     }
     
+    
+    val printExecutedStmts = true
+    
+    protected def execute(q: String) = {
+        if (printExecutedStmts) println(q)
+        jdbcTemplate.execute(q)
+    }
+    
+    
     /**
      * Perform various tests on CREATE TABLE script.
      *
@@ -54,17 +63,17 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
         
         {
             // execute script, compare with parsed model
-            jdbcTemplate.execute("DROP TABLE IF EXISTS " + t.name)
-            jdbcTemplate.execute(script)
+            execute("DROP TABLE IF EXISTS " + t.name)
+            execute(script)
             val d = jdbcModelExtractor.extractTable(t.name, ds)
             checkTwoSimilarTableModels(t, d)
         }
         
         {
             // execute serialized parsed model, compare with parsed model
-            jdbcTemplate.execute("DROP TABLE IF EXISTS " + t.name)
+            execute("DROP TABLE IF EXISTS " + t.name)
             val recreatedScript = modelSerializer.serializeTableToText(t)
-            jdbcTemplate.execute(recreatedScript)
+            execute(recreatedScript)
             val d = jdbcModelExtractor.extractTable(t.name, ds)
             checkTwoSimilarTableModels(t, d)
         }
@@ -87,9 +96,9 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
             // tables are required to be different
             diffMaker.compareTables(t1, t2) must beLike { case Some(_) => true }
             
-            jdbcTemplate.execute("DROP TABLE IF EXISTS " + t1.name)
-            jdbcTemplate.execute("DROP TABLE IF EXISTS " + t2.name)
-            jdbcTemplate.execute(script1)
+            execute("DROP TABLE IF EXISTS " + t1.name)
+            execute("DROP TABLE IF EXISTS " + t2.name)
+            execute(script1)
             val d1 = jdbcModelExtractor.extractTable(t1.name, ds)
             
             checkTwoSimilarTableModels(t1, d1)
@@ -98,7 +107,7 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
             val diff = diffMaker.compareTables(d1, t2)
             diff must beSomething
             for (st <- diffSerializer.serializeChangeTableDiff(diff.get, t2).ddlStatements) {
-                jdbcTemplate.execute(scriptSerializer.serialize(st))
+                execute(scriptSerializer.serialize(st))
             }
             val d2 = jdbcModelExtractor.extractTable(t2.name, ds)
             

@@ -493,6 +493,16 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         t.column("name").properties must beSameSeqAs(List(InlineUnique))
     }
     
+    "parser CONSTRAINT ... FOREIGN KEY" in {
+        val t = parseCreateTableRegular(
+                "CREATE TABLE servers (id INT, dc_id INT, " +
+                        "CONSTRAINT dc_fk FOREIGN KEY dc_idx (dc_id) REFERENCES datacenters(id))")
+        t.foreignKeys.first.fk must beLike {
+            case ForeignKeyModel(
+                    Some("dc_fk"), IndexModel(Some("dc_idx"), Seq("dc_id")), "datacenters", Seq("id")) => true
+        }
+    }
+    
     "parse indexes" in {
         val t = parseCreateTableRegular("CREATE TABLE a(id INT, UNIQUE(a), INDEX i2(b, c), UNIQUE KEY(d, e))")
         t.indexes must haveSize(1)

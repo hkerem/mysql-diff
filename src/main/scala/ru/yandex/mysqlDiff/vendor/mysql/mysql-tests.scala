@@ -36,6 +36,17 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         t2.column("x").properties.find(DefaultValuePropertyType) must_== Some(DefaultValue(NumberValue(0)))
     }
     
+    "foreign keys with full params specification" in {
+        execute("DROP TABLE IF EXISTS servers")
+        execute("DROP TABLE IF EXISTS datacenters")
+        execute("CREATE TABLE datacenters (id INT PRIMARY KEY) ENGINE=InnoDB")
+        val t2 = checkTwoTables(
+            "CREATE TABLE servers (id INT, dc_id INT) ENGINE=InnoDB",
+            "CREATE TABLE servers (id INT, dc_id INT, " +
+                    "CONSTRAINT dc_fk FOREIGN KEY dc_idx (dc_id) REFERENCES datacenters(id)) ENGINE=InnoDB")
+        t2.foreignKeys must haveSize(1)
+    }
+    
     "diff, apply collate" in {
         jdbcTemplate.execute("DROP TABLE IF EXISTS collate_test")
         jdbcTemplate.execute("CREATE TABLE collate_test (id VARCHAR(10)) COLLATE=cp1251_bin")
