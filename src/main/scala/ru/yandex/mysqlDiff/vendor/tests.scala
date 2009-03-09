@@ -67,7 +67,7 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
         
         {
             // execute script, compare with parsed model
-            execute("DROP TABLE IF EXISTS " + t.name)
+            ddlTemplate.dropTableIfExists(t.name)
             execute(script)
             val d = jdbcModelExtractor.extractTable(t.name)
             checkTwoSimilarTableModels(t, d)
@@ -75,7 +75,7 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
         
         {
             // execute serialized parsed model, compare with parsed model
-            execute("DROP TABLE IF EXISTS " + t.name)
+            ddlTemplate.dropTableIfExists(t.name)
             val recreatedScript = modelSerializer.serializeTableToText(t)
             execute(recreatedScript)
             val d = jdbcModelExtractor.extractTable(t.name)
@@ -100,8 +100,8 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
             // tables are required to be different
             diffMaker.compareTables(t1, t2) must beLike { case Some(_) => true }
             
-            execute("DROP TABLE IF EXISTS " + t1.name)
-            execute("DROP TABLE IF EXISTS " + t2.name)
+            ddlTemplate.dropTableIfExists(t1.name)
+            ddlTemplate.dropTableIfExists(t2.name)
             execute(script1)
             val d1 = jdbcModelExtractor.extractTable(t1.name)
             

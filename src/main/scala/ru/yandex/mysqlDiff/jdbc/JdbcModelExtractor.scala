@@ -34,6 +34,24 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
     // http://bugs.mysql.com/36699
     private val PROPER_COLUMN_DEF_MIN_MYSQL_VERSION = MysqlServerVersion.parse("5.0.51")
     
+    /** Database name from JDBC URL */
+    lazy val currentDb = {
+        val db = jt.metaData(_.getURL.replaceFirst("\\?.*", "").replaceFirst(".*[/:]", ""))
+        require(db.matches("\\w+"), "could not extract database name from URL")
+        db
+    }
+    
+    /**
+     * True iff last part of URL denotes DB catalog (PostgreSQL),
+     * and false iff denotes schema (MySQL).
+     */
+    val urlDbIsCatalog = false
+    
+    /** Value to be passed as first param to <code>DatabaseMetaData</code> methods */
+    def currentCatalog: String = if (urlDbIsCatalog) currentDb else null
+    /** Value to be passed as second param to <code>DatabaseMetaData</code> methods */
+    def currentSchema: String = if (urlDbIsCatalog) null else currentDb
+    
     /**
      * Like lazy keyword, but has isCreated method.
      */
@@ -53,23 +71,6 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
     protected abstract class SchemaExtractor {
         import jt._
         
-        /** Database name from JDBC URL */
-        lazy val currentDb = {
-            val db = metaData(_.getURL.replaceFirst("\\?.*", "").replaceFirst(".*[/:]", ""))
-            require(db.matches("\\w+"), "could not extract database name from URL")
-            db
-        }
-        
-        /**
-         * True iff last part of URL denotes DB catalog (PostgreSQL),
-         * and false iff denotes schema (MySQL).
-         */
-        val urlDbIsCatalog = false
-        
-        /** Value to be passed as first param to <code>DatabaseMetaData</code> methods */
-        def currentCatalog: String = if (urlDbIsCatalog) currentDb else null
-        /** Value to be passed as second param to <code>DatabaseMetaData</code> methods */
-        def currentSchema: String = if (urlDbIsCatalog) null else currentDb
         
         /** Uses only JDBC API, can be overriden by subclasses */
         protected def parseTableColumn(columns: ResultSet) = {

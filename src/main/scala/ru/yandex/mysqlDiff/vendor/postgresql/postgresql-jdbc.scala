@@ -6,8 +6,9 @@ import util._
 class PostgresqlJdbcModelExtractor(connectedContext: ConnectedContext)
     extends JdbcModelExtractor(connectedContext)
 {
+    override val urlDbIsCatalog = true
+    
     trait PostgresqlSchemaExtractor extends SchemaExtractor {
-        override val urlDbIsCatalog = true
     }
     
     protected override def newAllTablesSchemaExtractor() =

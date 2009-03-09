@@ -23,6 +23,7 @@ class ConnectedContext(val context: Context, val ds: LiteDataSource) {
     val jt = new JdbcTemplate(ds)
     val jdbcModelExtractor = new jdbc.JdbcModelExtractor(this)
     val metaDao = new jdbc.MetaDao(jt)
+    val ddlTemplate = new jdbc.DdlTemplate(this)
 }
 
 // XXX: create basic context
