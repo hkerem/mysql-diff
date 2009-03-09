@@ -24,10 +24,11 @@ object PostgresqlTestDataSourceParameters extends TestDataSourceParameters {
     override val testDsUser = "test"
     override val testDsPassword = "test"
     
+    override val connectedContext = new PostgresqlConnectedContext(ds)
 }
 
-object PostgresqlOnlineTests extends OnlineTestsSupport(PostgresqlContext, PostgresqlTestDataSourceParameters) {
-    import tdsp._
+object PostgresqlOnlineTests extends OnlineTestsSupport(PostgresqlTestDataSourceParameters.connectedContext) {
+    import connectedContext._
     import context._
 }
 

@@ -102,21 +102,19 @@ class MysqlMetaDao(jt: JdbcTemplate) extends MetaDao(jt) {
 object MysqlMetaDaoTests extends DbMetaDaoTests(vendor.mysql.MysqlTestDataSourceParameters.ds) {
 }
 
-class MysqlJdbcModelExtractor(context: Context) extends JdbcModelExtractor(context) {
+class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
+    extends JdbcModelExtractor(connectedContext)
+{
+    import connectedContext._
     import context._
     
-    override def createMetaDao(jt: JdbcTemplate) = new MysqlMetaDao(jt)
+    protected class MysqlAllTablesSchemaExtractor extends AllTablesSchemaExtractor
     
-    protected class MysqlAllTablesSchemaExtractor(jt: JdbcTemplate) extends AllTablesSchemaExtractor(jt) {
-    }
-    
-    protected class MysqlSingleTableSchemaExtractor(jt: JdbcTemplate) extends SingleTableSchemaExtractor(jt)
+    protected class MysqlSingleTableSchemaExtractor extends SingleTableSchemaExtractor
     
     trait MysqlSchemaExtractor extends SchemaExtractor {
         
         import jt._
-        
-        override val dao = createMetaDao(jt) // hack
         
         override def extractTableColumns(tableName: String): Seq[ColumnModel] = metaData { data =>
             // copy-paste of super plus hacks
@@ -159,15 +157,15 @@ class MysqlJdbcModelExtractor(context: Context) extends JdbcModelExtractor(conte
     
     }
 
-    protected override def newAllTablesSchemaExtractor(jt: JdbcTemplate) =
-        new AllTablesSchemaExtractor(jt) with MysqlSchemaExtractor {
+    protected override def newAllTablesSchemaExtractor() =
+        new AllTablesSchemaExtractor with MysqlSchemaExtractor {
             override def getMysqlColumns(tableName: String) =
-                dao.findMysqlTableColumns(currentCatalog, currentSchema, tableName)
+                metaDao.findMysqlTableColumns(currentCatalog, currentSchema, tableName)
         }
     
-    protected override def newSingleTableSchemaExtractor(jt: JdbcTemplate) =
-        new SingleTableSchemaExtractor(jt) with MysqlSchemaExtractor {
-            val cachedMysqlColumns = new Lazy(dao.findMysqlTablesColumns(currentCatalog, currentSchema))
+    protected override def newSingleTableSchemaExtractor() =
+        new SingleTableSchemaExtractor with MysqlSchemaExtractor {
+            val cachedMysqlColumns = new Lazy(metaDao.findMysqlTablesColumns(currentCatalog, currentSchema))
             
             override def getMysqlColumns(tableName: String) =
                 cachedMysqlColumns.get.find(_._1 == tableName).get._2
@@ -175,7 +173,9 @@ class MysqlJdbcModelExtractor(context: Context) extends JdbcModelExtractor(conte
 
 }
 
-object MysqlJdbcModelExtractorTests extends JdbcModelExtractorTests(MysqlContext, MysqlTestDataSourceParameters) {
+object MysqlJdbcModelExtractorTests
+    extends JdbcModelExtractorTests(MysqlTestDataSourceParameters.connectedContext)
+{
     import MysqlContext._
     import MysqlTestDataSourceParameters._
     

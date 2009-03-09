@@ -14,10 +14,11 @@ object MysqlTestDataSourceParameters extends TestDataSourceParameters {
     override val testDsUser = "test"
     override val testDsPassword = "test"
     
+    override val connectedContext = new MysqlConnectedContext(ds)
 }
 
-object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSourceParameters) {
-    import tdsp._
+object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters.connectedContext) {
+    import connectedContext._
     import context._
     
     "CAP-101" in {
@@ -48,9 +49,9 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
     }
     
     "diff, apply collate" in {
-        jdbcTemplate.execute("DROP TABLE IF EXISTS collate_test")
-        jdbcTemplate.execute("CREATE TABLE collate_test (id VARCHAR(10)) COLLATE=cp1251_bin")
-        val oldModel = jdbcModelExtractor.extractTable("collate_test", ds)
+        jt.execute("DROP TABLE IF EXISTS collate_test")
+        jt.execute("CREATE TABLE collate_test (id VARCHAR(10)) COLLATE=cp1251_bin")
+        val oldModel = jdbcModelExtractor.extractTable("collate_test")
         
         // checking properly extracted
         oldModel.options.properties must contain(MysqlCollateTableOption("cp1251_bin"))
@@ -68,10 +69,10 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
         script.statements must haveSize(1)
         
         for (s <- script.statements) {
-            jdbcTemplate.execute(scriptSerializer.serialize(s))
+            jt.execute(scriptSerializer.serialize(s))
         }
         
-        val resultModel = jdbcModelExtractor.extractTable("collate_test", ds)
+        val resultModel = jdbcModelExtractor.extractTable("collate_test")
         // checking patch properly applied
         resultModel.options.properties must contain(MysqlCollateTableOption("cp866_bin"))
     }
@@ -82,27 +83,27 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlContext, MysqlTestDataSo
     }
     
     "change engine" in {
-        jdbcTemplate.execute("DROP TABLE IF exists change_engine")
-        jdbcTemplate.execute("CREATE TABLE change_engine (id INT) ENGINE=MyISAM")
-        val d = jdbcModelExtractor.extractTable("change_engine", ds)
+        jt.execute("DROP TABLE IF exists change_engine")
+        jt.execute("CREATE TABLE change_engine (id INT) ENGINE=MyISAM")
+        val d = jdbcModelExtractor.extractTable("change_engine")
         d.options.properties must contain(MysqlEngineTableOption("MyISAM"))
         val t = modelParser.parseCreateTableScript("CREATE TABLE change_engine (id INT) ENGINE=InnoDB")
         val script = new Script(diffMaker.compareTablesScript(d, t))
         script.statements must notBeEmpty
         for (s <- script.statements) {
-            jdbcTemplate.execute(scriptSerializer.serialize(s))
+            jt.execute(scriptSerializer.serialize(s))
         }
         
-        val resultModel = jdbcModelExtractor.extractTable("change_engine", ds)
+        val resultModel = jdbcModelExtractor.extractTable("change_engine")
         resultModel.options.properties must contain(MysqlEngineTableOption("InnoDB"))
     }
     
     "bug with character set implies collation" in {
-        jdbcTemplate.execute("DROP TABLE IF EXISTS moderated_tags")
-        jdbcTemplate.execute("CREATE TABLE moderated_tags (tag VARCHAR(255) CHARACTER SET utf8 NOT NULL, type INT(11) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
+        jt.execute("DROP TABLE IF EXISTS moderated_tags")
+        jt.execute("CREATE TABLE moderated_tags (tag VARCHAR(255) CHARACTER SET utf8 NOT NULL, type INT(11) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
         val s2 = "CREATE TABLE moderated_tags (tag VARCHAR(255) NOT NULL, type INT(11) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
         
-        val dbModel = jdbcModelExtractor.extractTable("moderated_tags", ds)
+        val dbModel = jdbcModelExtractor.extractTable("moderated_tags")
         val localModel = modelParser.parseCreateTableScript(s2)
         
         // column collation is changed from utf8_bin to utf8_general_ci

@@ -1,5 +1,9 @@
 package ru.yandex.mysqlDiff
 
+import util._
+
+import Implicits._
+
 /**
  * Context holds references to DB-specific implementations of algorithms.
  */
@@ -11,7 +15,14 @@ class Context(val dataTypes: model.DataTypes) {
     val sqlParserCombinator = new script.SqlParserCombinator(this)
     val parser = new script.Parser(this)
     val scriptSerializer = new script.ScriptSerializer(this)
+    
+    def connectedContext(ds: LiteDataSource) = new ConnectedContext(this, ds)
+}
+
+class ConnectedContext(val context: Context, val ds: LiteDataSource) {
+    val jt = new JdbcTemplate(ds)
     val jdbcModelExtractor = new jdbc.JdbcModelExtractor(this)
+    val metaDao = new jdbc.MetaDao(jt)
 }
 
 // XXX: create basic context

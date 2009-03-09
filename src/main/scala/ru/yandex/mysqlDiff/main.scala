@@ -8,26 +8,30 @@ import diff._
 import model._
 import script._
 import jdbc._
+import util._
+
+import Implicits._
 
 object Utils {
     import Environment.defaultContext._
     
     def getModelFromArgsLine(arg: String): DatabaseModel = {
         if (arg.startsWith("jdbc:"))
-            jdbcModelExtractor.parse(arg)
+            connectedContext(LiteDataSource.driverManager(arg)).jdbcModelExtractor.extract()
         else {
             var str = ReaderResource.file(arg).slurp
             modelParser.parseModel(str)
         }
     }
     
-    def getModelFromArgsLine(arg: String, table: String) = {
-        if (arg.startsWith("jdbc:"))
-            new DatabaseModel(List(jdbcModelExtractor.parseTable(table, arg)))
-        else {
+    def getModelFromArgsLine(arg: String, table: String): DatabaseModel = {
+        if (arg.startsWith("jdbc:")) {
+            val jdbcModelExtractor = connectedContext(LiteDataSource.driverManager(arg)).jdbcModelExtractor
+            new DatabaseModel(Seq(jdbcModelExtractor.extractTable(table)))
+        } else {
             var str = ReaderResource.file(arg).slurp
             val tableModel = modelParser.parseModel(str).declarations.filter(_.name == table).first
-            new DatabaseModel(List(tableModel))
+            new DatabaseModel(Seq(tableModel))
         }
     }
 }

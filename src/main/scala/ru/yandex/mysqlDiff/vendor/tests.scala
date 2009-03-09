@@ -25,16 +25,20 @@ trait TestDataSourceParameters {
     val ds = LiteDataSource.driverManager(testDsUrl, testDsUser, testDsPassword)
     
     val jdbcTemplate = new util.JdbcTemplate(ds)
+    
+    val connectedContext: ConnectedContext
 }
 
 /**
  * Base for online tests
  */
-abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSourceParameters)
+abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
     extends org.specs.Specification with diff.DiffMakerMatchers
 {
+    import connectedContext._
+    
+    val context = connectedContext.context
     import context._
-    import tdsp._
     
     private def checkTwoSimilarTableModels(a: TableModel, b: TableModel) = {
         diffMaker.compareTables(a, b) must beLike { case None => true }
@@ -48,7 +52,7 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
     
     protected def execute(q: String) = {
         if (printExecutedStmts) println(q)
-        jdbcTemplate.execute(q)
+        jt.execute(q)
     }
     
     
@@ -65,7 +69,7 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
             // execute script, compare with parsed model
             execute("DROP TABLE IF EXISTS " + t.name)
             execute(script)
-            val d = jdbcModelExtractor.extractTable(t.name, ds)
+            val d = jdbcModelExtractor.extractTable(t.name)
             checkTwoSimilarTableModels(t, d)
         }
         
@@ -74,7 +78,7 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
             execute("DROP TABLE IF EXISTS " + t.name)
             val recreatedScript = modelSerializer.serializeTableToText(t)
             execute(recreatedScript)
-            val d = jdbcModelExtractor.extractTable(t.name, ds)
+            val d = jdbcModelExtractor.extractTable(t.name)
             checkTwoSimilarTableModels(t, d)
         }
         
@@ -99,7 +103,7 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
             execute("DROP TABLE IF EXISTS " + t1.name)
             execute("DROP TABLE IF EXISTS " + t2.name)
             execute(script1)
-            val d1 = jdbcModelExtractor.extractTable(t1.name, ds)
+            val d1 = jdbcModelExtractor.extractTable(t1.name)
             
             checkTwoSimilarTableModels(t1, d1)
             
@@ -109,7 +113,7 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
             for (st <- diffSerializer.serializeChangeTableDiff(diff.get, t2).ddlStatements) {
                 execute(scriptSerializer.serialize(st))
             }
-            val d2 = jdbcModelExtractor.extractTable(t2.name, ds)
+            val d2 = jdbcModelExtractor.extractTable(t2.name)
             
             // check result
             checkTwoSimilarTableModels(t2, d2)
@@ -133,7 +137,7 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
     "can create table with name LIKE" in {
         val t = new TableModel("like", Seq(new ColumnModel("no_other", dataTypes.int, Seq())), Seq(), Seq())
         execute(modelSerializer.serializeTableToText(t))
-        val d = jdbcModelExtractor.extractTable("like", ds)
+        val d = jdbcModelExtractor.extractTable("like")
         checkTwoSimilarTableModels(t, d)
     }
     */

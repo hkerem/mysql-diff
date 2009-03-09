@@ -20,9 +20,10 @@ class JdbcModelExtractorException(msg: String, cause: Throwable) extends Excepti
 /*
  * Table model from the live database.
  */
-class JdbcModelExtractor(context: Context) {
+class JdbcModelExtractor(connectedContext: ConnectedContext) {
     import JdbcUtils._
     
+    import connectedContext._
     import context._
     
     import vendor.mysql._
@@ -46,15 +47,11 @@ class JdbcModelExtractor(context: Context) {
         def isCreated = value.isDefined
     }
     
-    protected def createMetaDao(jt: JdbcTemplate) = new MetaDao(jt)
-    
     /**
      * Stateful object.
      */
-    protected abstract class SchemaExtractor(val jt: JdbcTemplate) {
+    protected abstract class SchemaExtractor {
         import jt._
-        
-        protected val dao = createMetaDao(jt)
         
         /** Database name from JDBC URL */
         lazy val currentDb = {
@@ -137,14 +134,14 @@ class JdbcModelExtractor(context: Context) {
         }
         
         def getPrimaryKey(tableName: String): Option[PrimaryKeyModel] =
-            dao.findPrimaryKey(currentCatalog, currentSchema, tableName)
+            metaDao.findPrimaryKey(currentCatalog, currentSchema, tableName)
         
         /** Indexes plus unique constraints */
         def getIndexes(tableName: String): Seq[UniqueOrIndexModel] =
-            dao.findIndexes(currentCatalog, currentSchema, tableName)
+            metaDao.findIndexes(currentCatalog, currentSchema, tableName)
 
         def getFks(tableName: String): Seq[ForeignKeyModel] =
-            dao.findImportedKeys(currentCatalog, currentSchema, tableName)
+            metaDao.findImportedKeys(currentCatalog, currentSchema, tableName)
         
         /** Not including PK */
         def getKeys(tableName: String): Seq[TableExtra] =
@@ -155,22 +152,22 @@ class JdbcModelExtractor(context: Context) {
     }
     
     /** Schema extractor optimized for single table extraction */
-    protected class SingleTableSchemaExtractor(jt: JdbcTemplate) extends SchemaExtractor(jt) {
+    protected class SingleTableSchemaExtractor extends SchemaExtractor {
         override def getTableOptions(tableName: String) =
-            dao.findTableOptions(currentCatalog, currentSchema, tableName)
+            metaDao.findTableOptions(currentCatalog, currentSchema, tableName)
         
     }
     
     /** Schema extractor optimized for extraction of all schema */
-    protected class AllTablesSchemaExtractor(jt: JdbcTemplate) extends SchemaExtractor(jt) {
+    protected class AllTablesSchemaExtractor extends SchemaExtractor {
     
         def extract(): DatabaseModel =
             new DatabaseModel(extractTables())
         
-        private val cachedTableNames = new Lazy(dao.findTableNames(currentCatalog, currentSchema))
+        private val cachedTableNames = new Lazy(metaDao.findTableNames(currentCatalog, currentSchema))
         def tableNames = cachedTableNames.get
         
-        private val cachedTablesOptions = new Lazy(dao.findTablesOptions(currentCatalog, currentSchema))
+        private val cachedTablesOptions = new Lazy(metaDao.findTablesOptions(currentCatalog, currentSchema))
         
         def getTableOptions(tableName: String): Seq[TableOption] =
             cachedTablesOptions.get.find(_._1 == tableName).get._2
@@ -200,63 +197,38 @@ class JdbcModelExtractor(context: Context) {
     }
     
     
-    protected def newAllTablesSchemaExtractor(jt: JdbcTemplate) =
-        new AllTablesSchemaExtractor(jt)
+    protected def newAllTablesSchemaExtractor() =
+        new AllTablesSchemaExtractor
     
-    protected def newSingleTableSchemaExtractor(jt: JdbcTemplate) =
-        new SingleTableSchemaExtractor(jt)
+    protected def newSingleTableSchemaExtractor() =
+        new SingleTableSchemaExtractor
     
-    def extractTables(ds: LiteDataSource): Seq[TableModel] =
-        newAllTablesSchemaExtractor(ds).extractTables()
+    def extractTables(): Seq[TableModel] =
+        newAllTablesSchemaExtractor().extractTables()
     
-    def extractTable(tableName: String, ds: LiteDataSource): TableModel =
-        newSingleTableSchemaExtractor(ds).extractTable(tableName)
+    def extractTable(tableName: String): TableModel =
+        newSingleTableSchemaExtractor().extractTable(tableName)
     
-    def extract(ds: LiteDataSource): DatabaseModel =
-        newAllTablesSchemaExtractor(ds).extract()
+    def extract(): DatabaseModel =
+        newAllTablesSchemaExtractor().extract()
     
-    def search(url: String): Seq[TableModel] = {
-        extractTables(LiteDataSource.driverManager(url))
-    }
 
-
-    def parse(jdbcUrl: String): DatabaseModel = new DatabaseModel(search(jdbcUrl))
-    
-    def parseTable(tableName: String, jdbcUrl: String) =
-        newSingleTableSchemaExtractor(LiteDataSource.driverManager(jdbcUrl)).extractTable(tableName)
-    
-    def main(args: scala.Array[String]) {
-        def usage() {
-            Console.err.println("usage: JdbcModelExtractor jdbc-url [table-name]")
-        }
-        
-        val model = args match {
-            case Seq(jdbcUrl) =>
-                parse(jdbcUrl)
-            case Seq(jdbcUrl, tableName) =>
-                new DatabaseModel(List(parseTable(tableName, jdbcUrl)))
-            case _ =>
-                usage(); exit(1)
-        }
-        
-        print(modelSerializer.serializeDatabaseToText(model))
-    }
 }
 
-class JdbcModelExtractorTests(context: Context, tdsp: vendor.TestDataSourceParameters)
+class JdbcModelExtractorTests(connectedContext: ConnectedContext)
     extends org.specs.Specification
 {
-    import context._
-    import tdsp._
+    import connectedContext._
+    import connectedContext.context._
     
-    import jdbcTemplate.execute
+    import jt.execute
     
     protected def dropTable(tableName: String) {
         execute("DROP TABLE IF EXISTS " + tableName)
     }
     
     protected def extractTable(tableName: String) = {
-        jdbcModelExtractor.extractTable(tableName, ds)
+        jdbcModelExtractor.extractTable(tableName)
     }
 }
 

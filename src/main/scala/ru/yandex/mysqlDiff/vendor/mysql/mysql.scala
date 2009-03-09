@@ -1,11 +1,20 @@
 package ru.yandex.mysqlDiff.vendor.mysql
 
+import util._
+
 object MysqlContext extends Context(MysqlDataTypes) {
     override val sqlParserCombinator = new MysqlParserCombinator(this)
     override val dataTypes = MysqlDataTypes
     override val modelParser = new MysqlModelParser(this)
-    override val jdbcModelExtractor = new MysqlJdbcModelExtractor(this)
     override val scriptSerializer = new MysqlScriptSerializer(this)
+    override def connectedContext(ds: LiteDataSource) = new MysqlConnectedContext(ds)
+}
+
+class MysqlConnectedContext(override val ds: LiteDataSource)
+    extends ConnectedContext(MysqlContext, ds)
+{
+    override val jdbcModelExtractor = new MysqlJdbcModelExtractor(this)
+    override val metaDao = new MysqlMetaDao(jt)
 }
 
 object MysqlCharsets {
