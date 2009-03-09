@@ -217,8 +217,12 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
              ("(" ~> repsep(tableEntry, ",") <~ ")") ~ rep(tableOption) ^^
                      { case ifne ~ name ~ entries ~ options =>
                             CreateTableStatement(name, ifne.isDefined, entries, options) }
-     
-    def createTable: Parser[TableDdlStatement] = createTableRegular
+    
+    def createTableLike: Parser[CreateTableLikeStatement] =
+            "CREATE TABLE" ~> name ~ ("(" ~> "LIKE" ~> name <~ ")") ^^ {
+                case name ~ likeName => CreateTableLikeStatement(name, false, likeName) }
+
+    def createTable = createTableLike | createTableRegular
     
     def createView = "CREATE VIEW" ~> opt(ifNotExists) ~> name ~ ("AS" ~> select) ^^
         { case name ~ select => CreateViewStatement(name, select) }
@@ -358,6 +362,12 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
                 //t.columns must beLike { case s: Seq[_] => s.length == 1 }
                 t.column("id") must beLike { case Column("id", _, attrs) if attrs.isEmpty => true }
                 true
+        }
+    }
+    
+    "parse CREATE TABLE ... (LIKE ...)" in {
+        parse(createTable)("CREATE TABLE oranges (LIKE lemons)") must beLike {
+            case CreateTableLikeStatement("oranges", false, "lemons") => true
         }
     }
     

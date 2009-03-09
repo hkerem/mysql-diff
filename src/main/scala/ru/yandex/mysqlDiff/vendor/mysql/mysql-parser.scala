@@ -66,11 +66,13 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     // http://dev.mysql.com/doc/refman/5.1/en/alter-table.html
     override def alterSpecification = super.alterSpecification | convertToCharacterSet | changeCharacterSet
     
-    def createTableLike: Parser[CreateTableLikeStatement] =
-            "CREATE TABLE" ~> opt("IF NOT EXISTS") ~ name ~ ("LIKE" ~> name) ^^ {
+    protected def optBraces[T](parser: Parser[T]): Parser[T] =
+        ("(" ~> parser <~ ")") | parser
+    
+    override def createTableLike: Parser[CreateTableLikeStatement] =
+            ("CREATE TABLE" ~> opt("IF NOT EXISTS")) ~ name ~ optBraces("LIKE" ~> name) ^^ {
                 case ifne ~ name ~ likeName => CreateTableLikeStatement(name, ifne.isDefined, likeName) }
     
-    override def createTable = super.createTable | createTableLike
 }
 
 object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext) {
