@@ -81,6 +81,9 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         // trick: "CREATE TABLE" is treated almost as "CREATE" ~ "TABLE"
         keywordSeq(chars.split(" "))
     
+    def stringConstant: Parser[String] =
+        stringLit ^^ { x => x.replaceFirst("^[\"']", "").replaceFirst("[\"']$", "") }
+    
     // should be NullValue
     def nullValue: Parser[SqlValue] = "NULL" ^^^ NullValue
     
@@ -90,12 +93,19 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def numberValue: Parser[NumberValue] = intNumber ^^ { x => NumberValue(x) } // silly
     
-    def stringValue: Parser[StringValue] = stringLit ^^
-            { x => StringValue(x.replaceFirst("^[\"']", "").replaceFirst("[\"']$", "")) }
+    def stringValue: Parser[StringValue] = stringConstant ^^ { x => StringValue(x) }
     
     def booleanValue: Parser[BooleanValue] = ("TRUE" ^^^ BooleanValue(true)) | ("FALSE" ^^^ BooleanValue(false))
     
-    def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | booleanValue
+    def temporalValue: Parser[TemporalValue] =
+        ( ("TIMESTAMP" ~ opt("WITHOUT TIME ZONE") ~> stringConstant) ^^ { x => new TimestampValue(x) }
+        | ("TIMESTAMP WITH TIME ZONE" ~> stringConstant) ^^ { x => new TimestampWithTimeZoneValue(x) }
+        | ("TIME" ~ opt("WITHOUT TIME ZONE") ~> stringConstant) ^^ { x => new TimeValue(x) }
+        | ("TIME WITH TIME ZONE" ~> stringConstant) ^^ { x => new TimeWithTimeZoneValue(x) }
+        | ("DATE" ~> stringConstant) ^^ { x => new DateValue(x) }
+        )
+    
+    def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | booleanValue | temporalValue
     
     // Data type options are defined in subclasses */
     def dataTypeOption: Parser[DataTypeOption] = failure("no data type option")
@@ -554,6 +564,9 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         parseValue("FALSE") must_== BooleanValue(false)
     }
     
+    "parseValue TIMSTAMP WITHOUT TIME ZONE" in {
+        parseValue("TIMESTAMP WITHOUT TIME ZONE 'now'") must_== new TimestampValue("now")
+    }
 }
 
 object SqlParserCombinatorTests extends SqlParserCombinatorTests(Environment.defaultContext)

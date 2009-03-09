@@ -63,6 +63,21 @@ case class StringValue(value: String) extends SqlValue
 
 case class BooleanValue(value: Boolean) extends SqlValue
 
+/** Any date time value 4.4.3.4 */
+abstract class TemporalValue extends SqlValue {
+    val value: String
+}
+
+trait WithTimeZoneValue extends TemporalValue {
+    // def timeZone: DateTimeZone
+}
+
+case class TimestampValue(override val value: String) extends TemporalValue
+case class TimestampWithTimeZoneValue(override val value: String) extends WithTimeZoneValue
+case class DateValue(override val value: String) extends TemporalValue
+case class TimeValue(override val value: String) extends TemporalValue
+case class TimeWithTimeZoneValue(override val value: String) extends WithTimeZoneValue
+
 // used as default value
 case object NowValue extends SqlValue
 

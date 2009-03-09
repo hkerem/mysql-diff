@@ -93,6 +93,15 @@ class ScriptSerializer(context: Context) {
         case BooleanValue(true) => "TRUE"
         case BooleanValue(false) => "FALSE"
         case NowValue => "NOW()"
+        case t: TemporalValue =>
+            val n = t match {
+                case _: TimestampValue => "TIMESTAMP"
+                case _: TimestampWithTimeZoneValue => "TIMESTAMP WITHOUT TIME ZONE"
+                case _: TimeValue => "TIME"
+                case _: TimeWithTimeZoneValue => "TIME WITHOUT TIME ZONE"
+                case _: DateValue => "DATE"
+            }
+            n + " '" + t.value + "'"
     }
     
     def serializeModelColumnProperty(cp: ColumnProperty): Option[String] = cp match {
@@ -295,6 +304,7 @@ object ScriptSerializerTests extends org.specs.Specification {
         scriptSerializer.serializeValue(NumberValue(15)) must_== "15"
         scriptSerializer.serializeValue(StringValue("hello")) must_== "'hello'"
         scriptSerializer.serializeValue(NowValue) must_== "NOW()" // XXX: or CURRENT_TIMESTAMP
+        scriptSerializer.serializeValue(DateValue("2009-03-09")) must_== "DATE '2009-03-09'"
     }
 }
 
