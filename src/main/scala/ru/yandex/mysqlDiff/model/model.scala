@@ -388,10 +388,7 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
         withOptions(this.options.withDefaultProperties(os))
 }
 
-abstract class DatabaseDeclaration(val name: String) 
-{
-    def toScript = ModelSerializer.serializeDatabaseDeclaration(this)
-    def toText = toScript.toText
+abstract class DatabaseDeclaration(val name: String) {
 }
 
 case class DatabaseModel(declarations: Seq[TableModel])

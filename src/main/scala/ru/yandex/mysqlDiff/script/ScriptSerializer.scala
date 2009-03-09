@@ -10,13 +10,7 @@ import vendor.mysql._
 
 import Implicits._
 
-/**
- * Serialize Script objects to text (String).
- */
 object ScriptSerializer {
-    import TableDdlStatement._
-    
-    /** Serializer options */
     abstract class Options {
         def stmtJoin: String
         def scriptTail: String = stmtJoin
@@ -42,6 +36,17 @@ object ScriptSerializer {
         object singleline extends Singleline
     }
     
+}
+
+/**
+ * Serialize Script objects to text (String).
+ */
+class ScriptSerializer(context: Context) {
+    import context._
+    import TableDdlStatement._
+    import ScriptSerializer._
+    
+    /** Serializer options */
     def serialize(stmts: Seq[ScriptElement], options: Options): String = {
         def serializeInList(stmt: ScriptElement) = {
             val tail = stmt match {
@@ -60,6 +65,15 @@ object ScriptSerializer {
     }
     
     def serialize(stmt: ScriptElement): String = serialize(stmt, Options.singleline)
+    
+    def isKeyword(name: String) =
+        ScriptConstants.isSql2003Keyword(name)
+    
+    def quoteName(name: String) = '"' + name + '"'
+    
+    def serializeName(name: String) =
+        if (isKeyword(name)) quoteName(name)
+        else name
     
     def serializeTableStatement(stmt: TableDdlStatement, options: Options): String = stmt match {
         case st: CreateTableStatement => serializeCreateTable(st, options)
@@ -127,7 +141,7 @@ object ScriptSerializer {
         val l = t.entries.map(mapEntry _).reverse
         val lines = (List(l.first) ++ l.drop(1).map(_ + "," + options.afterComma)).reverse.map(options.indent + _)
         
-        val firstLine = "CREATE TABLE " + t.name + " ("
+        val firstLine = "CREATE TABLE " + serializeName(t.name) + " ("
         val lastLine = ")" +
             (if (t.options.isEmpty) "" else " " + t.options.map(serializeTableOption _).mkString(" "))
         
@@ -213,7 +227,7 @@ object ScriptSerializer {
     }
     
     def serializeColumn(model: ColumnModel) =
-        serializeTableEntry(ModelSerializer.serializeColumn(model))
+        serializeTableEntry(modelSerializer.serializeColumn(model))
     
     def serializePrimaryKey(pk: PrimaryKeyModel) = {
         val words = new ArrayBuffer[String]
@@ -253,6 +267,9 @@ object ScriptSerializer {
 }
 
 object ScriptSerializerTests extends org.specs.Specification {
+    val context = Environment.defaultContext
+    import context._
+    
     import ScriptSerializer._
     
     "serialize semi singleline" in {
@@ -263,21 +280,21 @@ object ScriptSerializerTests extends org.specs.Specification {
         
         val options = Options.singleline
         
-        val serialized = serialize(script, options)
+        val serialized = scriptSerializer.serialize(script, options)
         
         //println("'" + serialized + "'")
         assert(serialized == "DROP TABLE users; /* h */ DROP TABLE users; DROP TABLE users; /* h */ /* h */ DROP TABLE users;")
     }
     
     "serialize default value" in {
-        serializeModelColumnProperty(DefaultValue(NumberValue(15))).get must_== "DEFAULT 15"
+        scriptSerializer.serializeModelColumnProperty(DefaultValue(NumberValue(15))).get must_== "DEFAULT 15"
     }
     
     "serialize value" in {
-        serializeValue(NullValue) must_== "NULL"
-        serializeValue(NumberValue(15)) must_== "15"
-        serializeValue(StringValue("hello")) must_== "'hello'"
-        serializeValue(NowValue) must_== "NOW()" // XXX: or CURRENT_TIMESTAMP
+        scriptSerializer.serializeValue(NullValue) must_== "NULL"
+        scriptSerializer.serializeValue(NumberValue(15)) must_== "15"
+        scriptSerializer.serializeValue(StringValue("hello")) must_== "'hello'"
+        scriptSerializer.serializeValue(NowValue) must_== "NOW()" // XXX: or CURRENT_TIMESTAMP
     }
 }
 

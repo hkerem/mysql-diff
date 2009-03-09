@@ -14,4 +14,8 @@ object MysqlTableDdlStatement {
     case class MysqlForeignKey(fk: ForeignKeyModel, indexName: Option[String]) extends Entry
 }
 
+class MysqlScriptSerializer(context: Context) extends ScriptSerializer(context) {
+    override def quoteName(name: String) = "`" + name + "`"
+}
+
 // vim: set ts=4 sw=4 et:

@@ -8,7 +8,8 @@ import Implicits._
 /**
  * Serialize model to create statements (except for methods with toText or toString methods).
  */
-object ModelSerializer {
+class ModelSerializer(context: Context) {
+    import context._
     
     def serializeColumn(column: ColumnModel) =
         new TableDdlStatement.Column(column.name, column.dataType, column.properties)
@@ -38,7 +39,7 @@ object ModelSerializer {
             table.entries.map(serializeTableEntry _), table.options.properties)
 
     def serializeTableToText(table: TableModel) =
-        ScriptSerializer.serialize(serializeTable(table))
+        scriptSerializer.serialize(serializeTable(table))
     
     def serializeDatabaseDeclaration(dd: DatabaseDeclaration) = dd match {
         case table: TableModel => serializeTable(table)
@@ -47,7 +48,7 @@ object ModelSerializer {
     def serializeDatabase(db: DatabaseModel) = db.declarations.map(serializeDatabaseDeclaration _)
     
     def serializeDatabaseToText(db: DatabaseModel) =
-        ScriptSerializer.serialize(serializeDatabase(db), ScriptSerializer.Options.multiline)
+        scriptSerializer.serialize(serializeDatabase(db), ScriptSerializer.Options.multiline)
 }
 
 // vim: set ts=4 sw=4 et:

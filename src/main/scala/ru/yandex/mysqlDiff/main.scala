@@ -137,12 +137,14 @@ object Dump extends MainSupport {
                 exit(1)
         }
         
+        import Environment.defaultContext._
+        
         object options extends ScriptSerializer.Options.Multiline {
             override def verbose = verboseOpt
         }
         
         //print(ModelSerializer.serializeDatabaseToText(db))
-        print(ScriptSerializer.serialize(ModelSerializer.serializeDatabase(db), options))
+        print(scriptSerializer.serialize(modelSerializer.serializeDatabase(db), options))
     }
 }
 

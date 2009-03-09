@@ -159,7 +159,7 @@ case class ModelParser(val context: Context) {
     def main(args: Array[String]) {
         val text = InputStreamResource.file(args(0)).reader.slurp()
         val model = parseModel(text)
-        print(ModelSerializer.serializeDatabaseToText(model))
+        print(modelSerializer.serializeDatabaseToText(model))
     }
 }
 

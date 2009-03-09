@@ -117,7 +117,7 @@ class DiffSerializer(val context: Context) {
     }
     
     def serializeCreateTableDiff(c: CreateTableDiff) =
-        ModelSerializer.serializeTable(c.table) :: Nil
+        modelSerializer.serializeTable(c.table) :: Nil
     
     def serializeDropTableDiff(d: DropTableDiff) =
         DropTableStatement(d.name, false) :: Nil
@@ -147,12 +147,12 @@ class DiffSerializer(val context: Context) {
     
     def serializeToScriptStrings(diff: DatabaseDiff, oldModel: DatabaseModel, newModel: DatabaseModel)
             : Seq[String] =
-        serializeToScript(diff, oldModel, newModel).map(ScriptSerializer.serialize(_))
+        serializeToScript(diff, oldModel, newModel).map(scriptSerializer.serialize(_))
     
     // XXX: rename to serializeToText
     def serialize(oldModel: DatabaseModel, newModel: DatabaseModel, diff: DatabaseDiff): String = {
         val options = ScriptSerializer.Options.multiline
-        ScriptSerializer.serialize(serializeToScript(diff, oldModel, newModel), options)
+        scriptSerializer.serialize(serializeToScript(diff, oldModel, newModel), options)
     }
 }
 

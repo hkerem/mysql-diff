@@ -128,6 +128,15 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
     "bug with NULL PRIMARY KEY" in {
         checkTable("CREATE TABLE null_pk (id INT NULL DEFAULT NULL, PRIMARY KEY(id))")
     }
+    
+    /* XXX: need drop table
+    "can create table with name LIKE" in {
+        val t = new TableModel("like", Seq(new ColumnModel("no_other", dataTypes.int, Seq())), Seq(), Seq())
+        execute(modelSerializer.serializeTableToText(t))
+        val d = jdbcModelExtractor.extractTable("like", ds)
+        checkTwoSimilarTableModels(t, d)
+    }
+    */
 
 }
 

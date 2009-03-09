@@ -239,7 +239,7 @@ class JdbcModelExtractor(context: Context) {
                 usage(); exit(1)
         }
         
-        print(ModelSerializer.serializeDatabaseToText(model))
+        print(modelSerializer.serializeDatabaseToText(model))
     }
 }
 

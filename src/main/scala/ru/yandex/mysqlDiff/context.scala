@@ -7,10 +7,10 @@ class Context(val dataTypes: model.DataTypes) {
     val diffMaker = new diff.DiffMaker(this)
     val diffSerializer = new diff.DiffSerializer(this)
     val modelParser = new model.ModelParser(this)
-    val modelSerializer = model.ModelSerializer
+    val modelSerializer = new model.ModelSerializer(this)
     val sqlParserCombinator = new script.SqlParserCombinator(this)
     val parser = new script.Parser(this)
-    val scriptSerializer = script.ScriptSerializer
+    val scriptSerializer = new script.ScriptSerializer(this)
     val jdbcModelExtractor = new jdbc.JdbcModelExtractor(this)
 }
 

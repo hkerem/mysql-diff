@@ -5,6 +5,7 @@ object MysqlContext extends Context(MysqlDataTypes) {
     override val dataTypes = MysqlDataTypes
     override val modelParser = new MysqlModelParser(this)
     override val jdbcModelExtractor = new MysqlJdbcModelExtractor(this)
+    override val scriptSerializer = new MysqlScriptSerializer(this)
 }
 
 object MysqlCharsets {

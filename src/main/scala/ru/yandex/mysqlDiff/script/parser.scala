@@ -573,7 +573,7 @@ class Parser(context: Context) {
                 ReaderResource.apply(args(1)).slurp()
             }
         val script = parse(text)
-        print(ScriptSerializer.serialize(script.stmts, ScriptSerializer.Options.multiline))
+        print(scriptSerializer.serialize(script.stmts, ScriptSerializer.Options.multiline))
     }
 }
 
