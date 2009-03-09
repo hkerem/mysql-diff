@@ -10,9 +10,6 @@ import scala.collection.mutable.ArrayBuffer
 import model._
 import util._
 
-// XXX: drop it
-import vendor.mysql._
-
 import Implicits._
 
 class JdbcModelExtractorException(msg: String, cause: Throwable) extends Exception(msg, cause)
@@ -26,14 +23,8 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
     import connectedContext._
     import context._
     
-    import vendor.mysql._
-
     import MetaDao._
-    import MysqlMetaDao._
 
-    // http://bugs.mysql.com/36699
-    private val PROPER_COLUMN_DEF_MIN_MYSQL_VERSION = MysqlServerVersion.parse("5.0.51")
-    
     /** Database name from JDBC URL */
     lazy val currentDb = {
         val db = jt.metaData(_.getURL.replaceFirst("\\?.*", "").replaceFirst(".*[/:]", ""))

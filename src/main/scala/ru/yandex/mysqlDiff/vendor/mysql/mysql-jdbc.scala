@@ -47,6 +47,9 @@ class MysqlMetaDao(jt: JdbcTemplate) extends MetaDao(jt) {
     
     import jt._
     
+    // http://bugs.mysql.com/36699
+    private val PROPER_COLUMN_DEF_MIN_MYSQL_VERSION = MysqlServerVersion.parse("5.0.51")
+    
     // MySQL does not store default charset, collation only
     // http://dev.mysql.com/doc/refman/5.1/en/tables-table.html
     def mapTableOptions(rs: ResultSet) =
