@@ -250,33 +250,30 @@ case object ForeignKey extends KeyType
  */
 abstract class TableExtra extends TableEntry
 
-abstract class HasIndexModel extends TableExtra {
-    def index: IndexModel
-    def columns: Seq[String] = index.columns
+trait UniqueOrIndexModel extends TableExtra {
+    def columns: Seq[String]
 }
 
-case class IndexModel(name: Option[String], override val columns: Seq[String]) extends HasIndexModel {
+case class IndexModel(name: Option[String], override val columns: Seq[String]) extends UniqueOrIndexModel {
     require(columns.length > 0)
     require(Set(columns: _*).size == columns.length)
-    
-    override def index = this
 }
 
-abstract case class ConstraintModel(name: Option[String], override val index: IndexModel) extends HasIndexModel {
+abstract case class ConstraintModel(name: Option[String]) extends TableExtra {
+    require(name.isEmpty || name.get.length > 0)
 }
-case class UniqueKeyModel(override val name: Option[String], override val index: IndexModel)
-    extends ConstraintModel(name, index)
+case class UniqueKeyModel(override val name: Option[String], override val columns: Seq[String])
+    extends ConstraintModel(name) with UniqueOrIndexModel
 
-case class PrimaryKeyModel(override val name: Option[String], override val index: IndexModel)
-    extends ConstraintModel(name, index)
+case class PrimaryKeyModel(override val name: Option[String], columns: Seq[String])
+    extends ConstraintModel(name)
 
 case class ForeignKeyModel(override val name: Option[String],
-        override val index: IndexModel,
+        localColumns: Seq[String],
         externalTable: String,
         externalColumns: Seq[String])
-    extends ConstraintModel(name, index)
+    extends ConstraintModel(name)
 {
-    def localColumns = index.columns
     require(localColumns.length == externalColumns.length)
     // XXX: check externalColumns unique
 }
@@ -307,8 +304,6 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
         "repeating column names in table " + name + " model")
     require(Set(constraintNames: _*).size == constraintNames.size,
         "repeating constraint names in table " + name + " model")
-    require(Set(allIndexNames: _*).size == allIndexNames.size,
-        "repeating index names in table " + name + " model")
     require(primaryKeys.length <= 1)
     
     def entries = columns ++ extras
@@ -321,10 +316,6 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     def indexes = extras.flatMap { case i: IndexModel => Some(i); case _ => None }
     def findIndex(name: String) = indexes.find(_.name == Some(name))
     def index(name: String) = findIndex(name).get
-    
-    /** All indexes including those used in PKs, FKs, UKs */
-    def allIndexes = extras.flatMap { case h: HasIndexModel => Some(h.index); case _ => None }
-    def allIndexNames = allIndexes.flatMap(_.name)
     
     def findColumn(name: String) = columns.find(_.name == name)
     def column(name: String) = findColumn(name).get

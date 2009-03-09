@@ -219,16 +219,15 @@ object ScriptSerializer {
         val words = new ArrayBuffer[String]
         if (pk.name.isDefined) words += "CONSTRAINT " + pk.name.get
         words += "PRIMARY KEY"
-        words ++= pk.index.name
         words += ("(" + pk.columns.mkString(", ") + ")")
         words.mkString(" ")
     }
     
+    // XXX: handle MySQL specific stuff
     def serializeForeignKey(fk: ForeignKeyModel) = {
         val words = new ArrayBuffer[String]
         if (fk.name.isDefined) words += "CONSTRAINT " + fk.name.get
         words += "FOREIGN KEY"
-        words ++= fk.name // XXX: don't mix constraint name and index name
         words += ("(" + fk.localColumns.mkString(", ") + ")")
         words += "REFERENCES"
         words += fk.externalTable
@@ -239,7 +238,7 @@ object ScriptSerializer {
     def serializeUniqueKey(uk: UniqueKeyModel) = {
         val words = new ArrayBuffer[String]
         if (uk.name.isDefined) words += "CONSTRAINT " + uk.name.get
-        words += "UNIQUE " + serializeIndex(uk.index)
+        words += "UNIQUE KEY(" + uk.columns.mkString(", ") + ")"
         words.mkString(" ")
     }
     

@@ -40,6 +40,13 @@ case class ModelParser(val context: Context) {
         new ColumnModel(name, dataType, c.modelProperties)
     }
     
+    protected def parseCreateTableExtra(e: Entry) = Seq(e match {
+        case Index(index) => index
+        case PrimaryKey(pk) => pk
+        case ForeignKey(fk) => fk
+        case UniqueKey(uk) => uk
+    })
+    
     def parseCreateTable(ct: CreateTableStatement): TableModel = {
         
         val name = ct.name
@@ -52,20 +59,18 @@ case class ModelParser(val context: Context) {
                 
                 attrs foreach {
                     case InlinePrimaryKey =>
-                        extras += PrimaryKeyModel(None, IndexModel(None, Seq(column.name)))
+                        extras += PrimaryKeyModel(None, Seq(column.name))
                     
                     case InlineReferences(table, tColumn) =>
-                        extras += ForeignKeyModel(None, IndexModel(None, Seq(column.name)), table, Seq(tColumn))
+                        extras += ForeignKeyModel(None, Seq(column.name), table, Seq(tColumn))
+                        extras += IndexModel(None, Seq(column.name))
                     
                     // XXX: other inline properties
                     
                     case ModelColumnProperty(_) =>
                 }
                 
-            case Index(index) => extras += index
-            case PrimaryKey(pk) => extras += pk
-            case ForeignKey(fk) => extras += fk
-            case UniqueKey(uk) => extras += uk
+            case e => extras ++= parseCreateTableExtra(e)
         }
         
         val pks = extras.flatMap { case pk: PrimaryKeyModel => Some(pk); case _ => None }

@@ -132,7 +132,6 @@ class JdbcModelExtractor(context: Context) {
             // MySQL adds PK to indexes, so exclude
             val indexes = getIndexes(tableName)
                     .filter(pk.isEmpty || _.columns.toList != pk.get.columns.toList)
-                    .filter(i => !(fks.map(_.localColumns.toList) contains i.columns.toList))
             
             new TableModel(tableName, columnsList.toList, indexes ++ pk ++ fks, getTableOptions(tableName))
         }
@@ -141,7 +140,7 @@ class JdbcModelExtractor(context: Context) {
             dao.findPrimaryKey(currentCatalog, currentSchema, tableName)
         
         /** Indexes plus unique constraints */
-        def getIndexes(tableName: String): Seq[HasIndexModel] =
+        def getIndexes(tableName: String): Seq[UniqueOrIndexModel] =
             dao.findIndexes(currentCatalog, currentSchema, tableName)
 
         def getFks(tableName: String): Seq[ForeignKeyModel] =

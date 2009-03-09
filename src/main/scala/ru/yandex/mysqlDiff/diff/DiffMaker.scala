@@ -121,15 +121,17 @@ case class DiffMaker(val context: Context) {
     
     /** Are foreign keys equivalent? */
     def fksEquivalent(a: ForeignKeyModel, b: ForeignKeyModel) =
-        indexesEquivalent(a.index, b.index) &&
+        (a.localColumns.toList == b.localColumns.toList) &&
                 (a.externalTable == b.externalTable) && (a.externalColumns.toList == b.externalColumns.toList) &&
                 (a.name == b.name || a.name == None || b.name == None)
     
     def uksEquivalent(a: UniqueKeyModel, b: UniqueKeyModel) =
-        indexesEquivalent(a.index, b.index)
+        (a.columns.toList == b.columns.toList) &&
+            (a.name == b.name || a.name == None || b.name == None)
     
     def pksEquivalent(a: PrimaryKeyModel, b: PrimaryKeyModel) =
-        indexesEquivalent(a.index, b.index)
+        (a.columns.toList == b.columns.toList) &&
+            (a.name == b.name || a.name == None || b.name == None)
     
     def extrasEquivalent(a: TableExtra, b: TableExtra) = (a, b) match {
         case (a: IndexModel, b: IndexModel) => indexesEquivalent(a, b)

@@ -79,6 +79,9 @@ object MysqlCollateTableOptionType extends TableOptionType {
 class MysqlModelParser(override val context: Context) extends ModelParser(context) {
     import context._
     
+    import script.TableDdlStatement._
+    import MysqlTableDdlStatement._
+    
     /** Unspecified collation can be computed from charset */
     private def tableCollation(table: TableModel): Option[String] = {
         def defaultCollation =
@@ -93,6 +96,11 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
             table.options.find(MysqlCollateTableOptionType).flatMap(
                 o => MysqlCharsets.defaultCharset(o.name))
         table.options.find(MysqlCharacterSetTableOptionType).map(_.name).orElse(defaultCharset)
+    }
+    
+    protected override def parseCreateTableExtra(e: Entry) = e match {
+        case MysqlForeignKey(fk, indexName) => Seq(fk, IndexModel(indexName, fk.localColumns))
+        case e => super.parseCreateTableExtra(e)
     }
     
     override def parseCreateTable(ct: script.CreateTableStatement): TableModel = {

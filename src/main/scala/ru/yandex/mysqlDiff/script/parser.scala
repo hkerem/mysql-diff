@@ -186,21 +186,22 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def constraint: Parser[Option[String]] = opt("CONSTRAINT" ~> name)
     
     def ukModel: Parser[UniqueKeyModel] =
-        (constraint <~ "UNIQUE" <~ opt("INDEX" | "KEY")) ~ opt(name) ~ nameList ^^
-            { case cn ~ n ~ cs => model.UniqueKeyModel(cn, new IndexModel(n, cs)) }
+        (constraint <~ "UNIQUE" <~ opt("INDEX" | "KEY")) ~ nameList ^^
+            { case n ~ cs => model.UniqueKeyModel(n, cs) }
     
     def fkModel: Parser[ForeignKeyModel] =
-        (constraint <~ "FOREIGN KEY") ~ opt(name) ~ nameList ~ ("REFERENCES" ~> name) ~ nameList ^^
-            { case cn ~ k ~ lcs ~ et ~ ecs => ForeignKeyModel(cn, new IndexModel(k, lcs), et, ecs) }
+        (constraint <~ "FOREIGN KEY") ~ nameList ~ ("REFERENCES" ~> name) ~ nameList ^^
+            { case cn ~ lcs ~ et ~ ecs => ForeignKeyModel(cn, lcs, et, ecs) }
+    
+    def fk: Parser[TableDdlStatement.Entry] = fkModel ^^ { fk => TableDdlStatement.ForeignKey(fk) }
     
     def pkModel: Parser[PrimaryKeyModel] =
-        (constraint <~ "PRIMARY KEY") ~ opt(name) ~ indexColNameList ^^
-            { case cn ~ name ~ nameList => PrimaryKeyModel(cn, new IndexModel(name, nameList)) }
+        (constraint <~ "PRIMARY KEY") ~ indexColNameList ^^
+            { case name ~ nameList => PrimaryKeyModel(name, nameList) }
     
-    // XXX: constraint name
     def tableEntry: Parser[TableDdlStatement.Entry] = 
       ( (pkModel ^^ { p => TableDdlStatement.PrimaryKey(p) })
-      | (fkModel ^^ { f => TableDdlStatement.ForeignKey(f) })
+      | fk
       | (ukModel ^^ { f => TableDdlStatement.UniqueKey(f) })
       | (indexModel ^^ { i => TableDdlStatement.Index(i) })
       | column
@@ -214,7 +215,8 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def createTableRegular = "CREATE TABLE" ~> opt(ifNotExists) ~ name ~
              ("(" ~> repsep(tableEntry, ",") <~ ")") ~ rep(tableOption) ^^
-                     { case ifne ~ name ~ entries ~ options => CreateTableStatement(name, ifne.isDefined, entries, options) }
+                     { case ifne ~ name ~ entries ~ options =>
+                            CreateTableStatement(name, ifne.isDefined, entries, options) }
      
     def createTable: Parser[TableDdlStatement] = createTableRegular
     
@@ -238,7 +240,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def addPk = "ADD" ~> pkModel ^^ { pk => TableDdlStatement.AddPrimaryKey(pk) }
     
-    def addFk = "ADD" ~> fkModel ^^ { fk => TableDdlStatement.AddForeignKey(fk) }
+    def addFk = "ADD" ~> fk ^^ { fk => TableDdlStatement.AddEntry(fk) }
     
     def alterColumn = "ALTER" ~> opt("COLUMN") ~> name ~
         (("SET DEFAULT" ~> sqlValue ^^ { x => Some(x) }) | ("DROP DEFAULT" ^^^ None)) ^^
@@ -493,16 +495,6 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         t.column("name").properties must beSameSeqAs(List(InlineUnique))
     }
     
-    "parser CONSTRAINT ... FOREIGN KEY" in {
-        val t = parseCreateTableRegular(
-                "CREATE TABLE servers (id INT, dc_id INT, " +
-                        "CONSTRAINT dc_fk FOREIGN KEY dc_idx (dc_id) REFERENCES datacenters(id))")
-        t.foreignKeys.first.fk must beLike {
-            case ForeignKeyModel(
-                    Some("dc_fk"), IndexModel(Some("dc_idx"), Seq("dc_id")), "datacenters", Seq("id")) => true
-        }
-    }
-    
     "parse indexes" in {
         val t = parseCreateTableRegular("CREATE TABLE a(id INT, UNIQUE(a), INDEX i2(b, c), UNIQUE KEY(d, e))")
         t.indexes must haveSize(1)
@@ -510,21 +502,9 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         
         t.uniqueKeys must haveSize(2)
         t.uniqueKeys(0).uk must beLike {
-            case UniqueKeyModel(None, IndexModel(None, Seq("a"))) => true }
+            case UniqueKeyModel(None, Seq("a")) => true }
         t.uniqueKeys(1).uk must beLike {
-            case UniqueKeyModel(None, IndexModel(None, Seq("d", "e"))) => true }
-    }
-    
-    "parse FK" in {
-        val t = parseCreateTableRegular(
-                "CREATE TABLE a (id INT, " +
-                "FOREIGN KEY (x, y) REFERENCES b (x1, y1), " +
-                "FOREIGN KEY fk1 (z) REFERENCES c (z1))")
-        t.foreignKeys must haveSize(2)
-        t.foreignKeys(0).fk must beLike {
-            case ForeignKeyModel(None, IndexModel(None, Seq("x", "y")), "b", Seq("x1", "y1")) => true }
-        t.foreignKeys(1).fk must beLike {
-            case ForeignKeyModel(None, IndexModel(Some("fk1"), Seq("z")), "c", Seq("z1")) => true }
+            case UniqueKeyModel(None, Seq("d", "e")) => true }
     }
     
     "parse ALTER TABLE ADD INDEX" in {
@@ -540,7 +520,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         val a = parse(alterTable)("ALTER TABLE convert_queue ADD UNIQUE(user_id, file_id)")
         a must beLike {
             case AlterTableStatement("convert_queue",
-                    Seq(AddEntry(UniqueKey(UniqueKeyModel(None, IndexModel(None, Seq("user_id", "file_id"))))))) => true }
+                    Seq(AddEntry(UniqueKey(UniqueKeyModel(None, Seq("user_id", "file_id")))))) => true }
     }
     
     "parse ALTER TABLE ALTER COLUMN SET DEFAULT" in {

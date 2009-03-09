@@ -4,6 +4,8 @@ import model._
 import script._
 
 class MysqlParserCombinator(context: Context) extends SqlParserCombinator(context) {
+    import MysqlTableDdlStatement._
+    
     // http://dev.mysql.com/doc/refman/5.1/en/create-table.html
     override def dataTypeOption = (
         super.dataTypeOption
@@ -34,6 +36,18 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     
     def tableEngine: Parser[TableOption] =
         ("ENGINE" | "TYPE") ~> opt("=") ~> ident ^^ { MysqlEngineTableOption(_) }
+     
+    override def ukModel: Parser[UniqueKeyModel] =
+        (constraint <~ "UNIQUE" <~ opt("INDEX" | "KEY")) ~ opt(name) ~ nameList ^^
+            { case n1 ~ n2 ~ cs =>
+                if (n1.isDefined && n2.isDefined)
+                    throw new MysqlDiffException("UNIQUE KEY name specified twice")
+                model.UniqueKeyModel(n1.orElse(n2), cs) }
+    
+    override def fk: Parser[TableDdlStatement.Entry] =
+        (constraint <~ "FOREIGN KEY") ~ opt(name) ~ nameList ~ ("REFERENCES" ~> name) ~ nameList ^^
+            { case cn ~ in ~ lcs ~ et ~ ecs => MysqlForeignKey(ForeignKeyModel(cn, lcs, et, ecs), in) }
+
    
     override def tableOption: Parser[TableOption] = (
         tableEngine
@@ -43,11 +57,11 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     
     def convertToCharacterSet =
         "CONVERT TO CHARACTER SET" ~> name ~ opt("COLLATE" ~> name) ^^
-            { case cs ~ coll => MysqlAlterTableStatement.ConvertToCharacterSet(cs, coll) }
+            { case cs ~ coll => MysqlTableDdlStatement.ConvertToCharacterSet(cs, coll) }
     
     def changeCharacterSet =
         opt("DEFAULT") ~> "CHARACTER SET" ~> opt("=") ~> name ~ opt("COLLATE" ~> opt("=") ~> name) ^^
-            { case cs ~ coll => MysqlAlterTableStatement.ChangeCharacterSet(cs, coll) }
+            { case cs ~ coll => MysqlTableDdlStatement.ChangeCharacterSet(cs, coll) }
     
     // http://dev.mysql.com/doc/refman/5.1/en/alter-table.html
     override def alterSpecification = super.alterSpecification | convertToCharacterSet | changeCharacterSet
@@ -65,6 +79,9 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
     import context._
     import sqlParserCombinator._
     
+    import MysqlTableDdlStatement._
+    import TableDdlStatement._
+    
     "parse dataTypeOption" in {
         parse(dataTypeOption)("UNSIGNED") must_== MysqlUnsigned(true)
         parse(dataTypeOption)("CHARACTER SET utf8") must_== new MysqlCharacterSet("utf8")
@@ -76,6 +93,29 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
             case CreateTableLikeStatement("oranges", false, "lemons") => true
         }
     }
+    
+    "parser CONSTRAINT ... FOREIGN KEY" in {
+        val t = parseCreateTableRegular(
+                "CREATE TABLE servers (id INT, dc_id INT, " +
+                        "CONSTRAINT dc_fk FOREIGN KEY dc_idx (dc_id) REFERENCES datacenters(id))")
+        val fks = t.entries.filter { case _: MysqlForeignKey => true; case _ => false }
+        fks must haveSize(1)
+        fks.first must beLike {
+            case MysqlForeignKey(
+                    ForeignKeyModel(Some("dc_fk"), Seq("dc_id"), "datacenters", Seq("id")), Some("dc_idx"))
+                => true
+        }
+    }
+    
+    "named UNIQUE" in {
+        val t = parseCreateTableRegular(
+            "CREATE TABLE users (login VARCHAR(10), UNIQUE KEY login_key(login))")
+        t.uniqueKeys must haveSize(1)
+        t.uniqueKeys.first must beLike {
+            case UniqueKey(UniqueKeyModel(Some("login_key"), Seq("login"))) => true
+        }
+    }
+    
 }
 
 // vim: set ts=4 sw=4 et:

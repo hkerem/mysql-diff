@@ -91,7 +91,7 @@ class DiffSerializer(val context: Context) {
             
             val addPk: Option[PrimaryKeyModel] =
                 addPks.firstOption.map { case CreateExtraDiff(pk: PrimaryKeyModel) => pk }
-            val addPkSingleColumn = addPk.filter(_.index.columns.length == 1).map(_.index.columns.first)
+            val addPkSingleColumn = addPk.filter(_.columns.length == 1).map(_.columns.first)
             
             val (addPkSingleColumnDiffs, rest2) = rest.partition {
                 case CreateColumnDiff(c) if Some(c.name) == addPkSingleColumn => true

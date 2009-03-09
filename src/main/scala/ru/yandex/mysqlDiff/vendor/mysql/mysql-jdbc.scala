@@ -251,10 +251,10 @@ object MysqlJdbcModelExtractorTests extends JdbcModelExtractorTests(MysqlContext
         fkp.externalColumns must beLike { case Seq("id1", "id2") => true }
         fkp.externalTable must_== "person"
         fkp.name must_== Some("fk2c")
-        fkp.index.name must_== Some("fk2i")
         
-        // no sure
-        //citizen.indexes must haveSize(0)
+        citizen.indexes must haveSize(2)
+        val ip = citizen.indexes.find(_.columns.toList == List("pid1", "pid2")).get
+        ip.name must_== Some("fk2i")
         
         city.foreignKeys must haveSize(0)
         person.foreignKeys must haveSize(0)

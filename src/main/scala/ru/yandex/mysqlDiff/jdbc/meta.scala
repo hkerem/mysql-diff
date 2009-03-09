@@ -45,7 +45,7 @@ class MetaDao(jt: JdbcTemplate) {
                 // MySQL names primary key PRIMARY
                 val pkNameO = if (pkName != null && pkName != "PRIMARY") Some(pkName) else None
 
-                Some(new PrimaryKeyModel(pkNameO, new IndexModel(None, r.map(_.columnName))))
+                Some(new PrimaryKeyModel(pkNameO, r.map(_.columnName)))
             }
         }
     
@@ -63,7 +63,7 @@ class MetaDao(jt: JdbcTemplate) {
     }
     
     // regular indexes
-    def findIndexes(catalog: String, schema: String, tableName: String): Seq[HasIndexModel] = execute { conn =>
+    def findIndexes(catalog: String, schema: String, tableName: String): Seq[UniqueOrIndexModel] = execute { conn =>
         val rs = conn.getMetaData.getIndexInfo(catalog, schema, tableName, false, false)
         
         case class R(indexName: String, nonUnique: Boolean, ordinalPosition: Int,
@@ -84,11 +84,10 @@ class MetaDao(jt: JdbcTemplate) {
             val rows = stableSort(rowsWithName, (r: R) => r.ordinalPosition)
             
             val unique = rows.first.unique
+            val columnNames = rows.map(_.columnName)
             
-            val index = new IndexModel(Some(indexName), rows.map(_.columnName))
-            
-            if (unique) new UniqueKeyModel(None, index)
-            else index
+            if (unique) new UniqueKeyModel(Some(indexName), columnNames)
+            else new IndexModel(Some(indexName), columnNames)
         }
     }
     
@@ -115,8 +114,7 @@ class MetaDao(jt: JdbcTemplate) {
                             " for key " + keyName
                     throw new IllegalStateException(m)
                 }
-                val index = new IndexModel(Some(keyName), rows.map(_.localColumnName))
-                ForeignKeyModel(Some(keyName), index,
+                ForeignKeyModel(Some(keyName), rows.map(_.localColumnName),
                         externalTableNames.elements.next, rows.map(_.externalColumnName))
             }
         }

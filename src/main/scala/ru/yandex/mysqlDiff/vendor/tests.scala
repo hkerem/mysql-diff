@@ -44,7 +44,7 @@ abstract class OnlineTestsSupport(val context: Context, val tdsp: TestDataSource
     }
     
     
-    val printExecutedStmts = true
+    val printExecutedStmts = false
     
     protected def execute(q: String) = {
         if (printExecutedStmts) println(q)
