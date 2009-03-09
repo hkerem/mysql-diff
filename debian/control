@@ -2,7 +2,7 @@ Source: yandex-mysql-diff
 Section: yandex
 Priority: optional
 Maintainer: Stepan Koltsov <stepancheg@yandex-team.ru>
-Build-Depends: yandex-ant, yandex-jdk6
+Build-Depends: yandex-ant, yandex-jdk6, devscripts, gnupg
 Standards-Version: 1.0
 
 Package: yandex-mysql-diff
