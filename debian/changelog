@@ -1,3 +1,9 @@
+yandex-mysql-diff (0.3.20090309203110.e96949f11c58) unstable; urgency=low
+
+  * incver to build debian package
+
+ -- buildfarm <buildfarm@yandex-team.ru>  Mon,  9 Mar 2009 20:37:20 +0300
+
 yandex-mysql-diff (0.2.1) unstable; urgency=low
 
   * Ver++
