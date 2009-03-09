@@ -18,7 +18,7 @@ case class PropertyMap[T <: PropertyType, V <: Property](val properties: Seq[V])
     def propertyTypes = properties.map(_.propertyType)
     
     // check there are no duplicate property types
-    require(Set(propertyTypes: _*).size == properties.length)
+    require(propertyTypes.unique.size == properties.length)
     
     protected def copy(properties: Seq[V]): this.type = new PropertyMap[T, V](properties).asInstanceOf[this.type]
     
@@ -256,7 +256,7 @@ trait UniqueOrIndexModel extends TableExtra {
 
 case class IndexModel(name: Option[String], override val columns: Seq[String]) extends UniqueOrIndexModel {
     require(columns.length > 0)
-    require(Set(columns: _*).size == columns.length)
+    require(columns.unique.size == columns.length)
 }
 
 abstract case class ConstraintModel(name: Option[String]) extends TableExtra {
@@ -300,9 +300,9 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
 
     require(name.length > 0, "table name must not be empty")
     require(columns.length > 0, "table " + name + " must have at least one column")
-    require(Set(columnNames: _*).size == columns.size,
+    require(columnNames.unique.size == columns.size,
         "repeating column names in table " + name + " model")
-    require(Set(constraintNames: _*).size == constraintNames.size,
+    require(constraintNames.unique.size == constraintNames.size,
         "repeating constraint names in table " + name + " model")
     require(primaryKeys.length <= 1)
     
@@ -397,7 +397,7 @@ abstract class DatabaseDeclaration(val name: String)
 case class DatabaseModel(declarations: Seq[TableModel])
 {
     // no objects with same name
-    require(Set(declarations.map(_.name): _*).size == declarations.length)
+    require(declarations.map(_.name).unique.size == declarations.length)
     
     def tables: Seq[TableModel] = declarations
     def table(name: String) = findTable(name).get

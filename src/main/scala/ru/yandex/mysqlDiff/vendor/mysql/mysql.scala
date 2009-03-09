@@ -1,7 +1,5 @@
 package ru.yandex.mysqlDiff.vendor.mysql
 
-import scala.collection.immutable.Set
-
 object MysqlContext extends Context(MysqlDataTypes) {
     override val sqlParserCombinator = new MysqlParserCombinator(this)
     override val dataTypes = MysqlDataTypes

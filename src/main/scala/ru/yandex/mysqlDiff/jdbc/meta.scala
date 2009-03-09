@@ -9,7 +9,9 @@ import scala.util.Sorting._
 import scala.collection.mutable.ArrayBuffer
 
 import vendor.mysql._
-    
+
+import Implicits._
+
 /**
  * DAO to query database information.
  */
@@ -77,7 +79,7 @@ class MetaDao(jt: JdbcTemplate) {
                     rs.getString("COLUMN_NAME"), rs.getString("ASC_OR_DESC"))
         }
         
-        val indexNames = Set(r.map(_.indexName): _*).toSeq
+        val indexNames = r.map(_.indexName).unique.toSeq
         
         indexNames.map { indexName =>
             val rowsWithName = r.filter(_.indexName == indexName)
@@ -104,11 +106,11 @@ class MetaDao(jt: JdbcTemplate) {
             }
 
             // key name can be null
-            val keys = Set(r.map(x => (x.keyName, x.externalTableName)): _*).toSeq
+            val keys = r.map(x => (x.keyName, x.externalTableName)).unique.toSeq
 
             keys.map { case (keyName, _) =>
                 val rows = r.filter(_.keyName == keyName)
-                val externalTableNames = Set(rows.map(_.externalTableName): _*)
+                val externalTableNames = rows.map(_.externalTableName).unique
                 if (externalTableNames.size != 1) {
                     val m = "internal error, got external table names: " + externalTableNames +
                             " for key " + keyName

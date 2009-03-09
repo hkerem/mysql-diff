@@ -5,7 +5,7 @@ import script._
 import util._
 
 /** Global implicits conversions */
-object Implicits {
+object Implicits extends util.CollectionImplicits {
     // ?
     implicit def toDecls(ps: ColumnProperties) =
         ps.properties.map(TableDdlStatement.ModelColumnProperty(_))
