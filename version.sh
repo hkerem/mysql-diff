@@ -5,7 +5,7 @@ BASE=0.3
 TAGS=$(hg id --tags)
 
 if [ "$TAGS" = "" -o "$TAGS" = "tip" ]; then
-    echo "$BASE-$(hg id --id)"
+    echo "$BASE.$(hg log -r . --limit 1 --template '{date|rfc3339date}' | sed -e 's,+.*,,; s,[T:-],,g').$(hg log -r . --template '{node|short}')"
 else
     echo "$TAGS"
 fi
