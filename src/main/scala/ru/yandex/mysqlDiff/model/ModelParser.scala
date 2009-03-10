@@ -33,7 +33,7 @@ case class ModelParser(val context: Context) {
     
     private def parseColumn(c: Column) = {
         val Column(name, dataType, attrs) = c
-        if (dataType.name == "TIMESTAMP" && c.modelProperties.defaultValue.isEmpty)
+        if (dataType.nameOption == Some("TIMESTAMP") && c.modelProperties.defaultValue.isEmpty)
             // because of MySQL-specifc features that are hard to deal with
             throw new Exception(
                     "TIMESTAMP without DEFAULT value is prohibited, column " + name) // XXX: report table
@@ -233,9 +233,9 @@ class ModelParserTests(context: Context) extends org.specs.Specification {
             "ALTER TABLE a ADD COLUMN login VARCHAR(10); " +
             "ALTER TABLE a CHANGE COLUMN name user_name VARCHAR(20) NOT NULL, DROP COLUMN password")
         val a = db.table("a")
-        a.column("id").dataType must beLike { case DataType("INT", None, _) => true }
-        a.column("login").dataType must beLike { case DataType("VARCHAR", Some(10), _) => true }
-        a.column("user_name").dataType must beLike { case DataType("VARCHAR", Some(20), _) => true }
+        a.column("id").dataType must beLike { case DefaultDataType("INT", None, _) => true }
+        a.column("login").dataType must beLike { case DefaultDataType("VARCHAR", Some(10), _) => true }
+        a.column("user_name").dataType must beLike { case DefaultDataType("VARCHAR", Some(20), _) => true }
         a.findColumn("name") must_== None
         a.findColumn("password") must_== None
     }

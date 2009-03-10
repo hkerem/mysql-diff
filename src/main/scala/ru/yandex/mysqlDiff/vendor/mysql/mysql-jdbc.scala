@@ -147,7 +147,11 @@ class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
                     .map(MysqlCollate(_))
                 
                 val dataTypeOptions = Seq[DataTypeOption]() ++ characterSet ++ collate
-                val dataType = base.dataType.overrideOptions(dataTypeOptions)
+                
+                val dataType = base.dataType match {
+                    case dataType: DefaultDataType => dataType.overrideOptions(dataTypeOptions)
+                    case dataType => dataType
+                }
                 
                 val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
                 
@@ -193,11 +197,12 @@ object MysqlJdbcModelExtractorTests
         assert("bananas" == table.name)
         
         assert("id" == table.columns(0).name)
-        assert("INT" == table.columns(0).dataType.name)
+        assert("INT" == table.columns(0).dataType.nameOption.get)
         
         assert("color" == table.columns(1).name)
-        assert("VARCHAR" == table.columns(1).dataType.name)
-        assert(100 == table.columns(1).dataType.length.get)
+        table.columns(1).dataType must beLike {
+            case DefaultDataType("VARCHAR", Some(100), _) => true
+        }
         
         assert(List("id") == table.primaryKey.get.columns.toList)
     }
@@ -317,8 +322,8 @@ object MysqlJdbcModelExtractorTests
         val a = table.column("a")
         val b = table.column("b")
         
-        b.dataType.options.properties must contain(MysqlCharacterSet("utf8"))
-        b.dataType.options.properties must contain(MysqlCollate("utf8_bin"))
+        b.dataType.asInstanceOf[DefaultDataType].options.properties must contain(MysqlCharacterSet("utf8"))
+        b.dataType.asInstanceOf[DefaultDataType].options.properties must contain(MysqlCollate("utf8_bin"))
     }
     
     "DATETIME without length" in {
@@ -326,7 +331,7 @@ object MysqlJdbcModelExtractorTests
             val table = t + "_without_length_test"
             dropTable(table)
             execute("CREATE TABLE " + table + "(a " + t + ")")
-            val tp = extractTable(table).column("a").dataType
+            val tp = extractTable(table).column("a").dataType.asInstanceOf[DefaultDataType]
             (tp.name, tp.length) must_== (t, None)
         }
     }

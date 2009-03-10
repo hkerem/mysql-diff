@@ -173,16 +173,16 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
     /** Convert value from DB to specified database type */
     protected def parseDefaultValueFromDb(s: String, dataType: DataType): Option[SqlValue] = {
         if (s == null) Some(NullValue) // None
-        else if (dataTypes.isAnyChar(dataType.name)) {
+        else if (dataType.nameOption.isDefined && dataTypes.isAnyChar(dataType.nameOption.get)) {
             if (s matches "'.*'") Some(StringValue(s.replaceFirst("^'", "").replaceFirst("'$", "")))
             else Some(StringValue(s))
         }
         else if (s == "NULL") None
-        else if (dataTypes.isAnyDateTime(dataType.name)) {
+        else if (dataType.nameOption.isDefined && dataTypes.isAnyDateTime(dataType.nameOption.get)) {
             if (s == "CURRENT_TIMESTAMP") Some(NowValue)
             else Some(StringValue(s))
         }
-        else if (dataTypes.isAnyNumber(dataType.name)) {
+        else if (dataType.nameOption.isDefined && dataTypes.isAnyNumber(dataType.nameOption.get)) {
             Some(sqlParserCombinator.parseValue(s))
         }
         else Some(StringValue(s))

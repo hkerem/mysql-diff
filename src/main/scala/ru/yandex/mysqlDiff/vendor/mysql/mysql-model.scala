@@ -37,8 +37,8 @@ object MysqlDataTypes extends DataTypes {
     // http://dev.mysql.com/doc/refman/5.0/en/numeric-type-overview.html
     override def normalize(dt: DataType) = super.normalize(dt) match {
         // XXX: only before 5.0.3
-        case DataType("BIT", _, options) => make("TINYINT", Some(1), options)
-        case DataType("BOOLEAN", _, options) => make("TINYINT", Some(1), options)
+        case DefaultDataType("BIT", _, options) => new DefaultDataType("TINYINT", Some(1), options)
+        case DefaultDataType("BOOLEAN", _, options) => new DefaultDataType("TINYINT", Some(1), options)
         case dt => dt
     }
     
@@ -125,24 +125,29 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         // Unspecified collation and charset are taken from table defaults
         // http://dev.mysql.com/doc/refman/5.1/en/charset-column.html
         
-        val defaultCharset: Option[MysqlCharacterSet] =
-            if (dataTypes.isAnyChar(dataType.name))
-                dataType.options.find(MysqlCollateType).flatMap {
+        val defaultCharset: Option[MysqlCharacterSet] = dataType match {
+            case DefaultDataType(name, _, options) if dataTypes.isAnyChar(name) =>
+                options.find(MysqlCollateType).flatMap {
                         cl: MysqlCollate => MysqlCharsets.defaultCharset(cl.name) }
                     .orElse(tableCharacterSet(table))
                     .map(MysqlCharacterSet(_))
-            else None
-        val defaultCollation: Option[MysqlCollate] =
-            if (dataTypes.isAnyChar(dataType.name))
-                dataType.options.find(MysqlCharacterSetType).flatMap {
+            case _ => None
+        }
+        val defaultCollation: Option[MysqlCollate] = dataType match {
+            case DefaultDataType(name, _, options) if dataTypes.isAnyChar(name) =>
+                options.find(MysqlCharacterSetType).flatMap {
                         cs: MysqlCharacterSet => MysqlCharsets.defaultCollation(cs.name) }
                     .orElse(tableCollation(table))
                     .map(MysqlCollate(_))
-            else None
+            case _ => None
+        }
         
         val defaultOptions: Seq[DataTypeOption] = List[DataTypeOption]() ++ defaultCharset ++ defaultCollation
         
-        dataType.withOptions(dataType.options.withDefaultProperties(defaultOptions))
+        dataType match {
+            case d: DefaultDataType => d.withDefaultOptions(defaultOptions)
+            case d if defaultOptions.isEmpty => d
+        }
     }
     
     private def fixDefaultValue(v: SqlValue) = v match {
@@ -170,8 +175,8 @@ object MysqlModelParserTests extends ModelParserTests(MysqlContext) {
         val t = modelParser.parseCreateTableScript(
             "CREATE TABLE users (id INT) CHARACTER SET utf8 COLLATE utf8_bin")
         val c = t.column("id")
-        c.dataType.options.find(MysqlCollateType) must_== None
-        c.dataType.options.find(MysqlCharacterSetType) must_== None
+        c.dataType.asInstanceOf[DefaultDataType].options.find(MysqlCollateType) must_== None
+        c.dataType.asInstanceOf[DefaultDataType].options.find(MysqlCharacterSetType) must_== None
     }
     
     "parse CREATE TABLE LIKE" in {

@@ -56,10 +56,14 @@ case class DiffMaker(val context: Context) {
     
     def dataTypesEquivalent(a: DataType, b: DataType) = {
         if (!dataTypes.equivalent(a, b)) false
-        else
-            compareSeqs(a.options, b.options,
-                    (a: DataTypeOption, b: DataTypeOption) => a.propertyType == b.propertyType
-            )._3.forall { case (a, b) => a == b }
+        else (a, b) match {
+            case (a: DefaultDataType, b: DefaultDataType) =>
+                compareSeqs(a.options, b.options,
+                        (a: DataTypeOption, b: DataTypeOption) => a.propertyType == b.propertyType
+                )._3.forall { case (a, b) => a == b }
+            case (a, b) =>
+                false
+        }
     }
     
     def columnPropertiesEquivalent(a: ColumnProperty, b: ColumnProperty) = {

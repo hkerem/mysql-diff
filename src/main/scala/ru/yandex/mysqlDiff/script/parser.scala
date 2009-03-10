@@ -495,7 +495,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         val column = parseColumn("friend_files_count INT NOT NULL DEFAULT 17")
         column.name must_== "friend_files_count"
         //column.dataType must_== dataTypes.int
-        column.dataType.name must_== "INT"
+        column.dataType.nameOption must_== Some("INT")
         column.defaultValue must_== Some(NumberValue(17))
     }
     
@@ -519,7 +519,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         t.columns must haveSize(1)
         t.columns must exist({ c: Column => c.name == "id" })
         //t.column("id").dataType must_== dataTypes.int
-        t.column("id").dataType.name must_== "INT"
+        t.column("id").dataType.nameOption must_== Some("INT")
     }
     
     "ignores spaces" in {
@@ -528,7 +528,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         t.columns must haveSize(1)
         t.columns must exist({ c: Column => c.name == "id" })
         //t.column("id").dataType must_== dataTypes.int
-        t.column("id").dataType.name must_== "INT"
+        t.column("id").dataType.nameOption must_== Some("INT")
     }
     
     "parse references from column" in {

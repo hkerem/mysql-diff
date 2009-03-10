@@ -227,8 +227,8 @@ class ScriptSerializer(context: Context) {
         case MysqlCharacterSet(cs) => Some("CHARACTER SET " + cs)
         case MysqlCollate(collate) => Some("COLLATE " + collate)
     }
-   
-    def serializeDataType(dataType: DataType) = {
+    
+    def serializeDefaultDataType(dataType: DefaultDataType) = {
         val words = new ArrayBuffer[String]
         words += {
             var size = dataType.length.map("(" + _ + ")").getOrElse("")
@@ -245,6 +245,10 @@ class ScriptSerializer(context: Context) {
                 .flatMap(serializeDataTypeOption _)
         
         words.mkString(" ")
+    }
+   
+    def serializeDataType(dataType: DataType) = dataType match {
+        case dataType: DefaultDataType => serializeDefaultDataType(dataType)
     }
     
     def serializeColumn(model: ColumnModel) =

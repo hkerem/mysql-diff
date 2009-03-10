@@ -96,20 +96,26 @@ case class DataTypeOptions(ps: Seq[DataTypeOption])
     override def copy(options: Seq[DataTypeOption]) = new DataTypeOptions(options).asInstanceOf[this.type]
 }
 
-case class DataType(name: String, length: Option[Int], options: DataTypeOptions) {
+abstract case class DataType() {
+    def nameOption: Option[String]
+}
+
+case class DefaultDataType(name: String, length: Option[Int], options: DataTypeOptions) extends DataType() {
     require(name.toUpperCase == name, "data type name must be upper-case")
+    
+    override def nameOption = Some(name)
     
     def this(name: String, length: Option[Int]) =
         this(name, length, new DataTypeOptions(Nil))
     
     def withName(n: String) =
-        new DataType(n, this.length, this.options)
+        new DefaultDataType(n, this.length, this.options)
     
     def withLength(l: Option[Int]) =
-        new DataType(this.name, l, this.options)
+        new DefaultDataType(this.name, l, this.options)
     
     def withOptions(os: DataTypeOptions) =
-        new DataType(this.name, this.length, os)
+        new DefaultDataType(this.name, this.length, os)
     
     def overrideOptions(os: Seq[DataTypeOption]) =
         withOptions(this.options.overrideProperties(os))
@@ -132,32 +138,40 @@ abstract class DataTypes {
     def make(name: String, length: Option[Int]): DataType =
         make(name, length, new DataTypeOptions(Nil))
 
-    def make(name: String, length: Option[Int], options: DataTypeOptions) =
-        new DataType(name.toUpperCase, length, options)
+    def make(name: String, length: Option[Int], options: DataTypeOptions): DataType =
+        new DefaultDataType(name.toUpperCase, length, options)
     
     def resolveTypeNameAlias(name: String) = name.toUpperCase
     
-    def normalize(dt: DataType) = make(resolveTypeNameAlias(dt.name), dt.length, dt.options)
+    def normalize(dt: DataType) = dt match {
+        case dt: DefaultDataType => new DefaultDataType(resolveTypeNameAlias(dt.name), dt.length, dt.options)
+        case dt => dt
+    }
     
     def isAnyChar(name: String) = resolveTypeNameAlias(name).matches(".*CHAR")
-    def isAnyDateTime(name: String) = List("DATE", "TIME", "DATETIME", "TIMESTAMP") contains resolveTypeNameAlias(name)
-    def isAnyNumber(name: String) = resolveTypeNameAlias(name).matches("(|TINY|SMALL|BIG)INT(EGER)?") ||
-        (List("NUMBER", "FLOAT", "REAL", "DOUBLE", "DECIMAL", "NUMERIC") contains resolveTypeNameAlias(name))
+    
+    def isAnyDateTime(name: String) =
+        List("DATE", "TIME", "DATETIME", "TIMESTAMP") contains resolveTypeNameAlias(name)
+    
+    def isAnyNumber(name: String) =
+        resolveTypeNameAlias(name).matches("(|TINY|SMALL|BIG)INT(EGER)?") ||
+                (List("NUMBER", "FLOAT", "REAL", "DOUBLE", "DECIMAL", "NUMERIC")
+                        contains resolveTypeNameAlias(name))
     
     def isLengthIgnored(name: String) = false
     def isLengthAllowed(name: String) =
         !(isAnyDateTime(name) || resolveTypeNameAlias(name).matches("(TINY|MEDIUM|LONG|)(TEXT|BLOB)"))
 
     /** Equivelent without options counting */
-    def equivalent(typeA: DataType, typeB: DataType) = {
-        val a = normalize(typeA)
-        val b = normalize(typeB)
-        
-        if (a == b) true
-        else if (a.name != b.name) false
-        else if (isAnyNumber(a.name)) true // ignore size change: XXX: should rather know DB defaults
-        else if (isAnyDateTime(a.name)) true // probably
-        else a.name == b.name && a.length == b.length
+    def equivalent(a: DataType, b: DataType) = (normalize(a), normalize(b)) match {
+        case (a: DefaultDataType, b: DefaultDataType) =>
+            if (a == b) true
+            else if (a.name != b.name) false
+            else if (isAnyNumber(a.name)) true // ignore size change: XXX: should rather know DB defaults
+            else if (isAnyDateTime(a.name)) true // probably
+            else a.name == b.name && a.length == b.length
+        case (a, b) =>
+            a == b
     }
 }
 
