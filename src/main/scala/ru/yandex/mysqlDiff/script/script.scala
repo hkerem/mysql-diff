@@ -67,13 +67,20 @@ object TableDdlStatement {
     /** Something can be specified with column */
     abstract class ColumnPropertyDecl
     
+    case class References(table: String, columns: Seq[String],
+            updatePolicy: Option[ImportedKeyPolicy], deletePolicy: Option[ImportedKeyPolicy])
+    
     /** Either column property */
     case class ModelColumnProperty(columnProperty: ColumnProperty) extends ColumnPropertyDecl
     
     // Or shortcuts
     case object InlinePrimaryKey extends ColumnPropertyDecl
     case object InlineUnique extends ColumnPropertyDecl
-    case class InlineReferences(tableName: String, columnName: String) extends ColumnPropertyDecl
+    case class InlineReferences(references: References)
+        extends ColumnPropertyDecl
+    {
+        require(references.columns.length == 1)
+    }
     
     case class Column(name: String, dataType: DataType, properties: Seq[ColumnPropertyDecl]) extends Entry {
         def this(model: ColumnModel) =

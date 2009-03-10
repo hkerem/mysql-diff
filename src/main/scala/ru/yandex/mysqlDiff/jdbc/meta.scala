@@ -95,14 +95,25 @@ class MetaDao(jt: JdbcTemplate) {
     
     def findImportedKeys(catalog: String, schema: String, tableName: String): Seq[ForeignKeyModel] =
         execute { conn =>
+            import DatabaseMetaData._
+            def translatePolicy(value: Int) = value match {
+                case `importedKeyCascade` => ImportedKeyCascade
+                case `importedKeyRestrict` => ImportedKeyNoAction
+                case `importedKeyNoAction` => ImportedKeyNoAction
+                case `importedKeySetDefault` => ImportedKeySetDefault
+                case `importedKeySetNull` => ImportedKeySetNull
+            }
+                
             val rs = conn.getMetaData.getImportedKeys(catalog, schema, tableName)
 
             case class R(keyName: String, externalTableName: String,
-                    localColumnName: String, externalColumnName: String)
+                    localColumnName: String, externalColumnName: String,
+                    updateRule: Int, deleteRule: Int)
 
             val r = read(rs) { rs =>
                 R(rs.getString("FK_NAME"), rs.getString("PKTABLE_NAME"),
-                        rs.getString("FKCOLUMN_NAME"), rs.getString("PKCOLUMN_NAME"))
+                        rs.getString("FKCOLUMN_NAME"), rs.getString("PKCOLUMN_NAME"),
+                        rs.getInt("UPDATE_RULE"), rs.getInt("DELETE_RULE"))
             }
 
             // key name can be null
@@ -116,8 +127,10 @@ class MetaDao(jt: JdbcTemplate) {
                             " for key " + keyName
                     throw new IllegalStateException(m)
                 }
+                
                 ForeignKeyModel(Some(keyName), rows.map(_.localColumnName),
-                        externalTableNames.elements.next, rows.map(_.externalColumnName))
+                        externalTableNames.elements.next, rows.map(_.externalColumnName),
+                        Some(translatePolicy(rows.first.updateRule)), Some(translatePolicy(rows.first.deleteRule)))
             }
         }
    

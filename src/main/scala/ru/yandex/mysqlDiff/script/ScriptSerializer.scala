@@ -114,11 +114,23 @@ class ScriptSerializer(context: Context) {
         case OnUpdateCurrentTimestamp(false) => None
     }
     
+    def serializeImportedKeyPolicy(p: ImportedKeyPolicy) = p match {
+        case ImportedKeyNoAction => "NO ACTION"
+        case ImportedKeyCascade => "CASCADE"
+        case ImportedKeySetNull => "SET NULL"
+        case ImportedKeySetDefault => "SET DEFAULT"
+    }
+    
     def serializeColumnProperty(cp: ColumnPropertyDecl): Option[String] = cp match {
         case ModelColumnProperty(cp) => serializeModelColumnProperty(cp)
         case InlineUnique => Some("UNIQUE")
         case InlinePrimaryKey => Some("PRIMARY KEY")
-        case InlineReferences(table, columns) => Some("REFERENCES " + table + "(" + columns.mkString(", ") + ")")
+        case InlineReferences(References(table, Seq(column), updatePolicy, deletePolicy)) =>
+            val words = new ArrayBuffer[String]
+            words += "REFERENCES " + table + "(" + column + ")"
+            words ++= updatePolicy.map(p => "ON UPDATE " + serializeImportedKeyPolicy(p))
+            words ++= deletePolicy.map(p => "ON DELETE " + serializeImportedKeyPolicy(p))
+            Some(words.mkString(" "))
     }
     
     def serializeColumnProperty(cp: ColumnPropertyDecl, c: Column): Option[String] =
@@ -248,13 +260,16 @@ class ScriptSerializer(context: Context) {
     
     // XXX: handle MySQL specific stuff
     def serializeForeignKey(fk: ForeignKeyModel) = {
+        val ForeignKeyModel(name, localColumns, externalTable, externalColumns, updatePolicy, deletePolicy) = fk
         val words = new ArrayBuffer[String]
-        if (fk.name.isDefined) words += "CONSTRAINT " + fk.name.get
+        if (name.isDefined) words += "CONSTRAINT " + fk.name.get
         words += "FOREIGN KEY"
-        words += ("(" + fk.localColumns.mkString(", ") + ")")
+        words += ("(" + localColumns.mkString(", ") + ")")
         words += "REFERENCES"
-        words += fk.externalTable
-        words += ("(" + fk.externalColumns.mkString(", ") + ")")
+        words += externalTable
+        words += ("(" + externalColumns.mkString(", ") + ")")
+        words ++= updatePolicy.map(p => "ON UPDATE " + serializeImportedKeyPolicy(p))
+        words ++= deletePolicy.map(p => "ON DELETE " + serializeImportedKeyPolicy(p))
         words.mkString(" ")
     }
     

@@ -283,10 +283,18 @@ case class UniqueKeyModel(override val name: Option[String], override val column
 case class PrimaryKeyModel(override val name: Option[String], columns: Seq[String])
     extends ConstraintModel(name)
 
+abstract class ImportedKeyPolicy
+object ImportedKeyNoAction extends ImportedKeyPolicy
+object ImportedKeyCascade extends ImportedKeyPolicy
+object ImportedKeySetNull extends ImportedKeyPolicy
+object ImportedKeySetDefault extends ImportedKeyPolicy
+
 case class ForeignKeyModel(override val name: Option[String],
         localColumns: Seq[String],
         externalTable: String,
-        externalColumns: Seq[String])
+        externalColumns: Seq[String],
+        updatePolicy: Option[ImportedKeyPolicy],
+        deletePolicy: Option[ImportedKeyPolicy])
     extends ConstraintModel(name)
 {
     require(localColumns.length == externalColumns.length)

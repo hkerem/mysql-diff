@@ -25,9 +25,9 @@ object PostgresqlParserCombinatorTests extends SqlParserCombinatorTests(Postgres
                 "CONSTRAINT fk1 FOREIGN KEY (z) REFERENCES c (z1))")
         t.foreignKeys must haveSize(2)
         t.foreignKeys(0).fk must beLike {
-            case ForeignKeyModel(None, Seq("x", "y"), "b", Seq("x1", "y1")) => true }
+            case ForeignKeyModel(None, Seq("x", "y"), "b", Seq("x1", "y1"), None, None) => true }
         t.foreignKeys(1).fk must beLike {
-            case ForeignKeyModel(Some("fk1"), Seq("z"), "c", Seq("z1")) => true }
+            case ForeignKeyModel(Some("fk1"), Seq("z"), "c", Seq("z1"), None, None) => true }
     }
     
 }

@@ -45,8 +45,11 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
                 model.UniqueKeyModel(n1.orElse(n2), cs) }
     
     override def fk: Parser[TableDdlStatement.Entry] =
-        (constraint <~ "FOREIGN KEY") ~ opt(name) ~ nameList ~ ("REFERENCES" ~> name) ~ nameList ^^
-            { case cn ~ in ~ lcs ~ et ~ ecs => MysqlForeignKey(ForeignKeyModel(cn, lcs, et, ecs), in) }
+        (constraint <~ "FOREIGN KEY") ~ opt(name) ~ nameList ~ references ^^
+            { case cn ~ in ~ lcs ~ r =>
+                    MysqlForeignKey(
+                            ForeignKeyModel(cn, lcs, r.table, r.columns, r.updatePolicy, r.deletePolicy),
+                            in) }
 
    
     override def tableOption: Parser[TableOption] = (
@@ -104,7 +107,8 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         fks must haveSize(1)
         fks.first must beLike {
             case MysqlForeignKey(
-                    ForeignKeyModel(Some("dc_fk"), Seq("dc_id"), "datacenters", Seq("id")), Some("dc_idx"))
+                    ForeignKeyModel(Some("dc_fk"), Seq("dc_id"), "datacenters", Seq("id"), None, None),
+                    Some("dc_idx"))
                 => true
         }
     }

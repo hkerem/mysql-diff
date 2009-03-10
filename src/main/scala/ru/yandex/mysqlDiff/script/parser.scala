@@ -124,9 +124,32 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def uniqueAttr = "UNIQUE" ^^^ TableDdlStatement.InlineUnique
     def pkAttr = "PRIMARY" ~ "KEY" ^^^ TableDdlStatement.InlinePrimaryKey
     
-    def referencesAttr = ("REFERENCES" ~> name <~ "(") ~ name <~ ")" ^^
-        { case t ~ c => TableDdlStatement.InlineReferences(t, c) }
+    def importedKeyPolicy: Parser[ImportedKeyPolicy] =
+        ( ("NO ACTION" ^^^ ImportedKeyNoAction)
+        | ("RESTRICT" ^^^ ImportedKeyNoAction)
+        | ("CASCADE" ^^^ ImportedKeyCascade)
+        | ("SET NULL" ^^^ ImportedKeySetNull)
+        | ("SET DEFAULT" ^^^ ImportedKeySetNull)
+        )
     
+    private abstract case class OnSomething(p: ImportedKeyPolicy)
+    private case class OnDelete(override val p: ImportedKeyPolicy) extends OnSomething(p)
+    private case class OnUpdate(override val p: ImportedKeyPolicy) extends OnSomething(p)
+    
+    private def onSomething: Parser[OnSomething] =
+        ( ( "ON UPDATE" ~> importedKeyPolicy ^^ { p => OnUpdate(p) } )
+        | ( "ON DELETE" ~> importedKeyPolicy ^^ { p => OnDelete(p) } )
+        )
+    
+    def references = "REFERENCES" ~> name ~ nameList ~ rep(onSomething) ^^
+        { case t ~ cs ~ onss =>
+            TableDdlStatement.References(t, cs,
+                    onss.find(_.isInstanceOf[OnUpdate]).map(_.p),
+                    onss.find(_.isInstanceOf[OnDelete]).map(_.p)) }
+
+    
+    def referencesAttr = references ^^ { r => TableDdlStatement.InlineReferences(r) }
+     
     def columnProperty: Parser[ColumnProperty] = nullability | defaultValue
     
     def columnAttr: Parser[TableDdlStatement.ColumnPropertyDecl] =
@@ -200,8 +223,9 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
             { case n ~ cs => model.UniqueKeyModel(n, cs) }
     
     def fkModel: Parser[ForeignKeyModel] =
-        (constraint <~ "FOREIGN KEY") ~ nameList ~ ("REFERENCES" ~> name) ~ nameList ^^
-            { case cn ~ lcs ~ et ~ ecs => ForeignKeyModel(cn, lcs, et, ecs) }
+        (constraint <~ "FOREIGN KEY") ~ nameList ~ references ^^
+            { case cn ~ lcs ~ r =>
+                    ForeignKeyModel(cn, lcs, r.table, r.columns, r.updatePolicy, r.deletePolicy) }
     
     def fk: Parser[TableDdlStatement.Entry] = fkModel ^^ { fk => TableDdlStatement.ForeignKey(fk) }
     
@@ -510,7 +534,8 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     "parse references from column" in {
         val t = parseCreateTableRegular(
                 "CREATE TABLE a (id INT PRIMARY KEY, city_id INT REFERENCES city(id), name VARCHAR(10) UNIQUE)")
-        t.column("city_id").properties must beSameSeqAs(List(InlineReferences("city", "id")))
+        t.column("city_id").properties must beLike {
+            case Seq(InlineReferences(References("city", Seq("id"), None, None))) => true }
         t.column("id").properties must beSameSeqAs(List(InlinePrimaryKey))
         t.column("name").properties must beSameSeqAs(List(InlineUnique))
     }
