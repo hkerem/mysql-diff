@@ -14,6 +14,8 @@ object MysqlTableDdlStatement {
     case class MysqlForeignKey(fk: ForeignKeyModel, indexName: Option[String]) extends Entry
 }
 
+case class MysqlSetNamesStatement(value: String) extends ScriptStatement
+
 class MysqlScriptSerializer(context: Context) extends ScriptSerializer(context) {
     override def quoteName(name: String) = "`" + name + "`"
 }

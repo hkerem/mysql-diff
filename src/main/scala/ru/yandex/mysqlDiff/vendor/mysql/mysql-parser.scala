@@ -83,6 +83,10 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
             ("CREATE TABLE" ~> opt("IF NOT EXISTS")) ~ name ~ optBraces("LIKE" ~> name) ^^ {
                 case ifne ~ name ~ likeName => CreateTableLikeStatement(name, ifne.isDefined, likeName) }
     
+    def setNames: Parser[MysqlSetNamesStatement] = "SET NAMES" ~> stringValue ^^
+            { s => MysqlSetNamesStatement(s.value) }
+    
+    override def topLevel = setNames | super.topLevel
 }
 
 object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext) {
