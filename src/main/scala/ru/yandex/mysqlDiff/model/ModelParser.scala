@@ -33,7 +33,7 @@ case class ModelParser(val context: Context) {
     
     private def parseColumn(c: Column) = {
         val Column(name, dataType, attrs) = c
-        if (dataType.nameOption == Some("TIMESTAMP") && c.modelProperties.defaultValue.isEmpty)
+        if (dataType.name == "TIMESTAMP" && c.modelProperties.defaultValue.isEmpty)
             // because of MySQL-specifc features that are hard to deal with
             throw new Exception(
                     "TIMESTAMP without DEFAULT value is prohibited, column " + name) // XXX: report table

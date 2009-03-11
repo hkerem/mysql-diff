@@ -6,6 +6,13 @@ import script._
 class MysqlParserCombinator(context: Context) extends SqlParserCombinator(context) {
     import MysqlTableDdlStatement._
     
+    def enum: Parser[MysqlEnumDataType] = "ENUM (" ~> rep1sep(stringValue, ",") <~ ")" ^^
+        { case s => MysqlEnumDataType(s.map(_.value)) }
+    def set: Parser[MysqlSetDataType] = "SET (" ~> rep1sep(stringValue, ",") <~ ")" ^^
+        { case s => MysqlSetDataType(s.map(_.value)) }
+    
+    override def dataType = enum | set | super.dataType
+    
     // http://dev.mysql.com/doc/refman/5.1/en/create-table.html
     override def dataTypeOption = (
         super.dataTypeOption
@@ -120,6 +127,12 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         t.uniqueKeys.first must beLike {
             case UniqueKey(UniqueKeyModel(Some("login_key"), Seq("login"))) => true
         }
+    }
+    
+    "enum" in {
+        parse(enum)("ENUM('week', 'month')") must beLike {
+            case MysqlEnumDataType(Seq("week", "month")) => true }
+        parse(createTable)("CREATE TABLE we (a ENUM('aa', 'bb'))")
     }
     
 }

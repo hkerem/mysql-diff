@@ -197,7 +197,7 @@ object MysqlJdbcModelExtractorTests
         assert("bananas" == table.name)
         
         assert("id" == table.columns(0).name)
-        assert("INT" == table.columns(0).dataType.nameOption.get)
+        assert("INT" == table.columns(0).dataType.name)
         
         assert("color" == table.columns(1).name)
         table.columns(1).dataType must beLike {

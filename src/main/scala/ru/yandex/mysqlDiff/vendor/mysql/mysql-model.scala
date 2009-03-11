@@ -31,6 +31,15 @@ case object MysqlCollateType extends DataTypeOptionType {
 }
 
 
+// XXX: character set, collation
+case class MysqlEnumDataType(values: Seq[String]) extends DataType {
+    override val name = "ENUM"
+}
+case class MysqlSetDataType(values: Seq[String]) extends DataType {
+    override val name = "SET"
+}
+
+
 object MysqlDataTypes extends DataTypes {
     def int = make("INT")
 

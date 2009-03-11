@@ -97,13 +97,11 @@ case class DataTypeOptions(ps: Seq[DataTypeOption])
 }
 
 abstract case class DataType() {
-    def nameOption: Option[String]
+    def name: String
 }
 
-case class DefaultDataType(name: String, length: Option[Int], options: DataTypeOptions) extends DataType() {
+case class DefaultDataType(override val name: String, length: Option[Int], options: DataTypeOptions) extends DataType() {
     require(name.toUpperCase == name, "data type name must be upper-case")
-    
-    override def nameOption = Some(name)
     
     def this(name: String, length: Option[Int]) =
         this(name, length, new DataTypeOptions(Nil))
