@@ -3,7 +3,18 @@ package ru.yandex.mysqlDiff.vendor.mysql
 import model._
 import script._
 
+class MysqlLexical extends script.SqlLexical {
+    val hexDigits = Set[Char]() ++ "0123456789abcdefABCDEF".toArray
+    def hexDigit = elem("hex digit", hexDigits.contains(_))
+    
+    override def token: Parser[Token] =
+        ( '0' ~ 'x' ~ rep1(hexDigit) ^^ { case o ~ x ~ b => NumericLit("0x" + b.mkString("")) }
+        | super.token )
+}
+
 class MysqlParserCombinator(context: Context) extends SqlParserCombinator(context) {
+    override val lexical = new MysqlLexical
+
     import MysqlTableDdlStatement._
     
     def enum: Parser[MysqlEnumDataType] = "ENUM (" ~> rep1sep(stringValue, ",") <~ ")" ^^
@@ -25,6 +36,10 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     def nowValue: Parser[SqlValue] =
         // please keep spaces
         ("NOW ( )" | "CURRENT_TIMESTAMP") ^^^ NowValue
+    
+    override def naturalNumber: Parser[Int] = numericLit ^^
+            { case x if x.startsWith("0x") => Integer.parseInt(x.substring(2), 16)
+              case x => x.toInt }
     
     override def sqlValue = super.sqlValue | nowValue
     
@@ -139,6 +154,10 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         parse(createTable)("CREATE TABLE we (a ENUM('aa', 'bb'))")
     }
     
+    "hex number" in {
+        parse(numberValue)("0x100") must_== NumberValue(0x100)
+        parse(numberValue)("0xabCDE") must_== NumberValue(0xabcde)
+    }
 }
 
 // vim: set ts=4 sw=4 et:

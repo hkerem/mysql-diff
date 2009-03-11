@@ -45,6 +45,9 @@ class SqlLexical extends StdLexical {
       | ('-' ~ '-' ~ rep(chrExcept(EofCh, '\n')))
     )
     
+    // All operators must be listed here
+    delimiters += ("(", ")", "=", ",", ";", "=", "!=", "-", "*")
+    
 }
 
 /*
@@ -56,9 +59,6 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     override val lexical = new SqlLexical
     
     import CreateTableStatement._
-    
-    // All operators must be listed here
-    lexical.delimiters += ("(", ")", "=", ",", ";", "=", "!=", "-", "*")
     
     def trueKeyword(chars: String): Parser[String] = {
         def itIs(elem: Elem) = elem.isInstanceOf[lexical.Identifier] && elem.chars.equalsIgnoreCase(chars)
@@ -106,6 +106,11 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         )
     
     def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | booleanValue | temporalValue
+    
+    def cast: Parser[CastExpr] = "CAST (" ~> sqlExpr ~ ("AS" ~> dataType <~ ")") ^^
+            { case e ~ t => CastExpr(e, t) }
+    
+    def sqlExpr: Parser[SqlExpr] = sqlValue | cast
     
     // Data type options are defined in subclasses */
     def dataTypeOption: Parser[DataTypeOption] = failure("no data type option")
@@ -321,7 +326,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     /// DML
     
-    def insertDataRow: Parser[Seq[SqlValue]] = "(" ~> rep1sep(sqlValue, ",") <~ ")"
+    def insertDataRow: Parser[Seq[SqlExpr]] = "(" ~> rep1sep(sqlExpr, ",") <~ ")"
     
     def insert: Parser[InsertStatement] =
         (("INSERT" ~> opt("IGNORE") <~ "INTO") ~ name ~ opt(nameList) <~ "VALUES") ~ rep1sep(insertDataRow, ",") ^^

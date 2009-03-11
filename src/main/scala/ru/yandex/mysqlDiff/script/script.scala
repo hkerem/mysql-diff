@@ -176,7 +176,7 @@ case class DropViewStatement(name: String) extends ViewDdlStatement(name)
 abstract class DmlStatement extends ScriptStatement
 
 case class InsertStatement(table: String, ignore: Boolean,
-        columns: Option[Seq[String]], data: Seq[Seq[SqlValue]])
+        columns: Option[Seq[String]], data: Seq[Seq[SqlExpr]])
     extends DmlStatement
 {
     require(table.length > 0)

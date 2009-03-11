@@ -104,6 +104,16 @@ class ScriptSerializer(context: Context) {
             n + " '" + t.value + "'"
     }
     
+    def serializeCast(cast: CastExpr) = {
+        val CastExpr(e, as) = cast
+        "CAST(" + serializeExpr(e) + " AS " + serializeDataType(as) + ")"
+    }
+    
+    def serializeExpr(expr: SqlExpr): String = expr match {
+        case v: SqlValue => serializeValue(v)
+        case s: CastExpr => serializeCast(s)
+    }
+    
     def serializeModelColumnProperty(cp: ColumnProperty): Option[String] = cp match {
         case Nullability(true) => Some("NULL")
         case Nullability(false) => Some("NOT NULL")
@@ -184,7 +194,7 @@ class ScriptSerializer(context: Context) {
         if (is.columns.isDefined)
             r += ("(" + is.columns.get.mkString(", ") + ")")
         r += "VALUES"
-        r += is.data.map(row => "(" + row.map(serializeValue _).mkString(", ") + ")").mkString(", ")
+        r += is.data.map(row => "(" + row.map(serializeExpr _).mkString(", ") + ")").mkString(", ")
         r.mkString(" ")
         // XXX: untested
     }
