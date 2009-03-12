@@ -50,15 +50,6 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     override def columnProperty =
         super.columnProperty | autoIncrementability | onUpdateCurrentTimestamp
     
-    def tableDefaultCharset: Parser[TableOption] =
-        opt("DEFAULT") ~> ("CHARSET" | ("CHARACTER SET")) ~> opt("=") ~> ident ^^
-            { MysqlCharacterSetTableOption(_) } 
-    def tableCollate: Parser[TableOption] =
-        "COLLATE" ~> opt("=") ~> ident ^^ { MysqlCollateTableOption(_) }
-    
-    def tableEngine: Parser[TableOption] =
-        ("ENGINE" | "TYPE") ~> opt("=") ~> ident ^^ { MysqlEngineTableOption(_) }
-     
     override def ukModel: Parser[UniqueKeyModel] =
         (constraint <~ "UNIQUE" <~ opt("INDEX" | "KEY")) ~ opt(name) ~ nameList ^^
             { case n1 ~ n2 ~ cs =>
@@ -74,11 +65,26 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
                             in) }
 
    
-    override def tableOption: Parser[TableOption] = (
-        tableEngine
-      | tableDefaultCharset
-      | tableCollate
-    )
+    def tableDefaultCharset: Parser[TableOption] =
+        opt("DEFAULT") ~> ("CHARSET" | ("CHARACTER SET")) ~> opt("=") ~> ident ^^
+            { MysqlCharacterSetTableOption(_) } 
+    def tableCollate: Parser[TableOption] =
+        "COLLATE" ~> opt("=") ~> ident ^^ { MysqlCollateTableOption(_) }
+    
+    def tableEngine: Parser[TableOption] =
+        ("ENGINE" | "TYPE") ~> opt("=") ~> ident ^^ { MysqlEngineTableOption(_) }
+    
+    def tableMinMaxRows: Parser[TableOption] =
+        ( "MIN_ROWS" ~> opt("=") ~> intNumber ^^ { MysqlMinRowsTableOption(_) }
+        | "MAX_ROWS" ~> opt("=") ~> intNumber ^^ { MysqlMaxRowsTableOption(_) }
+        )
+    
+    override def tableOption: Parser[TableOption] =
+        ( tableEngine
+        | tableDefaultCharset
+        | tableCollate
+        | tableMinMaxRows
+        )
     
     def convertToCharacterSet =
         "CONVERT TO CHARACTER SET" ~> name ~ opt("COLLATE" ~> name) ^^
@@ -137,6 +143,13 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
                     Some("dc_idx"))
                 => true
         }
+    }
+    
+    "TABLE options" in {
+        val t = parse(createTableRegular)("CREATE TABLE a (id INT) ENGINE=InnoDB MAX_ROWS 10 MIN_ROWS=20")
+        t.options must contain(MysqlMaxRowsTableOption(10))
+        t.options must contain(MysqlMinRowsTableOption(20))
+        t.options must contain(MysqlEngineTableOption("InnoDB"))
     }
     
     "CREATE TABLE named UNIQUE" in {

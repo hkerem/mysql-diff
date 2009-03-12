@@ -85,6 +85,145 @@ object MysqlCollateTableOptionType extends TableOptionType {
     override type Value = MysqlCollateTableOption
 }
 
+case class MysqlAutoIncrementTableOption(value: Int) extends TableOption {
+    override def propertyType = MysqlAutoIncrementTableOptionType
+}
+
+case object MysqlAutoIncrementTableOptionType extends TableOptionType {
+    override type Value = MysqlAutoIncrementTableOption
+}
+
+case class MysqlAvgRowLengthTableOption(value: Int) extends TableOption {
+    override def propertyType = MysqlAvgRowLengthTableOptionType
+}
+
+case object MysqlAvgRowLengthTableOptionType extends TableOptionType {
+    override type Value = MysqlAvgRowLengthTableOption
+}
+
+case class MysqlChecksumTableOption(value: Boolean) extends TableOption {
+    override def propertyType = MysqlChecksumTableOptionType
+}
+
+case object MysqlChecksumTableOptionType extends TableOptionType {
+    override type Value = MysqlChecksumTableOption
+}
+
+case class MysqlCommentTableOption(value: String) extends TableOption {
+    override def propertyType = MysqlCommentTableOptionType
+}
+
+case object MysqlCommentTableOptionType extends TableOptionType {
+    override type Value = MysqlCommentTableOption
+}
+
+case class MysqlConnectionTableOption(value: String) extends TableOption {
+    override def propertyType = MysqlConnectionTableOptionType
+}
+
+case object MysqlConnectionTableOptionType extends TableOptionType {
+    override type Value = MysqlConnectionTableOption
+}
+
+case class MysqlDataDirectoryTableOption(value: String) extends TableOption {
+    override def propertyType = MysqlDataDirectoryTableOptionType
+}
+
+case object MysqlDataDirectoryTableOptionType extends TableOptionType {
+    override type Value = MysqlDataDirectoryTableOption
+}
+
+case class MysqlDelayKeyWriteTableOption(value: Int) extends TableOption {
+    override def propertyType = MysqlDelayKeyWriteTableOptionType
+}
+
+case object MysqlDelayKeyWriteTableOptionType extends TableOptionType {
+    override type Value = MysqlDelayKeyWriteTableOption
+}
+
+case class MysqlIndexDirectoryTableOption(value: String) extends TableOption {
+    override def propertyType = MysqlIndexDirectoryTableOptionType
+}
+
+case object MysqlIndexDirectoryTableOptionType extends TableOptionType {
+    override type Value = MysqlIndexDirectoryTableOption
+}
+
+// XXX: should be enum
+case class MysqlInsertMethodTableOption(value: String) extends TableOption {
+    override def propertyType = MysqlInsertMethodTableOptionType
+}
+
+case object MysqlInsertMethodTableOptionType extends TableOptionType {
+    override type Value = MysqlInsertMethodTableOption
+}
+
+case class MysqlKeyBlockSizeTableOption(value: Int) extends TableOption {
+    override def propertyType = MysqlKeyBlockSizeTableOptionType
+}
+
+case object MysqlKeyBlockSizeTableOptionType extends TableOptionType {
+    override type Value = MysqlKeyBlockSizeTableOption
+}
+
+case class MysqlMaxRowsTableOption(value: Int) extends TableOption {
+    override def propertyType = MysqlMaxRowsTableOptionType
+}
+
+case object MysqlMaxRowsTableOptionType extends TableOptionType {
+    override type Value = MysqlMaxRowsTableOption
+}
+
+case class MysqlMinRowsTableOption(value: Int) extends TableOption {
+    override def propertyType = MysqlMinRowsTableOptionType
+}
+
+case object MysqlMinRowsTableOptionType extends TableOptionType {
+    override type Value = MysqlMinRowsTableOption
+}
+
+case class MysqlPackKeysTableOption(value: Int) extends TableOption {
+    override def propertyType = MysqlPackKeysTableOptionType
+}
+
+case object MysqlPackKeysTableOptionType extends TableOptionType {
+    override type Value = MysqlPackKeysTableOption
+}
+
+case class MysqlPasswordTableOption(value: String) extends TableOption {
+    override def propertyType = MysqlPasswordTableOptionType
+}
+
+case object MysqlPasswordTableOptionType extends TableOptionType {
+    override type Value = MysqlPasswordTableOption
+}
+
+case class MysqlRowFormatTableOption(value: String) extends TableOption {
+    override def propertyType = MysqlRowFormatTableOptionType
+}
+
+case object MysqlRowFormatTableOptionType extends TableOptionType {
+    override type Value = MysqlRowFormatTableOption
+}
+
+// XXX: write something meaningful
+case class MysqlTablespaceTableOption(value: Int) extends TableOption {
+    override def propertyType = MysqlTablespaceTableOptionType
+}
+
+case object MysqlTablespaceTableOptionType extends TableOptionType {
+    override type Value = MysqlTablespaceTableOption
+}
+
+case class MysqlUnionTableOption(value: Seq[String]) extends TableOption {
+    override def propertyType = MysqlUnionTableOptionType
+}
+
+case object MysqlUnionTableOptionType extends TableOptionType {
+    override type Value = MysqlUnionTableOption
+}
+
+
 class MysqlModelParser(override val context: Context) extends ModelParser(context) {
     import context._
     
