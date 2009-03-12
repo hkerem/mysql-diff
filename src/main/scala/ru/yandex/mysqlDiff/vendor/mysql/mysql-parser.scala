@@ -139,13 +139,20 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         }
     }
     
-    "named UNIQUE" in {
+    "CREATE TABLE named UNIQUE" in {
         val t = parseCreateTableRegular(
             "CREATE TABLE users (login VARCHAR(10), UNIQUE KEY login_key(login))")
         t.uniqueKeys must haveSize(1)
         t.uniqueKeys.first must beLike {
             case UniqueKey(UniqueKeyModel(Some("login_key"), Seq("login"))) => true
         }
+    }
+    
+    "parse ALTER TABLE ADD named UNIQUE INDEX" in {
+        val a = parse(alterTable)("ALTER TABLE event ADD UNIQUE INDEX idx2 (cr, d, ex)")
+        a must beLike {
+            case AlterTableStatement("event",
+                    Seq(AddEntry(UniqueKey(UniqueKeyModel(Some("idx2"), Seq("cr", "d", "ex")))))) => true }
     }
     
     "enum" in {

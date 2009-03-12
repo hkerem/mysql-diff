@@ -217,6 +217,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def indexColNameList: Parser[Seq[String]] = "(" ~> repsep(indexColName, ",") <~ ")"
     
+    // XXX: not sure name conforms ANSI SQL
     def indexModel: Parser[IndexModel] =
         ("KEY" | "INDEX") ~> opt(name) ~ indexColNameList ^^
             { case n ~ cs => model.IndexModel(n, cs) }
@@ -313,9 +314,9 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def alterTableOption = tableOption ^^ { o => TableDdlStatement.ChangeTableOption(o) }
     
-    def alterSpecification: Parser[TableDdlStatement.Operation] = addColumn | addIndex | addPk | addUk | addFk |
+    def alterSpecification: Parser[TableDdlStatement.Operation] = addIndex | addPk | addUk | addFk | addColumn |
         alterColumn | changeColumn | modifyColumn |
-        dropColumn | dropPk | dropKey |
+        dropPk | dropKey | dropColumn |
         dropFk | disableEnableKeys | alterTableRename | alterTableOrderBy | alterTableOption
     
     // http://dev.mysql.com/doc/refman/5.1/en/alter-table.html
@@ -588,6 +589,13 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         a must beLike {
             case AlterTableStatement("convert_queue",
                     Seq(AddEntry(UniqueKey(UniqueKeyModel(None, Seq("user_id", "file_id")))))) => true }
+    }
+    
+    "parse ALTER TABLE DROP INDEX" in {
+        val a = parse(alterTable)("ALTER TABLE event DROP INDEX idx_event__query2")
+        a must beLike {
+            case AlterTableStatement("event",
+                Seq(DropIndex("idx_event__query2"))) => true }
     }
     
     "parse ALTER TABLE ALTER COLUMN SET DEFAULT" in {
