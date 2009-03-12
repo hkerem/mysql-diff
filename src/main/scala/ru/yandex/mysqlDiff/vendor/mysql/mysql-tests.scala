@@ -98,6 +98,10 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
         resultModel.options.properties must contain(MysqlEngineTableOption("InnoDB"))
     }
     
+    "ENUM" in {
+        checkTable("CREATE TABLE users (id INT, department ENUM('dev', 'mngr', 'adm') DEFAULT 'mngr')")
+    }
+    
     "bug with character set implies collation" in {
         jt.execute("DROP TABLE IF EXISTS moderated_tags")
         jt.execute("CREATE TABLE moderated_tags (tag VARCHAR(255) CHARACTER SET utf8 NOT NULL, type INT(11) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
@@ -124,6 +128,11 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
     "BOOLEAN with DEFAULT TRUE" in {
         checkTable(
             "CREATE TABLE boolean_with_default_true (available BOOLEAN NOT NULL default TRUE)")
+    }
+    
+    "BOOLEAN with DEFAULT 1" in {
+        checkTable(
+            "CREATE TABLE boolean_with_default_true (available BOOLEAN NOT NULL default 1)")
     }
 }
 

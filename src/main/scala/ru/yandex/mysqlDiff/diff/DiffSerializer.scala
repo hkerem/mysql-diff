@@ -3,6 +3,8 @@ package ru.yandex.mysqlDiff.diff
 import model._
 import script._
 
+import Implicits._
+
 /**
  * Serialize diff model to script.
  */
@@ -22,10 +24,14 @@ class DiffSerializer(val context: Context) {
     }
     
     def dropExtraStmt(k: TableExtra) = k match {
-        case i: IndexModel => TableDdlStatement.DropIndex(i.name.get)
-        case _: PrimaryKeyModel => TableDdlStatement.DropPrimaryKey
-        case u: UniqueKeyModel => TableDdlStatement.DropUniqueKey(u.name.get)
-        case f: ForeignKeyModel => TableDdlStatement.DropForeignKey(f.name.get)
+        case i: IndexModel =>
+            TableDdlStatement.DropIndex(i.name.getOrThrow("cannot drop unnamed index"))
+        case _: PrimaryKeyModel =>
+            TableDdlStatement.DropPrimaryKey
+        case u: UniqueKeyModel =>
+            TableDdlStatement.DropUniqueKey(u.name.getOrThrow("cannot drop unnamed unique key"))
+        case f: ForeignKeyModel =>
+            TableDdlStatement.DropForeignKey(f.name.getOrThrow("cannot drop unnamed foreign key"))
     }
     
     def createExtraStmt(k: TableExtra) = k match {

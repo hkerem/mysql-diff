@@ -127,7 +127,7 @@ class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
             val mysqlColumns = getMysqlColumns(tableName)
             
             read(columns) { columns =>
-                var base = parseTableColumn(columns)
+                val base = parseTableColumn(columns)
                 
                 val mysqlColumn = mysqlColumns.find(_.columnName == base.name).get
 
@@ -135,6 +135,12 @@ class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
                     // http://bugs.mysql.com/36699
                     if (true) mysqlColumn.columnDefault
                     else columns.getString("COLUMN_DEF")
+                
+                val forceDataType =
+                    if (mysqlColumn.columnType.toUpperCase.matches("(ENUM|SET)\\b.*"))
+                        Some(MysqlParserCombinator.parseDataType(mysqlColumn.columnType))
+                    else
+                        None
                 
                 // XXX: fetch
                 val isUnsigned = false
@@ -149,8 +155,8 @@ class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
                 val dataTypeOptions = Seq[DataTypeOption]() ++ characterSet ++ collate
                 
                 val dataType = base.dataType match {
+                    case _ if forceDataType.isDefined => forceDataType.get
                     case dataType: DefaultDataType => dataType.overrideOptions(dataTypeOptions)
-                    case dataType => dataType
                 }
                 
                 val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
@@ -183,10 +189,10 @@ class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
 object MysqlJdbcModelExtractorTests
     extends JdbcModelExtractorTests(MysqlTestDataSourceParameters.connectedContext)
 {
-    import MysqlContext._
-    import MysqlTestDataSourceParameters._
+    import MysqlTestDataSourceParameters.connectedContext._
+    import MysqlTestDataSourceParameters.connectedContext.context._
     
-    import jdbcTemplate.execute
+    import jt.execute
     
     "Simple Table" in {
         dropTable("bananas")
@@ -324,6 +330,16 @@ object MysqlJdbcModelExtractorTests
         
         b.dataType.asInstanceOf[DefaultDataType].options.properties must contain(MysqlCharacterSet("utf8"))
         b.dataType.asInstanceOf[DefaultDataType].options.properties must contain(MysqlCollate("utf8_bin"))
+    }
+    
+    "ENUM" in {
+        ddlTemplate.recreateTable(
+            "CREATE TABLE s_ev (season ENUM('winter', 'spring', 'summer', 'autumn')," +
+            "   probability ENUM('yes', 'no', 'maybe', 'definitely') DEFAULT 'yes')")
+        val table = extractTable("s_ev")
+        table.column("season").dataType must_== new MysqlEnumDataType(Seq("winter", "spring", "summer", "autumn"))
+        table.column("season").defaultValue must_== Some(NullValue)
+        table.column("probability").defaultValue must_== Some(StringValue("yes"))
     }
     
     "DATETIME without length" in {

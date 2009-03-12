@@ -353,12 +353,12 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     def uniqueKeys = extras.flatMap { case u: UniqueKeyModel => Some(u); case _ => None }
     def findUniqueKey(name: String) = uniqueKeys.find(_.name == Some(name))
     def uniqueKey(name: String) =
-        findUniqueKey(name).getOrThrow("table " + name + " has no unique key " + name)
+        findUniqueKey(name).getOrThrow("table " + this.name + " has no unique key " + name)
     
     def foreignKeys = extras.flatMap { case f: ForeignKeyModel => Some(f); case _ => None }
     def findForeignKey(name: String) = foreignKeys.find(_.name == Some(name))
     def foreignKey(name: String) =
-        findForeignKey(name).getOrThrow("table " + name + " has no foreign key " + name)
+        findForeignKey(name).getOrThrow("table " + this.name + " has no foreign key " + name)
     
     def findColumn(name: String) = columns.find(_.name == name)
     def column(name: String) = findColumn(name).getOrThrow("table " + this.name + " has no column " + name)

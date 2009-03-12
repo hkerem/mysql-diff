@@ -22,6 +22,13 @@ class DdlTemplate(connectedContext: ConnectedContext) {
         tableNames.map(_.toUpperCase) contains name.toUpperCase
     }
     
+    /** DROP TABLE IF EXISTS, then execute script */
+    def recreateTable(script: String) = {
+        val cts = sqlParserCombinator.parseCreateTableRegular(script)
+        dropTableIfExists(cts.name)
+        jt.execute(script)
+    }
+    
 }
 
 // vim: set ts=4 sw=4 et:

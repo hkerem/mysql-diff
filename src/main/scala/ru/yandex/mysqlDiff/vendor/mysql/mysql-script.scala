@@ -18,6 +18,13 @@ case class MysqlSetNamesStatement(value: String) extends ScriptStatement
 
 class MysqlScriptSerializer(context: Context) extends ScriptSerializer(context) {
     override def quoteName(name: String) = "`" + name + "`"
+    
+    override def serializeDataType(dataType: DataType) = dataType match {
+        // XXX: test
+        case MysqlEnumDataType(values) => "ENUM(" + values.map(serializeString _).mkString(", ") + ")"
+        case MysqlSetDataType(values) => "SET(" + values.map(serializeString _).mkString(", ") + ")"
+        case _ => super.serializeDataType(dataType)
+    }
 }
 
 // vim: set ts=4 sw=4 et:

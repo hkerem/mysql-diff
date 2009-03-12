@@ -34,9 +34,19 @@ case object MysqlCollateType extends DataTypeOptionType {
 // XXX: character set, collation
 case class MysqlEnumDataType(values: Seq[String]) extends DataType {
     override val name = "ENUM"
+    
+    override def equals(that: Any) = that match {
+        case that: MysqlEnumDataType => this.values.toList == that.values.toList
+        case _ => false
+    }
 }
 case class MysqlSetDataType(values: Seq[String]) extends DataType {
     override val name = "SET"
+    
+    override def equals(that: Any) = that match {
+        case that: MysqlSetDataType => this.values.toList == that.values.toList
+        case _ => false
+    }
 }
 
 
@@ -55,9 +65,15 @@ object MysqlDataTypes extends DataTypes {
 
 object MysqlDataTypesTests extends org.specs.Specification {
     import MysqlContext._
-
+    
     "TINYINT(1) equivalent to BIT" in {
         dataTypes.equivalent(dataTypes.make("BIT"), dataTypes.make("TINYINT", Some(1))) must beTrue
+    }
+    
+    "ENUM('abc', 'def') equivalent" in {
+        dataTypes.equivalent(
+            new MysqlEnumDataType(List("abc", "def")),
+            new MysqlEnumDataType(Seq("abc", "def"))) must beTrue
     }
 }
 

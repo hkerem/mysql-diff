@@ -366,6 +366,9 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def parse(text: String): Seq[Any] =
         parse(script)(text)
     
+    def parseDataType(text: String) =
+        parse(dataType)(text)
+    
     def parseCreateTable(text: String) =
         parse(createTable)(text)
     

@@ -62,7 +62,7 @@ case class DiffMaker(val context: Context) {
                         (a: DataTypeOption, b: DataTypeOption) => a.propertyType == b.propertyType
                 )._3.forall { case (a, b) => a == b }
             case (a, b) =>
-                false
+                true
         }
     }
     

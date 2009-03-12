@@ -75,6 +75,9 @@ class ScriptSerializer(context: Context) {
         if (isKeyword(name)) quoteName(name)
         else name
     
+    def serializeString(string: String) =
+        "'" + string + "'" // XXX: escape
+    
     def serializeTableStatement(stmt: TableDdlStatement, options: Options): String = stmt match {
         case st: CreateTableStatement => serializeCreateTable(st, options)
         case dt: DropTableStatement => serializeDropTable(dt)
@@ -89,7 +92,7 @@ class ScriptSerializer(context: Context) {
     def serializeValue(value: SqlValue): String = value match {
         case NullValue => "NULL"
         case NumberValue(number) => number.toString
-        case StringValue(string) => "'" + string + "'" // XXX: escape
+        case StringValue(string) => serializeString(string)
         case BooleanValue(true) => "TRUE"
         case BooleanValue(false) => "FALSE"
         case NowValue => "NOW()"

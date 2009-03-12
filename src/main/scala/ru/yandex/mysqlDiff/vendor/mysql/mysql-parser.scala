@@ -110,6 +110,8 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     override def topLevel = setNames | super.topLevel
 }
 
+object MysqlParserCombinator extends MysqlParserCombinator(MysqlContext)
+
 object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext) {
     val context = MysqlContext
     
