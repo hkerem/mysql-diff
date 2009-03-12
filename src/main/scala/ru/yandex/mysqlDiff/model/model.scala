@@ -349,10 +349,10 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     
     def indexes = extras.flatMap { case i: IndexModel => Some(i); case _ => None }
     def findIndex(name: String) = indexes.find(_.name == Some(name))
-    def index(name: String) = findIndex(name).get
+    def index(name: String) = findIndex(name).getOrThrow("table " + this.name + " has no index " + name)
     
     def findColumn(name: String) = columns.find(_.name == name)
-    def column(name: String) = findColumn(name).get
+    def column(name: String) = findColumn(name).getOrThrow("table " + this.name + " has no column " + name)
     def columnNames = columns.map(_.name)
     
     def constraints = extras.flatMap { case c: ConstraintModel => Some(c); case _ => None }
