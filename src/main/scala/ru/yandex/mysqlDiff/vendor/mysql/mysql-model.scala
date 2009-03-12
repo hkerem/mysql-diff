@@ -230,6 +230,12 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
     import script.TableDdlStatement._
     import MysqlTableDdlStatement._
     
+    protected override def alterTableOperation(op: Operation, table: TableModel): TableModel = op match {
+        case AddEntry(MysqlForeignKey(fk, indexNameOption)) =>
+            table.addForeignKey(fk).addIndex(IndexModel(indexNameOption, fk.localColumns))
+        case _ => super.alterTableOperation(op, table)
+    }
+    
     /** Unspecified collation can be computed from charset */
     private def tableCollation(table: TableModel): Option[String] = {
         def defaultCollation =

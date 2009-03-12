@@ -129,7 +129,7 @@ case class ModelParser(val context: Context) {
     def parseCreateTableScript(text: String) =
         parseCreateTable(sqlParserCombinator.parseCreateTableRegular(text))
     
-    private def alterTableOperation(op: Operation, table: TableModel): TableModel = {
+    protected def alterTableOperation(op: Operation, table: TableModel): TableModel = {
         import AlterTableStatement._
         op match {
             case AddEntry(c: Column) => table.addColumn(parseColumn(c))
@@ -143,8 +143,8 @@ case class ModelParser(val context: Context) {
             case DropColumn(name) => table.dropColumn(name)
             case DropPrimaryKey => table.dropPrimaryKey
             case DropIndex(name) => table.dropIndexOrUniqueKey(name) // XXX: should drop unique key only on MySQL
+            case DropForeignKey(name) => table.dropForeignKey(name)
             /*
-            case DropForeignKey(name) =>
             case AddForeignKey(fk) => 
             */
             case ChangeTableOption(option) => table.overrideOptions(Seq(option))
