@@ -107,11 +107,6 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | booleanValue | temporalValue
     
-    def cast: Parser[CastExpr] = "CAST (" ~> sqlExpr ~ ("AS" ~> dataType <~ ")") ^^
-            { case e ~ t => CastExpr(e, t) }
-    
-    def sqlExpr: Parser[SqlExpr] = sqlValue | cast
-    
     // Data type options are defined in subclasses */
     def dataTypeOption: Parser[DataTypeOption] = failure("no data type option")
     
@@ -173,43 +168,48 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def binaryOp = "+" | "-"
     
     // XXX: unused yet
-    def selectBinary: Parser[SelectExpr] = selectExpr ~ binaryOp ~ selectExpr ^^
-        { case a ~ op ~ b => new SelectBinary(a, op, b) }
+    // XXX: copy full grammar from 2-6.34
+    def selectBinary: Parser[SqlExpr] = sqlExpr ~ binaryOp ~ sqlExpr ^^
+        { case a ~ op ~ b => new BinaryOpExpr(a, op, b) }
     
-    def selectExpr: Parser[SelectExpr] = (
-        "*" ^^^ SelectStar
-      | name ^^ { case name => new SelectName(name) }
-      | sqlValue ^^ { case value => new SelectValue(value) }
-    )
+    def cast: Parser[CastExpr] = "CAST (" ~> sqlExpr ~ ("AS" ~> dataType <~ ")") ^^
+            { case e ~ t => CastExpr(e, t) }
+    
+    def sqlExpr: Parser[SqlExpr] =
+        ( sqlValue
+        | cast
+        | ("*" ^^^ SelectStar)
+        | (name ^^ { case name => new NameExpr(name) })
+        )
     
     /** value op value to boolean */
     def booleanOp: Parser[String] = "=" | "!=" | "LIKE"
     
-    def llBinaryCondition: Parser[SelectExpr] = selectExpr ~ booleanOp ~ selectExpr ^^ {
-        case a ~ x ~ b => SelectBinary(a, x, b)
+    def llBinaryCondition: Parser[SqlExpr] = sqlExpr ~ booleanOp ~ sqlExpr ^^ {
+        case a ~ x ~ b => BinaryOpExpr(a, x, b)
     }
     
     /** Lowest */
-    def llCondition: Parser[SelectExpr] = 
-        ("(" ~> selectCondition <~ ")") | llBinaryCondition
+    def llCondition: Parser[SqlExpr] = 
+        ("(" ~> searchCondition <~ ")") | llBinaryCondition
     
-    def andCondition: Parser[SelectExpr] = rep1sep(llCondition, "AND") ^^ {
+    def andCondition: Parser[SqlExpr] = rep1sep(llCondition, "AND") ^^ {
         case ands => ands.reduceLeft {
-            (c1: SelectExpr, c2: SelectExpr) => SelectBinary(c1, "AND", c2)
+            (c1: SqlExpr, c2: SqlExpr) => BinaryOpExpr(c1, "AND", c2)
         }
     }
     
-    def orCondition: Parser[SelectExpr] = rep1sep(andCondition, "OR") ^^ {
+    def orCondition: Parser[SqlExpr] = rep1sep(andCondition, "OR") ^^ {
         case ors => ors.reduceLeft {
-            (c1: SelectExpr, c2: SelectExpr) => SelectBinary(c1, "OR", c2)
+            (c1: SqlExpr, c2: SqlExpr) => BinaryOpExpr(c1, "OR", c2)
         }
     }
     
-    def selectCondition: Parser[SelectExpr] = orCondition
+    def searchCondition: Parser[SqlExpr] = orCondition
     
     def from: Parser[Seq[String]] = "FROM" ~> rep1sep(name, ",")
     
-    def select: Parser[SelectStatement] = ("SELECT" ~> rep1sep(selectExpr, ",")) ~ from ~ opt("WHERE" ~> selectCondition) ^^
+    def select: Parser[SelectStatement] = ("SELECT" ~> rep1sep(sqlExpr, ",")) ~ from ~ opt("WHERE" ~> searchCondition) ^^
         { case exprs ~ names ~ where => SelectStatement(exprs, names, where) }
     
     // XXX: length ignored
@@ -332,7 +332,18 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         (("INSERT" ~> opt("IGNORE") <~ "INTO") ~ name ~ opt(nameList) <~ "VALUES") ~ rep1sep(insertDataRow, ",") ^^
             { case ignore ~ name ~ columns ~ data => new InsertStatement(name, ignore.isDefined, columns, data) }
     
-    def topLevel: Parser[Any] = ddlStmt | insert
+    def updateSet: Parser[(String, SqlExpr)] = name ~ ("=" ~> sqlExpr) ^^ { case a ~ b => (a, b) }
+    
+    // update statement: searched
+    def update: Parser[UpdateStatement] =
+        ("UPDATE" ~> name) ~ ("SET" ~> rep1sep(updateSet, ", ")) ~ opt("WHERE" ~> searchCondition) ^^
+            { case name ~ updates ~ cond => UpdateStatement(name, updates, cond) }
+    
+    def delete: Parser[DeleteStatement] = failure("not yet")
+    
+    def dmlStmt: Parser[DmlStatement] = insert | update | select | delete
+    
+    def topLevel: Parser[Any] = ddlStmt | dmlStmt
     
     def script: Parser[Seq[Any]] = repsep(topLevel, ";") <~ opt(";") ~ lexical.EOF
     
@@ -429,65 +440,65 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         s must beLike {
             case SelectStatement(Seq(SelectStar), Seq("users"), _) => true
         }
-        s.condition.get must_== SelectBinary(SelectName("login"), "=", SelectValue(StringValue("colonel")))
+        s.condition.get must_== BinaryOpExpr(NameExpr("login"), "=", StringValue("colonel"))
     }
     
-    "parse selectExpr" in {
-        parse(selectExpr)("*") must_== SelectStar
-        parse(selectExpr)("users") must_== new SelectName("users")
-        parse(selectExpr)("12") must_== new SelectValue(new NumberValue(12))
-        parse(selectExpr)("'aa'") must_== new SelectValue(new StringValue("aa"))
+    "parse sqlExpr" in {
+        parse(sqlExpr)("*") must_== SelectStar
+        parse(sqlExpr)("users") must_== new NameExpr("users")
+        parse(sqlExpr)("12") must_== new NumberValue(12)
+        parse(sqlExpr)("'aa'") must_== new StringValue("aa")
     }
     
-    "parse selectCondition" in {
-        parse(selectCondition)("1 = 1 AND name Like 'vas%'") must beLike {
-            case SelectBinary(l, "AND", r) =>
+    "parse searchCondition" in {
+        parse(searchCondition)("1 = 1 AND name Like 'vas%'") must beLike {
+            case BinaryOpExpr(l, "AND", r) =>
                 l must beLike {
-                    case SelectBinary(SelectValue(NumberValue(1)), "=", SelectValue(NumberValue(1))) => true
+                    case BinaryOpExpr(NumberValue(1), "=", NumberValue(1)) => true
                 }
                 r must beLike {
-                    case SelectBinary(SelectName("name"), "Like", SelectValue(StringValue("vas%"))) => true
+                    case BinaryOpExpr(NameExpr("name"), "Like", StringValue("vas%")) => true
                 }
         }
     }
     
-    "parse selectCondition AND higher then OR" in {
-        val or = parse(selectCondition)("1 = 2 OR 2 = 3 AND 4 = 5")
-        or must beLike { case SelectBinary(a, "OR", b) => true }
-        val SelectBinary(a, "OR", b) = or
+    "parse searchCondition AND higher then OR" in {
+        val or = parse(searchCondition)("1 = 2 OR 2 = 3 AND 4 = 5")
+        or must beLike { case BinaryOpExpr(a, "OR", b) => true }
+        val BinaryOpExpr(a, "OR", b) = or
         a must beLike {
-            case SelectBinary(SelectValue(NumberValue(1)), "=", SelectValue(NumberValue(2))) => true
+            case BinaryOpExpr(NumberValue(1), "=", NumberValue(2)) => true
         }
         b must beLike {
-            case SelectBinary(c, "AND", d) =>
-                c must beLike { case SelectBinary(_, "=", _) => true }
-                d must beLike { case SelectBinary(_, "=", _) => true }
+            case BinaryOpExpr(c, "AND", d) =>
+                c must beLike { case BinaryOpExpr(_, "=", _) => true }
+                d must beLike { case BinaryOpExpr(_, "=", _) => true }
         }
     }
     
-    "parse selectCondition braces" in {
-        val and = parse(selectCondition)("1 = 2 AND (2 = 3 OR 4 = 5)")
-        and must beLike { case SelectBinary(a, "AND", b) => true }
-        val SelectBinary(a, "AND", b) = and
+    "parse searchCondition braces" in {
+        val and = parse(searchCondition)("1 = 2 AND (2 = 3 OR 4 = 5)")
+        and must beLike { case BinaryOpExpr(a, "AND", b) => true }
+        val BinaryOpExpr(a, "AND", b) = and
         a must beLike {
-            case SelectBinary(SelectValue(NumberValue(1)), "=", SelectValue(NumberValue(2))) => true
+            case BinaryOpExpr(NumberValue(1), "=", NumberValue(2)) => true
         }
         b must beLike {
-            case SelectBinary(c, "OR", d) =>
-                c must beLike { case SelectBinary(_, "=", _) => true }
-                d must beLike { case SelectBinary(_, "=", _) => true }
+            case BinaryOpExpr(c, "OR", d) =>
+                c must beLike { case BinaryOpExpr(_, "=", _) => true }
+                d must beLike { case BinaryOpExpr(_, "=", _) => true }
         }
     }
     
-    "parse selectCondition first AND computed before second" in {
-        val and = parse(selectCondition)("1 = 2 AND 3 = 4 AND 5 = 6")
+    "parse searchCondition first AND computed before second" in {
+        val and = parse(searchCondition)("1 = 2 AND 3 = 4 AND 5 = 6")
         and must beLike {
-            case SelectBinary(SelectBinary(_, "AND", _), "AND", _) => true
+            case BinaryOpExpr(BinaryOpExpr(_, "AND", _), "AND", _) => true
         }
-        val SelectBinary(SelectBinary(a, "AND", b), "AND", c) = and
-        a must beLike { case SelectBinary(SelectValue(NumberValue(1)), "=", SelectValue(NumberValue(2))) => true }
-        b must beLike { case SelectBinary(SelectValue(NumberValue(3)), "=", SelectValue(NumberValue(4))) => true }
-        c must beLike { case SelectBinary(SelectValue(NumberValue(5)), "=", SelectValue(NumberValue(6))) => true }
+        val BinaryOpExpr(BinaryOpExpr(a, "AND", b), "AND", c) = and
+        a must beLike { case BinaryOpExpr(NumberValue(1), "=", NumberValue(2)) => true }
+        b must beLike { case BinaryOpExpr(NumberValue(3), "=", NumberValue(4)) => true }
+        c must beLike { case BinaryOpExpr(NumberValue(5), "=", NumberValue(6)) => true }
     }
     
     "quotes in identifiers" in {
@@ -516,6 +527,12 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         insert.columns.get.toList must_== List("id", "login")
         insert.data.length must_== 1
         insert.data.first.toList must_== List(NumberValue(15), StringValue("vasya"))
+    }
+    
+    "parse UPDATE" in {
+        val updateStmt = parse(update)("UPDATE service SET s_name = name WHERE sid != 29")
+        updateStmt must beLike {
+            case UpdateStatement("service", Seq(("s_name", _)), _) => true }
     }
     
     "case insensitive" in {

@@ -189,15 +189,28 @@ case class InsertStatement(table: String, ignore: Boolean,
     require(data.forall(columnsCount == _.length))
 }
 
-// both expression and condition
-abstract class SelectExpr
+case class UpdateStatement(table: String, set: Seq[(String, SqlExpr)], condition: Option[SqlExpr])
+    extends DmlStatement
+{
 
-case object SelectStar extends SelectExpr
-case class SelectName(name: String) extends SelectExpr
-case class SelectValue(value: SqlValue) extends SelectExpr
-case class SelectBinary(left: SelectExpr, op: String, right: SelectExpr) extends SelectExpr
+}
 
-case class SelectStatement(expr: Seq[SelectExpr], tables: Seq[String], condition: Option[SelectExpr])
+case class DeleteStatement() // XXX
+    extends DmlStatement
+
+case class SelectStatement(expr: Seq[SqlExpr], tables: Seq[String], condition: Option[SqlExpr])
+    extends DmlStatement
+
+
+abstract class SqlExpr
+
+case class CastExpr(expr: SqlExpr, as: DataType) extends SqlExpr
+
+case object SelectStar extends SqlExpr
+
+case class NameExpr(name: String) extends SqlExpr
+case class BinaryOpExpr(left: SqlExpr, op: String, right: SqlExpr) extends SqlExpr
+
 
 object ScriptTests extends org.specs.Specification {
 }

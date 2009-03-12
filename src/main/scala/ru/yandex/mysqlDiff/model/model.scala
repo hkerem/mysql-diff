@@ -52,9 +52,7 @@ case class PropertyMap[T <: PropertyType, V <: Property](val properties: Seq[V])
     
 }
 
-abstract class SqlExpr
-
-abstract class SqlValue extends SqlExpr
+abstract class SqlValue extends script.SqlExpr
 
 case object NullValue extends SqlValue
 
@@ -81,8 +79,6 @@ case class TimeWithTimeZoneValue(override val value: String) extends WithTimeZon
 
 // used as default value
 case object NowValue extends SqlValue
-
-case class CastExpr(expr: SqlExpr, as: DataType) extends SqlExpr
 
 // XXX: rename to DataTypeProperties
 abstract class DataTypeOption extends Property {
