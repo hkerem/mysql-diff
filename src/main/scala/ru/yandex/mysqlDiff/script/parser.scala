@@ -319,8 +319,8 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def alterSpecification: Parser[TableDdlStatement.Operation] = addIndex | addPk | addUk | addFk | addColumn |
         alterColumn | changeColumn | modifyColumn |
-        dropPk | dropKey | dropColumn |
-        dropFk | disableEnableKeys | alterTableRename | alterTableOrderBy | alterTableOption
+        dropPk | dropKey | dropFk | dropColumn |
+        disableEnableKeys | alterTableRename | alterTableOrderBy | alterTableOption
     
     // http://dev.mysql.com/doc/refman/5.1/en/alter-table.html
     def alterTable: Parser[AlterTableStatement] = "ALTER TABLE" ~> name ~ rep1sep(alterSpecification, ",") ^^
