@@ -340,7 +340,10 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         ("UPDATE" ~> name) ~ ("SET" ~> rep1sep(updateSet, ", ")) ~ opt("WHERE" ~> searchCondition) ^^
             { case name ~ updates ~ cond => UpdateStatement(name, updates, cond) }
     
-    def delete: Parser[DeleteStatement] = failure("not yet")
+    // delete statement: searched
+    def delete: Parser[DeleteStatement] =
+        ("DELETE FROM" ~> name) ~ opt("WHERE" ~> searchCondition) ^^
+            { case name ~ cond => DeleteStatement(name, cond) }
     
     def dmlStmt: Parser[DmlStatement] = insert | update | select | delete
     
@@ -534,6 +537,12 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         val updateStmt = parse(update)("UPDATE service SET s_name = name WHERE sid != 29")
         updateStmt must beLike {
             case UpdateStatement("service", Seq(("s_name", _)), _) => true }
+    }
+    
+    "DELETE" in {
+        val d = parse(delete)("DELETE FROM users WHERE 1 = 0")
+        d must beLike {
+            case DeleteStatement("users", Some(_)) => true }
     }
     
     "case insensitive" in {

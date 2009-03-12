@@ -195,7 +195,7 @@ case class UpdateStatement(table: String, set: Seq[(String, SqlExpr)], condition
 
 }
 
-case class DeleteStatement() // XXX
+case class DeleteStatement(table: String, condition: Option[SqlExpr])
     extends DmlStatement
 
 case class SelectStatement(expr: Seq[SqlExpr], tables: Seq[String], condition: Option[SqlExpr])
