@@ -115,17 +115,26 @@ object TableDdlStatement {
     trait ColumnOperation extends Operation
     trait ExtraOperation extends Operation
     
+    // XXX: use it
+    abstract case class ColumnPosition()
+    case class ColumnAfter(name: String) extends ColumnPosition
+    case object ColumnFirst extends ColumnPosition
+    
     case class AddEntry(e: Entry) extends Operation
     
+    // XXX: AFTER
     def AddColumn(c: ColumnModel) = AddEntry(new Column(c))
     def AddPrimaryKey(pk: PrimaryKeyModel) = AddEntry(new PrimaryKey(pk))
     def AddForeignKey(fk: ForeignKeyModel) = AddEntry(new ForeignKey(fk))
     def AddUniqueKey(un: UniqueKeyModel) = AddEntry(new UniqueKey(un))
     def AddIndex(index: IndexModel) = AddEntry(new Index(index))
     
-    case class ChangeColumn(oldName: String, model: ColumnModel) extends ModifyOperation with ColumnOperation
+    // XXX: AFTER
+    case class ChangeColumn(oldName: String, model: ColumnModel)
+        extends ModifyOperation with ColumnOperation
     
-    case class ModifyColumn(model: ColumnModel) extends ModifyOperation with ColumnOperation
+    case class ModifyColumn(model: ColumnModel)
+        extends ModifyOperation with ColumnOperation
     
     /** @param value None means DROP DEFAULT */
     case class AlterColumnSetDefault(name: String, value: Option[SqlValue])

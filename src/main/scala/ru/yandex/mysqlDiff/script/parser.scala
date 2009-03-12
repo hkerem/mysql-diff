@@ -273,9 +273,11 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def dropView = "DROP VIEW" ~> name ^^ { name => DropViewStatement(name) }
     
+    def columnPosition: Parser[Any] = opt("FIRST" | ("AFTER" ~> name))
+    
     // XXX: add multiple column
     // XXX: use FIRST, AFTER
-    def addColumn = "ADD" ~> opt("COLUMN") ~> column <~ opt("FIRST" | ("AFTER" ~ name)) ^^
+    def addColumn = "ADD" ~> opt("COLUMN") ~> column <~ columnPosition ^^
             { column => TableDdlStatement.AddEntry(column) }
     
     def addIndex = "ADD" ~> indexModel ^^ { ind => TableDdlStatement.AddIndex(ind) }
@@ -290,10 +292,11 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         (("SET DEFAULT" ~> sqlValue ^^ { x => Some(x) }) | ("DROP DEFAULT" ^^^ None)) ^^
             { case n ~ v => TableDdlStatement.AlterColumnSetDefault(n, v) }
     
-    def changeColumn = "CHANGE" ~> opt("COLUMN") ~> name ~ columnModel ^^
+    // XXX: use column position
+    def changeColumn = "CHANGE" ~> opt("COLUMN") ~> name ~ columnModel <~ columnPosition ^^
         { case n ~ c => TableDdlStatement.ChangeColumn(n, c) }
     
-    def modifyColumn = "MODIFY" ~> opt("COLUMN") ~> columnModel ^^
+    def modifyColumn = "MODIFY" ~> opt("COLUMN") ~> columnModel <~ columnPosition ^^
         { case c => TableDdlStatement.ModifyColumn(c) }
     
     def dropColumn = "DROP" ~> opt("COLUMN") ~> name ^^ { n => TableDdlStatement.DropColumn(n) }
