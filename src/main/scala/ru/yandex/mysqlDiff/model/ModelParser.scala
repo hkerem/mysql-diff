@@ -142,7 +142,7 @@ case class ModelParser(val context: Context) {
             case ModifyColumn(model) => table.alterColumn(model.name, ignored => model)
             case DropColumn(name) => table.dropColumn(name)
             case DropPrimaryKey => table.dropPrimaryKey
-            case DropIndex(name) => table.dropIndex(name)
+            case DropIndex(name) => table.dropIndexOrUniqueKey(name) // XXX: should drop unique key only on MySQL
             /*
             case DropForeignKey(name) =>
             case AddForeignKey(fk) => 

@@ -345,11 +345,14 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     private def primaryKeys = extras.flatMap { case p: PrimaryKeyModel => Some(p); case _ => None }
     def primaryKey = primaryKeys.firstOption
     def foreignKeys = extras.flatMap { case f: ForeignKeyModel => Some(f); case _ => None }
-    def uniqueKeys = extras.flatMap { case u: UniqueKeyModel => Some(u); case _ => None }
     
     def indexes = extras.flatMap { case i: IndexModel => Some(i); case _ => None }
     def findIndex(name: String) = indexes.find(_.name == Some(name))
     def index(name: String) = findIndex(name).getOrThrow("table " + this.name + " has no index " + name)
+    
+    def uniqueKeys = extras.flatMap { case u: UniqueKeyModel => Some(u); case _ => None }
+    def findUniqueKey(name: String) = uniqueKeys.find(_.name == Some(name))
+    def uniqueKey(name: String) = findUniqueKey(name).getOrThrow("table " + name + " has no unique key " + name)
     
     def findColumn(name: String) = columns.find(_.name == name)
     def column(name: String) = findColumn(name).getOrThrow("table " + this.name + " has no column " + name)
@@ -385,6 +388,14 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     def dropIndex(name: String) = {
         index(name)
         withExtras(extras.filter { case IndexModel(Some(`name`), _) => false; case _ => true })
+    }
+    
+    def dropIndexOrUniqueKey(name: String) = {
+        if (findIndex(name).isDefined) {
+            dropIndex(name)
+        } else if (findUniqueKey(name).isDefined) {
+            withExtras(extras.filter { case UniqueKeyModel(Some(`name`), _) => false; case _ => true })
+        } else throw new MysqlDiffException("table " + name + " has no index or unique key " + name)
     }
     
     def addPrimaryKeu(pk: PrimaryKeyModel) =
