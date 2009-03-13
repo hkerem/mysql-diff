@@ -68,7 +68,7 @@ object TableDdlStatement {
     abstract class ColumnPropertyDecl
     
     case class References(table: String, columns: Seq[String],
-            updatePolicy: Option[ImportedKeyPolicy], deletePolicy: Option[ImportedKeyPolicy])
+            updateRule: Option[ImportedKeyRule], deleteRule: Option[ImportedKeyRule])
     
     /** Either column property */
     case class ModelColumnProperty(columnProperty: ColumnProperty) extends ColumnPropertyDecl

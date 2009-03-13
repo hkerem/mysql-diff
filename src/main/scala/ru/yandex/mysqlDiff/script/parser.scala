@@ -119,7 +119,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def uniqueAttr = "UNIQUE" ^^^ TableDdlStatement.InlineUnique
     def pkAttr = "PRIMARY" ~ "KEY" ^^^ TableDdlStatement.InlinePrimaryKey
     
-    def importedKeyPolicy: Parser[ImportedKeyPolicy] =
+    def importedKeyPolicy: Parser[ImportedKeyRule] =
         ( ("NO ACTION" ^^^ ImportedKeyNoAction)
         | ("RESTRICT" ^^^ ImportedKeyNoAction)
         | ("CASCADE" ^^^ ImportedKeyCascade)
@@ -127,9 +127,9 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         | ("SET DEFAULT" ^^^ ImportedKeySetNull)
         )
     
-    private abstract case class OnSomething(p: ImportedKeyPolicy)
-    private case class OnDelete(override val p: ImportedKeyPolicy) extends OnSomething(p)
-    private case class OnUpdate(override val p: ImportedKeyPolicy) extends OnSomething(p)
+    private abstract case class OnSomething(p: ImportedKeyRule)
+    private case class OnDelete(override val p: ImportedKeyRule) extends OnSomething(p)
+    private case class OnUpdate(override val p: ImportedKeyRule) extends OnSomething(p)
     
     private def onSomething: Parser[OnSomething] =
         ( ( "ON UPDATE" ~> importedKeyPolicy ^^ { p => OnUpdate(p) } )
@@ -226,7 +226,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def fkModel: Parser[ForeignKeyModel] =
         (constraint <~ "FOREIGN KEY") ~ nameList ~ references ^^
             { case cn ~ lcs ~ r =>
-                    ForeignKeyModel(cn, lcs, r.table, r.columns, r.updatePolicy, r.deletePolicy) }
+                    ForeignKeyModel(cn, lcs, r.table, r.columns, r.updateRule, r.deleteRule) }
     
     def fk: Parser[TableDdlStatement.Entry] = fkModel ^^ { fk => TableDdlStatement.ForeignKey(fk) }
     

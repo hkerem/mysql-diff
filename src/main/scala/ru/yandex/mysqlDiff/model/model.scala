@@ -301,18 +301,18 @@ object ImportedKeyInitiallyDeferred extends ImportedKeyDeferrability
 object ImportedKeyInitiallyImmediate extends ImportedKeyDeferrability
 object ImportedKeyNotDeferrable extends ImportedKeyDeferrability
 
-abstract class ImportedKeyPolicy
-object ImportedKeyNoAction extends ImportedKeyPolicy
-object ImportedKeyCascade extends ImportedKeyPolicy
-object ImportedKeySetNull extends ImportedKeyPolicy
-object ImportedKeySetDefault extends ImportedKeyPolicy
+abstract class ImportedKeyRule
+object ImportedKeyNoAction extends ImportedKeyRule
+object ImportedKeyCascade extends ImportedKeyRule
+object ImportedKeySetNull extends ImportedKeyRule
+object ImportedKeySetDefault extends ImportedKeyRule
 
 case class ForeignKeyModel(override val name: Option[String],
         localColumns: Seq[String],
         externalTable: String,
         externalColumns: Seq[String],
-        updatePolicy: Option[ImportedKeyPolicy],
-        deletePolicy: Option[ImportedKeyPolicy])
+        updateRule: Option[ImportedKeyRule],
+        deleteRule: Option[ImportedKeyRule])
     extends ConstraintModel(name)
 {
     require(localColumns.length == externalColumns.length)

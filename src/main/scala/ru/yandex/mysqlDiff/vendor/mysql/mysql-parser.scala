@@ -86,7 +86,7 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
         (constraint <~ "FOREIGN KEY") ~ opt(name) ~ nameList ~ references ^^
             { case cn ~ in ~ lcs ~ r =>
                     MysqlForeignKey(
-                            ForeignKeyModel(cn, lcs, r.table, r.columns, r.updatePolicy, r.deletePolicy),
+                            ForeignKeyModel(cn, lcs, r.table, r.columns, r.updateRule, r.deleteRule),
                             in) }
 
    

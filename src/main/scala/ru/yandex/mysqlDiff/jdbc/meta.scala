@@ -166,7 +166,7 @@ object MetaDao {
     case class CrossReference(
         pkTableCatalog: Option[String], pkTableSchema: Option[String], pkTableName: String, pkColumnName: String,
         fkTableCatalog: Option[String], fkTableSchema: Option[String], fkTableName: String, fkColumnName: String,
-        keySeq: Int, updateRule: ImportedKeyPolicy, deleteRule: ImportedKeyPolicy,
+        keySeq: Int, updateRule: ImportedKeyRule, deleteRule: ImportedKeyRule,
         fkName: Option[String], pkName: Option[String], deferrability: ImportedKeyDeferrability)
     
     def mapCrossReference(rs: ResultSet) = {
