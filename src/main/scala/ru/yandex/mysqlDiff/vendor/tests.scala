@@ -48,7 +48,7 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
     }
     
     
-    val printExecutedStmts = true
+    val printExecutedStmts = false
     
     protected def execute(q: String) = {
         if (printExecutedStmts) println(q)
