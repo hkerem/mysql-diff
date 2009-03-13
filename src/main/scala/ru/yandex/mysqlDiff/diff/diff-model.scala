@@ -1,4 +1,8 @@
-package ru.yandex.mysqlDiff.model
+package ru.yandex.mysqlDiff.diff
+
+import model._
+
+import Implicits._
 
 abstract class ColumnPropertyDiff
 case class DropColumnPropertyDiff(property: ColumnProperty) extends ColumnPropertyDiff
