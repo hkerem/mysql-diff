@@ -8,7 +8,7 @@ object StringImplicits extends StringImplicits
 
 class StringExtras(string: String) {
     def % (args: Any*) =
-        String.format(string, args.toArray.asInstanceOf[Array[Object]])
+        String.format(string, args.toArray.asInstanceOf[Array[Object]]: _*)
 }
 
 object StringTests extends org.specs.Specification {
