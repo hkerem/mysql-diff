@@ -240,6 +240,22 @@ class JdbcTemplate(override val ds: LiteDataSource) extends JdbcOperations {
 }
 
 class ResultSetExtras(rs: ResultSet) {
+    import rs._
+    
+    private def mapNull[T <: AnyRef](value: T) = value match {
+        case null => None
+        case value => Some(value)
+    }
+    private def mapWasNull[T](value: T) =
+        if (wasNull) None
+        else Some(value)
+    
+    def getStringOption(column: Int) = mapNull(rs.getString(column))
+    def getStringOption(column: String) = mapNull(rs.getString(column))
+    
+    def getIntOption(column: Int) = mapWasNull(rs.getInt(column))
+    def getIntOption(column: String) = mapWasNull(rs.getInt(column))
+    
     def read[T](rm: ResultSet => T): Seq[T] = {
         val r = new ArrayBuffer[T]
         while (rs.next()) {

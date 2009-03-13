@@ -21,6 +21,7 @@ class MetaDao(jt: JdbcTemplate) {
     
     import jt._
     
+    import MetaDao._
     
     def findPrimaryKey(catalog: String, schema: String, tableName: String): Option[PrimaryKeyModel] =
         execute { conn =>
@@ -92,47 +93,40 @@ class MetaDao(jt: JdbcTemplate) {
         }
     }
     
-    def findImportedKeys(catalog: String, schema: String, tableName: String): Seq[ForeignKeyModel] =
-        execute { conn =>
-            import DatabaseMetaData._
-            def translatePolicy(value: Int) = value match {
-                case `importedKeyCascade` => ImportedKeyCascade
-                case `importedKeyRestrict` => ImportedKeyNoAction
-                case `importedKeyNoAction` => ImportedKeyNoAction
-                case `importedKeySetDefault` => ImportedKeySetDefault
-                case `importedKeySetNull` => ImportedKeySetNull
+    def findImportedKeyModels(catalog: String, schema: String, tableName: String): Seq[ForeignKeyModel] = {
+        val r = findImportedKeys(catalog, schema, tableName)
+
+        // key name can be null
+        val keys = r.map(x => (x.fkName, x.pkTableName)).unique.toSeq
+
+        keys.map { case (keyName, _) =>
+            val rows = r.filter(_.fkName == keyName)
+            val externalTableNames = rows.map(_.pkTableName).unique
+            if (externalTableNames.size != 1) {
+                val m = "internal error, got external table names: " + externalTableNames +
+                        " for key " + keyName
+                throw new IllegalStateException(m)
             }
-                
-            val rs = conn.getMetaData.getImportedKeys(catalog, schema, tableName)
-
-            case class R(keyName: String, externalTableName: String,
-                    localColumnName: String, externalColumnName: String,
-                    updateRule: Int, deleteRule: Int)
-
-            val r = rs.read { rs =>
-                R(rs.getString("FK_NAME"), rs.getString("PKTABLE_NAME"),
-                        rs.getString("FKCOLUMN_NAME"), rs.getString("PKCOLUMN_NAME"),
-                        rs.getInt("UPDATE_RULE"), rs.getInt("DELETE_RULE"))
-            }
-
-            // key name can be null
-            val keys = r.map(x => (x.keyName, x.externalTableName)).unique.toSeq
-
-            keys.map { case (keyName, _) =>
-                val rows = r.filter(_.keyName == keyName)
-                val externalTableNames = rows.map(_.externalTableName).unique
-                if (externalTableNames.size != 1) {
-                    val m = "internal error, got external table names: " + externalTableNames +
-                            " for key " + keyName
-                    throw new IllegalStateException(m)
-                }
-                
-                ForeignKeyModel(Some(keyName), rows.map(_.localColumnName),
-                        externalTableNames.elements.next, rows.map(_.externalColumnName),
-                        Some(translatePolicy(rows.first.updateRule)), Some(translatePolicy(rows.first.deleteRule)))
-            }
+            
+            ForeignKeyModel(keyName, rows.map(_.fkColumnName),
+                    externalTableNames.elements.next, rows.map(_.pkColumnName),
+                    Some(rows.first.updateRule), Some(rows.first.deleteRule))
         }
-   
+    }
+    
+    def findImportedKeys(catalog: String, schema: String, table: String) =
+        metaData(_.getImportedKeys(catalog, schema, table).read(mapCrossReference _))
+    
+    def findExportedKeys(catalog: String, schema: String, table: String) =
+        metaData(_.getExportedKeys(catalog, schema, table).read(mapCrossReference _))
+    
+    def findCrossReference(
+            parentCatalog: String, parentSchema: String, parentTable: String,
+            foreignCatalog: String, foreignSchema: String, foreignTable: String)
+        = metaData(_.getCrossReference(
+                parentCatalog, parentSchema, parentTable, foreignCatalog, foreignSchema, foreignTable)
+                        .read(mapCrossReference _))
+    
     /**
      * To be overriden in subclasses.
      * @return empty Seqs in this implementation
@@ -153,7 +147,41 @@ class MetaDao(jt: JdbcTemplate) {
 }
 
 object MetaDao {
-
+    import DatabaseMetaData._
+    
+    def translatePolicy(value: Int) = value match {
+        case `importedKeyCascade` => ImportedKeyCascade
+        case `importedKeyRestrict` => ImportedKeyNoAction
+        case `importedKeyNoAction` => ImportedKeyNoAction
+        case `importedKeySetDefault` => ImportedKeySetDefault
+        case `importedKeySetNull` => ImportedKeySetNull
+    }
+    
+    def translateDeferrability(value: Int) = value match {
+        case `importedKeyInitiallyDeferred` => ImportedKeyInitiallyDeferred
+        case `importedKeyInitiallyImmediate` => ImportedKeyInitiallyImmediate
+        case `importedKeyNotDeferrable` => ImportedKeyNotDeferrable
+    }
+    
+    case class CrossReference(
+        pkTableCatalog: Option[String], pkTableSchema: Option[String], pkTableName: String, pkColumnName: String,
+        fkTableCatalog: Option[String], fkTableSchema: Option[String], fkTableName: String, fkColumnName: String,
+        keySeq: Int, updateRule: ImportedKeyPolicy, deleteRule: ImportedKeyPolicy,
+        fkName: Option[String], pkName: Option[String], deferrability: ImportedKeyDeferrability)
+    
+    def mapCrossReference(rs: ResultSet) = {
+        import rs._
+        CrossReference(
+            rs.getStringOption("PKTABLE_CAT"), rs.getStringOption("PKTABLE_SCHEM"),
+            rs.getString("PKTABLE_NAME"), rs.getString("PKCOLUMN_NAME"),
+            rs.getStringOption("FKTABLE_CAT"), rs.getStringOption("FKTABLE_SCHEM"),
+            rs.getString("FKTABLE_NAME"), rs.getString("FKCOLUMN_NAME"),
+            rs.getInt("KEY_SEQ"),
+            translatePolicy(rs.getInt("UPDATE_RULE")), translatePolicy(rs.getInt("DELETE_RULE")),
+            rs.getStringOption("FK_NAME"), rs.getStringOption("PK_NAME"),
+            translateDeferrability(rs.getInt("DEFERRABILITY")))
+    }
+    
 }
 
 abstract class DbMetaDaoTests(ds: LiteDataSource) extends org.specs.Specification {

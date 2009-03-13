@@ -6,6 +6,8 @@ import util.CollectionUtils._
 
 import Implicits._
 
+class TableName(name: String, schema: Option[String], catalog: Option[String])
+
 abstract class Property {
     def propertyType: PropertyType
 }
@@ -293,6 +295,11 @@ case class UniqueKeyModel(override val name: Option[String], override val column
 
 case class PrimaryKeyModel(override val name: Option[String], columns: Seq[String])
     extends ConstraintModel(name)
+
+abstract class ImportedKeyDeferrability
+object ImportedKeyInitiallyDeferred extends ImportedKeyDeferrability
+object ImportedKeyInitiallyImmediate extends ImportedKeyDeferrability
+object ImportedKeyNotDeferrable extends ImportedKeyDeferrability
 
 abstract class ImportedKeyPolicy
 object ImportedKeyNoAction extends ImportedKeyPolicy

@@ -132,7 +132,7 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
             metaDao.findIndexes(currentCatalog, currentSchema, tableName)
 
         def getFks(tableName: String): Seq[ForeignKeyModel] =
-            metaDao.findImportedKeys(currentCatalog, currentSchema, tableName)
+            metaDao.findImportedKeyModels(currentCatalog, currentSchema, tableName)
         
         /** Not including PK */
         def getKeys(tableName: String): Seq[TableExtra] =
