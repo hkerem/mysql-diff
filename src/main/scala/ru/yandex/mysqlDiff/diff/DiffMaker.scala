@@ -90,10 +90,11 @@ case class DiffMaker(val context: Context) {
             (a.name == b.name || a.name == None || b.name == None)
     
     /** Are foreign keys equivalent? */
-    def fksEquivalent(a: ForeignKeyModel, b: ForeignKeyModel) =
-        (a.localColumns.toList == b.localColumns.toList) &&
-                (a.externalTable == b.externalTable) && (a.externalColumns.toList == b.externalColumns.toList) &&
-                (a.name == b.name || a.name == None || b.name == None)
+    def fksEquivalent(a: ForeignKeyModel, b: ForeignKeyModel) = {
+        val (_, _, ab) =
+                compareSeqs(a.properties, b.properties, (a: (Any, Any), b: (Any, Any)) => a._1 == b._1)
+        ab.forall { case (a, b) => a == b }
+    }
     
     def uksEquivalent(a: UniqueKeyModel, b: UniqueKeyModel) =
         (a.columns.toList == b.columns.toList) &&

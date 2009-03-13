@@ -317,6 +317,13 @@ case class ForeignKeyModel(override val name: Option[String],
 {
     require(localColumns.length == externalColumns.length)
     // XXX: check externalColumns unique
+    
+    def properties: Seq[(Any, Any)] =
+        Seq("localColumns" -> localColumns.toList,
+                "externalTable" -> externalTable,
+                "externalColumns" -> externalColumns.toList
+            ) ++ name.map("name" -> _) ++
+            updateRule.map("updateRule" -> _) ++ deleteRule.map("deleteRule" -> _)
 }
 
 

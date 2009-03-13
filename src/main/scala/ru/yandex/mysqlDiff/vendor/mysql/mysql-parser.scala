@@ -160,7 +160,7 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         fks must haveSize(1)
         fks.first must beLike {
             case MysqlForeignKey(
-                    ForeignKeyModel(Some("dc_fk"), Seq("dc_id"), "datacenters", Seq("id"), None, None),
+                    ForeignKeyModel(Some("dc_fk"), Seq("dc_id"), "datacenters", Seq("id"), _, _),
                     Some("dc_idx"))
                 => true
         }

@@ -68,6 +68,18 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             )
     }
     
+    "FOREIGN KEY ... ON UPDATE ... ON DELETE" in {
+        ddlTemplate.dropTableWithExportedKeysIfExists("o_u_o_d")
+        ddlTemplate.dropTableWithExportedKeysIfExists("o_u_o_d_pri")
+        jt.execute("CREATE TABLE o_u_o_d_pri (id INT PRIMARY KEY) ENGINE=InnoDB")
+        checkTwoTables(
+            "CREATE TABLE o_u_o_d (a_id INT, id INT, " +
+                "FOREIGN KEY (a_id) REFERENCES o_u_o_d_pri(id) ON UPDATE SET NULL) ENGINE=InnoDB",
+            "CREATE TABLE o_u_o_d (a_id INT, id INT, " +
+                "FOREIGN KEY (a_id) REFERENCES o_u_o_d_pri(id) ON UPDATE CASCADE ON DELETE SET NULL) ENGINE=InnoDB"
+            )
+    }
+    
     "diff, apply collate" in {
         jt.execute("DROP TABLE IF EXISTS collate_test")
         jt.execute("CREATE TABLE collate_test (id VARCHAR(10)) COLLATE=cp1251_bin")

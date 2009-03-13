@@ -139,8 +139,8 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def references = "REFERENCES" ~> name ~ nameList ~ rep(onSomething) ^^
         { case t ~ cs ~ onss =>
             TableDdlStatement.References(t, cs,
-                    onss.find(_.isInstanceOf[OnUpdate]).map(_.p),
-                    onss.find(_.isInstanceOf[OnDelete]).map(_.p)) }
+                    onss.find(_.isInstanceOf[OnUpdate]).map(_.p).orElse(Some(ImportedKeyNoAction)),
+                    onss.find(_.isInstanceOf[OnDelete]).map(_.p).orElse(Some(ImportedKeyNoAction))) }
 
     
     def referencesAttr = references ^^ { r => TableDdlStatement.InlineReferences(r) }
@@ -568,7 +568,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         val t = parseCreateTableRegular(
                 "CREATE TABLE a (id INT PRIMARY KEY, city_id INT REFERENCES city(id), name VARCHAR(10) UNIQUE)")
         t.column("city_id").properties must beLike {
-            case Seq(InlineReferences(References("city", Seq("id"), None, None))) => true }
+            case Seq(InlineReferences(References("city", Seq("id"), _, _))) => true }
         t.column("id").properties must beSameSeqAs(List(InlinePrimaryKey))
         t.column("name").properties must beSameSeqAs(List(InlineUnique))
     }
