@@ -7,9 +7,12 @@
   * download scala compiler and library from Ivy (no need in scala.home any more)
   * ALTER TABLE statements on single table are joined now
   * BOOLEAN support
+  * ENUM support
   * CREATE TABLE ... LIKE
   * model parser now understands ALTER and DROP
   * Basic PostgreSQL support
+  * FOREIGN KEY support
+  * parse more DML statements
   * ...
 
 - 0.2 -
