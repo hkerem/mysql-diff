@@ -38,8 +38,8 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
     }
     
     "foreign keys with full params specification" in {
-        execute("DROP TABLE IF EXISTS servers")
-        execute("DROP TABLE IF EXISTS datacenters")
+        ddlTemplate.dropTableWithExportedKeysIfExists("servers")
+        ddlTemplate.dropTableWithExportedKeysIfExists("datacenters")
         execute("CREATE TABLE datacenters (id INT PRIMARY KEY) ENGINE=InnoDB")
         val t2 = checkTwoTables(
             "CREATE TABLE servers (id INT, dc_id INT) ENGINE=InnoDB",
@@ -49,7 +49,8 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
     }
     
     "FOREIGN KEY with overlapping INDEX" in {
-        ddlTemplate.dropTableIfExists("yyyy")
+        ddlTemplate.dropTableWithExportedKeysIfExists("yyyy")
+        ddlTemplate.dropTableWithExportedKeysIfExists("zzzz")
         ddlTemplate.recreateTable("CREATE TABLE zzzz (id INT PRIMARY KEY) ENGINE=InnoDB")
         checkTwoTables(
             "CREATE TABLE yyyy (id INT, zzzz_id INT, CONSTRAINT zzzz_c FOREIGN KEY zzzz_i (zzzz_id) REFERENCES zzzz(id), INDEX(zzzz_id, id)) ENGINE=InnoDB",
@@ -58,7 +59,8 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
     }
     
     "FOREIGN KEY with overlapping UNIQUE" in {
-        ddlTemplate.dropTableIfExists("uuuu")
+        ddlTemplate.dropTableWithExportedKeysIfExists("uuuu")
+        ddlTemplate.dropTableWithExportedKeysIfExists("qqqq")
         ddlTemplate.recreateTable("CREATE TABLE qqqq (id INT PRIMARY KEY) ENGINE=InnoDB")
         checkTwoTables(
             "CREATE TABLE uuuu (id INT, qqqq_id INT, CONSTRAINT qqqq_c FOREIGN KEY qqqq_i (qqqq_id) REFERENCES qqqq(id), UNIQUE(qqqq_id, id)) ENGINE=InnoDB",
@@ -157,6 +159,31 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
         checkTable(
             "CREATE TABLE service_with_mediumint_unsigned (bg_color MEDIUMINT UNSIGNED)")
     }
+}
+
+object MysqlDdlTemplateTests extends DdlTemplateTests(MysqlTestDataSourceParameters.connectedContext) {
+    import MysqlTestDataSourceParameters.connectedContext._
+    import MysqlTestDataSourceParameters.connectedContext.context._
+    
+    import ddlTemplate._
+    import jt.execute
+    
+    "dropTableWithExportedKeys" in {
+        dropTableWithExportedKeysIfExists("dt_a")
+        dropTableWithExportedKeysIfExists("dt_b")
+        
+        execute("CREATE TABLE dt_a (id INT PRIMARY KEY, b_id INT) ENGINE=InnoDB")
+        execute("CREATE TABLE dt_b (id INT PRIMARY KEY, a_id INT) ENGINE=InnoDB")
+        execute("ALTER TABLE dt_a ADD FOREIGN KEY (b_id) REFERENCES dt_b(id)")
+        execute("ALTER TABLE dt_b ADD FOREIGN KEY (a_id) REFERENCES dt_a(id)")
+        
+        dropTableWithExportedKeys("dt_a")
+        tableExists("dt_a") must beFalse
+        tableExists("dt_b") must beTrue
+        
+        jdbcModelExtractor.extractTable("dt_b").foreignKeys must beEmpty
+    }
+    
 }
 
 // vim: set ts=4 sw=4 et:

@@ -222,6 +222,7 @@ class MysqlTests(includeOnline: Boolean) extends org.specs.Specification {
     include(MysqlDataTypesTests)
     include(MysqlParserCombinatorTests)
     if (includeOnline) include(MysqlJdbcModelExtractorTests)
+    if (includeOnline) include(MysqlDdlTemplateTests)
     include(MysqlDataTypesTests)
 }
 
