@@ -5,7 +5,7 @@ import script._
 import util._
 
 /** Global implicits conversions */
-object Implicits extends util.CollectionImplicits with util.JdbcImplicits {
+object Implicits extends util.CollectionImplicits with util.JdbcImplicits with util.StringImplicits {
     // I believe it must be added to scala.Predef
     type ArrayBuffer[T] = scala.collection.mutable.ArrayBuffer[T]
     
