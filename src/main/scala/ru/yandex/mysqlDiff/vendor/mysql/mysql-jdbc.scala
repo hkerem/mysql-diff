@@ -126,7 +126,7 @@ class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
             
             val mysqlColumns = getMysqlColumns(tableName)
             
-            read(columns) { columns =>
+            columns.read { columns =>
                 val base = parseTableColumn(columns)
                 
                 val mysqlColumn = mysqlColumns.find(_.columnName == base.name).get

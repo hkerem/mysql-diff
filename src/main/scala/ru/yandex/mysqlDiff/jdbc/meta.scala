@@ -20,7 +20,6 @@ class MetaDao(jt: JdbcTemplate) {
     def this(ds: LiteDataSource) = this(new JdbcTemplate(ds))
     
     import jt._
-    import MetaDao.read
     
     
     def findPrimaryKey(catalog: String, schema: String, tableName: String): Option[PrimaryKeyModel] =
@@ -29,7 +28,7 @@ class MetaDao(jt: JdbcTemplate) {
 
             case class R(pkName: String, columnName: String, keySeq: Int)
 
-            val r0 = read(rs) { rs =>
+            val r0 = rs.read { rs =>
                 R(rs.getString("PK_NAME"), rs.getString("COLUMN_NAME"), rs.getInt("KEY_SEQ"))
             }
 
@@ -59,7 +58,7 @@ class MetaDao(jt: JdbcTemplate) {
         
         val rs = data.getTables(catalog, schema, "%", List("TABLE").toArray)
         
-        read(rs) { rs =>
+        rs.read { rs =>
             rs.getString("TABLE_NAME")
         }
     }
@@ -74,7 +73,7 @@ class MetaDao(jt: JdbcTemplate) {
             def unique = !nonUnique
         }
         
-        val r = read(rs) { rs =>
+        val r = rs.read { rs =>
             R(rs.getString("INDEX_NAME"), rs.getBoolean("NON_UNIQUE"), rs.getInt("ORDINAL_POSITION"),
                     rs.getString("COLUMN_NAME"), rs.getString("ASC_OR_DESC"))
         }
@@ -110,7 +109,7 @@ class MetaDao(jt: JdbcTemplate) {
                     localColumnName: String, externalColumnName: String,
                     updateRule: Int, deleteRule: Int)
 
-            val r = read(rs) { rs =>
+            val r = rs.read { rs =>
                 R(rs.getString("FK_NAME"), rs.getString("PKTABLE_NAME"),
                         rs.getString("FKCOLUMN_NAME"), rs.getString("PKCOLUMN_NAME"),
                         rs.getInt("UPDATE_RULE"), rs.getInt("DELETE_RULE"))
@@ -155,17 +154,6 @@ class MetaDao(jt: JdbcTemplate) {
 
 object MetaDao {
 
-    /**
-     * Utility to read rows from ResultSet.
-     */
-    def read[T](rs: ResultSet)(f: ResultSet => T) = {
-        val r = new ArrayBuffer[T]()
-        while (rs.next()) {
-            r += f(rs)
-        }
-        r
-    }
-    
 }
 
 abstract class DbMetaDaoTests(ds: LiteDataSource) extends org.specs.Specification {

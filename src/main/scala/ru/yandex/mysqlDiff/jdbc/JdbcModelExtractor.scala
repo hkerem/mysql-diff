@@ -104,7 +104,7 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
         
         def extractTableColumns(tableName: String): Seq[ColumnModel] = metaData { data =>
             val columns = data.getColumns(currentCatalog, currentSchema, tableName, "%")
-            read(columns)(parseTableColumn _)
+            columns.read(parseTableColumn _)
         }
         
         def extractTable(tableName: String): TableModel = {
