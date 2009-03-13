@@ -6,6 +6,7 @@ object MysqlContext extends Context(MysqlDataTypes) {
     override val sqlParserCombinator = new MysqlParserCombinator(this)
     override val dataTypes = MysqlDataTypes
     override val modelParser = new MysqlModelParser(this)
+    override val modelSerializer = new MysqlModelSerializer(this)
     override val scriptSerializer = new MysqlScriptSerializer(this)
     override def connectedContext(ds: LiteDataSource) = new MysqlConnectedContext(ds)
 }
@@ -221,6 +222,7 @@ class MysqlTests(includeOnline: Boolean) extends org.specs.Specification {
     include(MysqlDataTypesTests)
     include(MysqlParserCombinatorTests)
     if (includeOnline) include(MysqlJdbcModelExtractorTests)
+    include(MysqlDataTypesTests)
 }
 
 object MysqlTests extends MysqlTests(true)

@@ -27,6 +27,7 @@ class SomeTests(testsSelector: TestsSelector) extends org.specs.Specification {
     include(diff.DiffSerializerTests)
     include(new vendor.VendorTests(testsSelector))
     include(new jdbc.JdbcTests(testsSelector))
+    include(util.CollectionTests)
 }
 
 object Tests extends SomeTests(AllTestsSelector)

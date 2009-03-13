@@ -130,7 +130,7 @@
     </target>
     
     <target name="run-tests-from-teamcity" depends="compile">
-        <property name="mysql.test.ds.url" value="jdbc:mysql://fastshot.yandex.ru:3306/mysql_diff_test"/>
+        <property name="mysql.test.ds.url" value="jdbc:mysql://fastshot.yandex.ru:3306/mysql_diff_tests"/>
         <property name="postgresql.test.ds.url" value="jdbc:postgresql://fastshot.yandex.ru/mysql_diff_tests"/>
         <property name="test.name" value="ru.yandex.mysqlDiff.TestsFromTeamcity"/>
         <do-run-test test="${test.name}"/>

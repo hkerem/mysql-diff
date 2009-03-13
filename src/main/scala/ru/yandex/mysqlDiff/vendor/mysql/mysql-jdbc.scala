@@ -16,7 +16,7 @@ object MysqlMetaDao {
         tableCatalog: String, tableSchema: String, tableName: String,
         columnName: String, ordinalPosition: Int, columnDefault: String,
         isNullable: Boolean, dataType: String,
-        characterMaximumLength: Double, characterOctetLength: Double,
+        characterMaximumLength: Int, characterOctetLength: Double,
         numericPrecision: Int, numericScale: Int,
         characterSetName: String, collationName: String,
         columnType: String, /* skipped some columns */ columnComment: String
@@ -28,7 +28,7 @@ object MysqlMetaDao {
             getString("table_catalog"), getString("table_schema"), getString("table_name"),
             getString("column_name"), getInt("ordinal_position"), getString("column_default"),
             getBoolean("is_nullable"), getString("data_type"),
-            getDouble("character_maximum_length"), getDouble("character_octet_length"),
+            getInt("character_maximum_length"), getDouble("character_octet_length"),
             getInt("numeric_precision"), getInt("numeric_scale"),
             getString("character_set_name"), getString("collation_name"),
             getString("column_type"), getString("column_comment")
@@ -136,29 +136,32 @@ class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
                     if (true) mysqlColumn.columnDefault
                     else columns.getString("COLUMN_DEF")
                 
-                val forceDataType =
-                    if (mysqlColumn.columnType.toUpperCase.matches("(ENUM|SET)\\b.*"))
-                        Some(MysqlParserCombinator.parseDataType(mysqlColumn.columnType))
-                    else
-                        None
-                
-                // XXX: fetch
-                val isUnsigned = false
-                val isZerofill = false
-                val characterSet = Some(mysqlColumn.characterSetName)
+                lazy val characterSet = Some(mysqlColumn.characterSetName)
                     .filter(x => x != null && x != "")
-                    .map(MysqlCharacterSet(_))
-                val collate = Some(mysqlColumn.collationName)
+                lazy val collate = Some(mysqlColumn.collationName)
                     .filter(x => x != null && x != "")
-                    .map(MysqlCollate(_))
                 
-                val dataTypeOptions = Seq[DataTypeOption]() ++ characterSet ++ collate
+                lazy val DataTypeWithLength(_, length) = base.dataType
                 
-                val dataType = base.dataType match {
-                    case _ if forceDataType.isDefined => forceDataType.get
-                    case dataType: DefaultDataType => dataType.overrideOptions(dataTypeOptions)
-                }
-                
+                val columnType = mysqlColumn.dataType.toUpperCase
+                val dataType =
+                    if (columnType.toUpperCase.matches("(ENUM|SET)\\b.*")) {
+                        MysqlParserCombinator.parseDataType(mysqlColumn.columnType)
+                    } else if (MysqlDataTypes.characterDataTypeNames.contains(columnType)) {
+                        val length = mysqlColumn.characterMaximumLength match {
+                            case 0 => None
+                            case x => Some(x)
+                        }
+                        new MysqlCharacterDataType(columnType, length, characterSet, collate)
+                    } else if (MysqlDataTypes.textDataTypeNames.contains(columnType)) {
+                        new MysqlTextDataType(columnType, None, characterSet, collate)
+                    } else if (MysqlDataTypes.numericDataTypeNames.contains(columnType)) {
+                        // XXX: fetch unsigned, zerofill
+                        MysqlParserCombinator.parseDataType(mysqlColumn.columnType)
+                    } else {
+                        base.dataType
+                    }
+                        
                 val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
                 
                 val props = Seq[ColumnProperty]() ++ defaultValue
@@ -207,7 +210,7 @@ object MysqlJdbcModelExtractorTests
         
         assert("color" == table.columns(1).name)
         table.columns(1).dataType must beLike {
-            case DefaultDataType("VARCHAR", Some(100), _) => true
+            case MysqlCharacterDataType("VARCHAR", Some(100), _, _) => true
         }
         
         assert(List("id") == table.primaryKey.get.columns.toList)
@@ -254,19 +257,19 @@ object MysqlJdbcModelExtractorTests
         val person = extractTable("person")
         
         citizen.foreignKeys must haveSize(2)
+        citizen.indexes must haveSize(2)
         
         val fkc = citizen.foreignKeys.find(_.localColumns.toList == List("city_id")).get
         fkc.localColumns must beLike { case Seq("city_id") => true }
         fkc.externalColumns must beLike { case Seq("id") => true }
         fkc.externalTable must_== "city"
+        val ic = citizen.indexes.find(_.columns.toList == List("city_id"))
         
         val fkp = citizen.foreignKeys.find(_.localColumns.toList == List("pid1", "pid2")).get
         fkp.localColumns must beLike { case Seq("pid1", "pid2") => true }
         fkp.externalColumns must beLike { case Seq("id1", "id2") => true }
         fkp.externalTable must_== "person"
         fkp.name must_== Some("fk2c")
-        
-        citizen.indexes must haveSize(2)
         val ip = citizen.indexes.find(_.columns.toList == List("pid1", "pid2")).get
         ip.name must_== Some("fk2i")
         
@@ -320,7 +323,7 @@ object MysqlJdbcModelExtractorTests
         //t.column("name").properties.autoIncrement must_== None
     }
     
-    "fetch column CHARACTER SET and COLLATE" in {
+    "COLUMN CHARACTER SET and COLLATE" in {
         dropTable("qwqw")
         execute("CREATE TABLE qwqw (a VARCHAR(2), b VARCHAR(2) CHARACTER SET utf8 COLLATE utf8_bin)")
         
@@ -328,8 +331,8 @@ object MysqlJdbcModelExtractorTests
         val a = table.column("a")
         val b = table.column("b")
         
-        b.dataType.asInstanceOf[DefaultDataType].options.properties must contain(MysqlCharacterSet("utf8"))
-        b.dataType.asInstanceOf[DefaultDataType].options.properties must contain(MysqlCollate("utf8_bin"))
+        b.dataType must beLike {
+            case MysqlCharacterDataType("VARCHAR", Some(2), Some("utf8"), Some("utf8_bin")) => true }
     }
     
     "ENUM" in {
@@ -342,14 +345,11 @@ object MysqlJdbcModelExtractorTests
         table.column("probability").defaultValue must_== Some(StringValue("yes"))
     }
     
-    "DATETIME without length" in {
-        for (t <- List("DATETIME", "TEXT")) {
-            val table = t + "_without_length_test"
-            dropTable(table)
-            execute("CREATE TABLE " + table + "(a " + t + ")")
-            val tp = extractTable(table).column("a").dataType.asInstanceOf[DefaultDataType]
-            (tp.name, tp.length) must_== (t, None)
-        }
+    "BOOLEAN" in {
+        ddlTemplate.recreateTable(
+            "CREATE TABLE t_b (a BOOLEAN)")
+        val t = extractTable("t_b")
+        t.column("a").dataType must beLike { case MysqlNumericDataType("TINYINT", Some(1), _, _, _) => true }
     }
 }
 

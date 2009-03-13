@@ -5,7 +5,10 @@ import script._
 import util._
 
 /** Global implicits conversions */
-object Implicits extends util.CollectionImplicits {
+object Implicits extends util.CollectionImplicits with util.JdbcImplicits {
+    // I believe it must be added to scala.Predef
+    type ArrayBuffer[T] = scala.collection.mutable.ArrayBuffer[T]
+    
     // ?
     implicit def toDecls(ps: ColumnProperties) =
         ps.properties.map(TableDdlStatement.ModelColumnProperty(_))
@@ -40,10 +43,6 @@ object Implicits extends util.CollectionImplicits {
     implicit def fromTableOptions(to: TableOptions) =
         to.properties
     
-    // JDBC
-    
-    implicit def jdbcTemplate(ds: LiteDataSource) =
-        new JdbcTemplate(ds)
 }
 
 // vim: set ts=4 sw=4 et:

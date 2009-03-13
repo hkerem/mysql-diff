@@ -215,50 +215,29 @@ class ScriptSerializer(context: Context) {
         "ALTER TABLE " + st.name + " " +
             st.ops.map(serializeAlterTableOperation(_)).mkString(", ")
     
-    def serializeAlterTableOperation(op: Operation) = {
-        op match {
-            case AddEntry(column: Column) => "ADD COLUMN " + serializeTableEntry(column)
-            case AddEntry(e) => "ADD " + serializeTableEntry(e)
-            
-            case ChangeColumn(oldName, column) => "CHANGE COLUMN " + oldName + " " + serializeColumn(column)
-            case ModifyColumn(column) => "MODIFY COLUMN " + serializeColumn(column)
-            case DropColumn(name) => "DROP COLUMN " + name
-            
-            case DropPrimaryKey => "DROP PRIMARY KEY"
-            case DropIndex(name) => "DROP INDEX " + name
-            case DropForeignKey(name) => "DROP FOREIGN KEY " + name
-            
-            case ChangeTableOption(o) => serializeTableOption(o)
-        }
+    def serializeAlterTableOperation(op: Operation) = op match {
+        case AddEntry(column: Column) => "ADD COLUMN " + serializeTableEntry(column)
+        case AddEntry(e) => "ADD " + serializeTableEntry(e)
+        
+        case ChangeColumn(oldName, column) => "CHANGE COLUMN " + oldName + " " + serializeColumn(column)
+        case ModifyColumn(column) => "MODIFY COLUMN " + serializeColumn(column)
+        case DropColumn(name) => "DROP COLUMN " + name
+        
+        case DropPrimaryKey => "DROP PRIMARY KEY"
+        case DropIndex(name) => "DROP INDEX " + name
+        case DropForeignKey(name) => "DROP FOREIGN KEY " + name
+        case DropUniqueKey(name) => "DROP KEY " + name
+        
+        case ChangeTableOption(o) => serializeTableOption(o)
     }
     
     def serializeDataTypeOption(o: DataTypeOption) = o match {
-        case MysqlUnsigned(true) => Some("UNSIGNED")
-        case MysqlUnsigned(false) => None
-        case MysqlZerofill(true) => Some("ZEROFILL")
-        case MysqlZerofill(false) => None
         case MysqlCharacterSet(cs) => Some("CHARACTER SET " + cs)
         case MysqlCollate(collate) => Some("COLLATE " + collate)
     }
     
-    def serializeDefaultDataType(dataType: DefaultDataType) = {
-        val words = new ArrayBuffer[String]
-        words += {
-            var size = dataType.length.map("(" + _ + ")").getOrElse("")
-            dataType.name + size
-        }
-        
-        // Hack: MySQL requires CHARACTER SET before COLLATE
-        def dataTypeOptionOrder(o: DataTypeOption) = o match {
-            case x: MysqlCollate => 2
-            case x: MysqlCharacterSet => 1
-            case x => 0
-        }
-        words ++= stableSort(dataType.options.properties, dataTypeOptionOrder _)
-                .flatMap(serializeDataTypeOption _)
-        
-        words.mkString(" ")
-    }
+    def serializeDefaultDataType(dataType: DefaultDataType) =
+        dataType.name + dataType.length.map("(" + _ + ")").getOrElse("")
    
     def serializeDataType(dataType: DataType) = dataType match {
         case dataType: DefaultDataType => serializeDefaultDataType(dataType)

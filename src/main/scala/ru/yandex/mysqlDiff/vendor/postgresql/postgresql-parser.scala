@@ -15,7 +15,7 @@ object PostgresqlParserCombinatorTests extends SqlParserCombinatorTests(Postgres
     
     "DOUBLE PRECISION" in {
         parse(dataType)("DOUBLE PRECISION") must beLike {
-            case DefaultDataType("DOUBLE PRECISION", None, _) => true
+            case DefaultDataType("DOUBLE PRECISION", None) => true
         }
     }
     

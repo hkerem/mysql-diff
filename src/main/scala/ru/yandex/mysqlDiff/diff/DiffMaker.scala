@@ -4,6 +4,8 @@ import scala.collection.mutable.ArrayBuffer
 
 import model._
 
+import util.CollectionUtils._
+
 import Implicits._
 
 /**
@@ -12,33 +14,6 @@ import Implicits._
 case class DiffMaker(val context: Context) {
     import context._
 
-    /**
-     * Find common elements in two seqs.
-     * @return (elementsOnlyInA, elementsOnlyInB, pairsOfElementsInBothSeqs)
-     */
-    def compareSeqs[A, B](a: Seq[A], b: Seq[B], comparator: (A, B) => Boolean): (Seq[A], Seq[B], Seq[(A, B)]) = {
-        var onlyInA = List[A]()
-        var onlyInB = List[B]()
-        var inBothA = List[(A, B)]()
-        var inBothB = List[(A, B)]()
-        
-        for (x <- a) {
-            b.find(comparator(x, _)) match {
-                case Some(y) => inBothA ++= List((x, y))
-                case None => onlyInA ++= List(x)
-            }
-        }
-        
-        for (y <- b) {
-            a.find(comparator(_, y)) match {
-                case Some(x) => inBothB ++= List((x, y))
-                case None => onlyInB ++= List(y)
-            }
-        }
-        
-        // inBothA must_== inBothB
-        (onlyInA, onlyInB, inBothA)
-    }
     
     /**
      * Are the values equivalent from DB point of view. For example, 1 and '1' are equivalent.
@@ -54,17 +29,8 @@ case class DiffMaker(val context: Context) {
         a == b || e1(a, b) || e1(b, a)
     }
     
-    def dataTypesEquivalent(a: DataType, b: DataType) = {
-        if (!dataTypes.equivalent(a, b)) false
-        else (a, b) match {
-            case (a: DefaultDataType, b: DefaultDataType) =>
-                compareSeqs(a.options, b.options,
-                        (a: DataTypeOption, b: DataTypeOption) => a.propertyType == b.propertyType
-                )._3.forall { case (a, b) => a == b }
-            case (a, b) =>
-                true
-        }
-    }
+    def dataTypesEquivalent(a: DataType, b: DataType) =
+        dataTypes.equivalent(a, b)
     
     def columnPropertiesEquivalent(a: ColumnProperty, b: ColumnProperty) = {
         require(a.propertyType == b.propertyType)
@@ -253,18 +219,6 @@ object DiffMakerTests extends org.specs.Specification {
     
     import vendor.mysql._
     
-    "compareSeqs" in {
-        val a = List(1, 2, 3, 5)
-        val b = List("4", "3", "2")
-
-        def comparator(x: Int, y: String) = x.toString == y
-        val (onlyInA, onlyInB, inBoth) = diffMaker.compareSeqs(a, b, comparator _)
-
-        List(1, 5) must_== onlyInA.toList
-        List("4") must_== onlyInB.toList
-        List((2, "2"), (3, "3")) must_== inBoth.toList
-    }
-    
     "compareColumns rename" in {
         val oldC = new ColumnModel("user", dataTypes.varchar(10), new ColumnProperties(List(Nullability(true))))
         val newC = new ColumnModel("user_name", dataTypes.varchar(10), new ColumnProperties(List(Nullability(true))))
@@ -349,12 +303,6 @@ object DiffMakerTests extends org.specs.Specification {
     
     "VARCHAR(100) equivalent" in {
         val dt = dataTypes.make("VARCHAR", Some(100))
-        dataTypesEquivalent(dt, dt) must beTrue
-    }
-    
-    "VARCHAR(100) CHARACTER SET utf8 COLLATE utf8_general_ci equivalent" in {
-        val dt = dataTypes.make("VARCHAR", Some(100),
-                Seq(MysqlCollate("utf8_general_ci"), MysqlCharacterSet("utf8")))
         dataTypesEquivalent(dt, dt) must beTrue
     }
     

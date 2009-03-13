@@ -107,15 +107,10 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def sqlValue: Parser[SqlValue] = nullValue | numberValue | stringValue | booleanValue | temporalValue
     
-    // Data type options are defined in subclasses */
-    def dataTypeOption: Parser[DataTypeOption] = failure("no data type option")
-    
     def dataTypeName = name
     
-    // XXX: store unsigned
-    def dataType: Parser[DataType] = dataTypeName ~ opt("(" ~> naturalNumber <~ ")") ~ rep(dataTypeOption) ^^
-            { case name ~ length ~ options =>
-                    dataTypes.make(name.toUpperCase, length, new DataTypeOptions(options)) }
+    def dataType: Parser[DataType] = dataTypeName ~ opt("(" ~> naturalNumber <~ ")") ^^
+            { case name ~ length => dataTypes.make(name.toUpperCase, length) }
    
     def nullability: Parser[Nullability] = opt("NOT") <~ "NULL" ^^ { x => Nullability(x.isEmpty) }
     

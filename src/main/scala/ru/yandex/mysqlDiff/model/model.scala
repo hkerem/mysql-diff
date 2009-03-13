@@ -2,6 +2,8 @@ package ru.yandex.mysqlDiff.model
 
 import scala.collection.mutable._
 
+import util.CollectionUtils._
+
 import Implicits._
 
 abstract class Property {
@@ -95,33 +97,40 @@ case class DataTypeOptions(ps: Seq[DataTypeOption])
     override def copy(options: Seq[DataTypeOption]) = new DataTypeOptions(options).asInstanceOf[this.type]
 }
 
-abstract case class DataType() {
-    def name: String
+object DataTypeNameKey
+object DataTypeLengthKey
+
+abstract case class DataType(name: String) {
+    require(name.toUpperCase == name, "data type name must be upper-case")
+    require(name.matches("[\\w ]+"))
+    
+    def properties: Seq[(Any, Any)] = Seq(DataTypeNameKey -> name) ++ customProperties
+    def customProperties: Seq[(Any, Any)]
 }
 
-case class DefaultDataType(override val name: String, length: Option[Int], options: DataTypeOptions) extends DataType() {
-    require(name.toUpperCase == name, "data type name must be upper-case")
-    
-    def this(name: String, length: Option[Int]) =
-        this(name, length, new DataTypeOptions(Nil))
+trait DataTypeWithLength {
+    val name: String
+    val length: Option[Int]
+}
+
+object DataTypeWithLength {
+    def unapply(dt: DataTypeWithLength) = Some((dt.name, dt.length))
+}
+
+case class DefaultDataType(override val name: String, length: Option[Int])
+    extends DataType(name) with DataTypeWithLength
+{
     
     def withName(n: String) =
-        new DefaultDataType(n, this.length, this.options)
+        new DefaultDataType(n, this.length)
     
     def withLength(l: Option[Int]) =
-        new DefaultDataType(this.name, l, this.options)
+        new DefaultDataType(this.name, l)
     
-    def withOptions(os: DataTypeOptions) =
-        new DefaultDataType(this.name, this.length, os)
+    override def customProperties = length.map(DataTypeLengthKey -> _).toList
     
-    def overrideOptions(os: Seq[DataTypeOption]) =
-        withOptions(this.options.overrideProperties(os))
-    
-    def withDefaultOptions(os: Seq[DataTypeOption]) =
-        withOptions(this.options.withDefaultProperties(os))
-
     override def toString =
-        name + length.map("(" + _ + ")").getOrElse("") + (if (options.isEmpty) "" else " " + options.mkString(" "))
+        name + length.map("(" + _ + ")").getOrElse("")
 }
 
 abstract class DataTypes {
@@ -133,15 +142,12 @@ abstract class DataTypes {
         make(name, None)
     
     def make(name: String, length: Option[Int]): DataType =
-        make(name, length, new DataTypeOptions(Nil))
+        return new DefaultDataType(name.toUpperCase, length)
 
-    def make(name: String, length: Option[Int], options: DataTypeOptions): DataType =
-        new DefaultDataType(name.toUpperCase, length, options)
-    
     def resolveTypeNameAlias(name: String) = name.toUpperCase
     
     def normalize(dt: DataType) = dt match {
-        case dt: DefaultDataType => new DefaultDataType(resolveTypeNameAlias(dt.name), dt.length, dt.options)
+        case dt: DefaultDataType => make(resolveTypeNameAlias(dt.name), dt.length)
         case dt => dt
     }
     
@@ -159,16 +165,10 @@ abstract class DataTypes {
     def isLengthAllowed(name: String) =
         !(isAnyDateTime(name) || resolveTypeNameAlias(name).matches("(TINY|MEDIUM|LONG|)(TEXT|BLOB)"))
 
-    /** Equivelent without options counting */
-    def equivalent(a: DataType, b: DataType) = (normalize(a), normalize(b)) match {
-        case (a: DefaultDataType, b: DefaultDataType) =>
-            if (a == b) true
-            else if (a.name != b.name) false
-            else if (isAnyNumber(a.name)) true // ignore size change: XXX: should rather know DB defaults
-            else if (isAnyDateTime(a.name)) true // probably
-            else a.name == b.name && a.length == b.length
-        case (a, b) =>
-            a == b
+    def equivalent(a: DataType, b: DataType) = {
+        val (_, _, ab) = compareSeqs(
+            normalize(a).properties, normalize(b).properties, (a: (Any, Any), b: (Any, Any)) => a._1 == b._1)
+        ab.forall { case (a, b) => a == b }
     }
 }
 
@@ -338,6 +338,8 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
         "repeating column names in table " + name + " model")
     require(constraintNames.unique.size == constraintNames.size,
         "repeating constraint names in table " + name + " model")
+    require(indexNames.unique.size == indexNames.size,
+        "repeating index names in table " + name + " model")
     require(primaryKeys.length <= 1)
     
     def entries = columns ++ extras
@@ -346,6 +348,7 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     def primaryKey = primaryKeys.firstOption
     
     def indexes = extras.flatMap { case i: IndexModel => Some(i); case _ => None }
+    def indexNames = indexes.flatMap(_.name)
     def findIndex(name: String) = indexes.find(_.name == Some(name))
     def index(name: String) =
         findIndex(name).getOrThrow("table " + this.name + " has no index " + name)
@@ -367,8 +370,12 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     def constraints = extras.flatMap { case c: ConstraintModel => Some(c); case _ => None }
     def constraintNames = constraints.flatMap(_.name)
     
-    def indexWithColumns(columns: String*) = indexes.find(_.columns.toList == columns.toList).get
-    def uniqueKeyWithColumns(columns: String*) = uniqueKeys.find(_.columns.toList == columns.toList).get
+    def indexWithColumns(columns: String*) =
+        indexes.find(_.columns.toList == columns.toList)
+            .getOrThrow("table " + this.name + " has no index with columns " + columns.mkString(", "))
+    def uniqueKeyWithColumns(columns: String*) =
+        uniqueKeys.find(_.columns.toList == columns.toList)
+            .getOrThrow("table " + this.name + " has no unique keys with columns " + columns.mkString(", "))
     
     
     def addColumn(c: ColumnModel) =

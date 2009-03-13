@@ -22,16 +22,41 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     def set: Parser[MysqlSetDataType] = "SET (" ~> rep1sep(stringValue, ",") <~ ")" ^^
         { case s => MysqlSetDataType(s.map(_.value)) }
     
-    override def dataType = enum | set | super.dataType
+    def anyWord(words: Seq[String]): Parser[String] =
+        words.foldLeft[Parser[String]](failure("builder"))(_ append _)
     
-    // http://dev.mysql.com/doc/refman/5.1/en/create-table.html
-    override def dataTypeOption = (
-        super.dataTypeOption
-      | ("UNSIGNED" ^^^ MysqlUnsigned(true))
-      | ("ZEROFILL" ^^^ MysqlZerofill(true))
-      | ("CHARACTER" ~> "SET" ~> name ^^ (name => MysqlCharacterSet(name)))
-      | ("COLLATE" ~> name ^^ (name => MysqlCollate(name)))
-    )
+    def mysqlNumericDataTypeName: Parser[String] =
+        anyWord(MysqlDataTypes.numericDataTypeNames) ^^ { _.toUpperCase }
+    
+    def mysqlNumericDataType: Parser[MysqlNumericDataType] =
+        mysqlNumericDataTypeName ~ opt("(" ~> naturalNumber ~ opt("," ~> intNumber) <~ ")") ~
+                opt("UNSIGNED") ~ opt("ZEROFILL") ^^
+            { case n ~ s ~ u ~ z =>
+                val (l, d) = s match {
+                    case None => (None, None)
+                    case Some(l ~ None) => (Some(l), None)
+                    case Some(l ~ Some(d)) => (Some(l), Some(d))
+                }
+                MysqlNumericDataType(n, l, d, Some(u.isDefined), Some(z.isDefined)) }
+    
+    def mysqlCharacterDataTypeName: Parser[String] =
+        anyWord(MysqlDataTypes.characterDataTypeNames) ^^ { _.toUpperCase }
+    
+    def mysqlCharacterDataType: Parser[MysqlCharacterDataType] =
+        mysqlCharacterDataTypeName ~ opt("(" ~> naturalNumber <~ ")") ~
+            opt("CHARACTER SET" ~> name) ~ opt("COLLATE" ~> name) ^^
+                { case n ~ l ~ cs ~ cl => MysqlCharacterDataType(n, l, cs, cl) }
+    
+    def mysqlTextDataTypeName: Parser[String] =
+        anyWord(MysqlDataTypes.textDataTypeNames) ^^ { _.toUpperCase }
+    
+    def mysqlTextDataType: Parser[MysqlTextDataType] =
+        mysqlTextDataTypeName ~ opt("BINARY") ~
+            opt("CHARACTER SET" ~> name) ~ opt("COLLATE" ~> name) ^^
+                { case n ~ b ~ cs ~ cl => MysqlTextDataType(n, Some(b.isDefined), cs, cl) }
+    
+    override def dataType: Parser[DataType] =
+        enum | set | mysqlNumericDataType | mysqlCharacterDataType | mysqlTextDataType | super.dataType
     
     def nowValue: Parser[SqlValue] =
         // please keep spaces
@@ -121,12 +146,6 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
     import MysqlTableDdlStatement._
     import TableDdlStatement._
     
-    "parse dataTypeOption" in {
-        parse(dataTypeOption)("UNSIGNED") must_== MysqlUnsigned(true)
-        parse(dataTypeOption)("CHARACTER SET utf8") must_== new MysqlCharacterSet("utf8")
-        parse(dataTypeOption)("COLLATE utf8bin") must_== new MysqlCollate("utf8bin")
-    }
-    
     "parse CREATE TABLE ... LIKE" in {
         parse(createTable)("CREATE TABLE oranges LIKE lemons") must beLike {
             case CreateTableLikeStatement("oranges", false, "lemons") => true
@@ -174,6 +193,10 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         parse(enum)("ENUM('week', 'month')") must beLike {
             case MysqlEnumDataType(Seq("week", "month")) => true }
         parse(createTable)("CREATE TABLE we (a ENUM('aa', 'bb'))")
+    }
+    
+    "mysqlNumericDataTypeName" in {
+        parse(mysqlNumericDataTypeName)("INT") must_== "INT"
     }
     
     "hex number" in {

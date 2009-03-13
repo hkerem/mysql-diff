@@ -94,8 +94,7 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
             val defaultValueFromDb =
                 columns.getString("COLUMN_DEF")
             
-            val dataType = dataTypes.make(colType, colTypeSize,
-                    Seq[DataTypeOption]())
+            val dataType = dataTypes.make(colType, colTypeSize)
             
             val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
             

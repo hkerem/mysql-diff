@@ -1,7 +1,9 @@
 package ru.yandex.mysqlDiff.vendor.mysql
 
 import model._
+import script._
 
+// XXX: data type options are unused now, shold be used for automated comparison
 case class MysqlZerofill(set: Boolean) extends DataTypeOption {
     override def propertyType = MysqlZerofillType
 }
@@ -15,6 +17,7 @@ case class MysqlUnsigned(set: Boolean) extends DataTypeOption {
 case object MysqlUnsignedType extends DataTypeOptionType {
     override type Value = MysqlUnsigned
 }
+
 
 case class MysqlCharacterSet(name: String) extends DataTypeOption {
     override def propertyType = MysqlCharacterSetType
@@ -30,34 +33,137 @@ case object MysqlCollateType extends DataTypeOptionType {
     override type Value = MysqlCollate
 }
 
+object DataTypeValuesKey
 
 // XXX: character set, collation
-case class MysqlEnumDataType(values: Seq[String]) extends DataType {
-    override val name = "ENUM"
+case class MysqlEnumDataType(values: Seq[String]) extends DataType("ENUM") {
     
     override def equals(that: Any) = that match {
         case that: MysqlEnumDataType => this.values.toList == that.values.toList
         case _ => false
     }
+    
+    override def customProperties = Seq(DataTypeValuesKey -> values.toList)
 }
-case class MysqlSetDataType(values: Seq[String]) extends DataType {
-    override val name = "SET"
+
+case class MysqlSetDataType(values: Seq[String]) extends DataType("SET") {
     
     override def equals(that: Any) = that match {
         case that: MysqlSetDataType => this.values.toList == that.values.toList
         case _ => false
     }
+    
+    override def customProperties = Seq(DataTypeValuesKey -> values.toList)
 }
 
+object MysqlDataTypeDecimalsKey
+object MysqlDataTypeUnsignedKey
+object MysqlDataTypeZerofillKey
+
+case class MysqlNumericDataType(override val name: String, length: Option[Int], decimals: Option[Int],
+        unsigned: Option[Boolean], zerofill: Option[Boolean])
+    extends DataType(name)
+{
+    require(MysqlDataTypes.numericDataTypeNames.contains(name), "data type must be a number: " + name)
+    require(length.isDefined || decimals.isEmpty)
+    
+    override def customProperties =
+        Seq[(Any, Any)]() ++
+        length.map(DataTypeLengthKey -> _) ++
+        decimals.map(MysqlDataTypeDecimalsKey -> _) ++
+        unsigned.map(MysqlDataTypeUnsignedKey -> _) ++
+        zerofill.map(MysqlDataTypeZerofillKey -> _)
+        
+}
+
+object MysqlCharacterSetKey
+object MysqlCollateKey
+
+trait MysqlCharsetAwareDataType extends DataType {
+    val charset: Option[String]
+    val collate: Option[String]
+    def withCharset(cs: Option[String]): this.type
+    def withCollate(cl: Option[String]): this.type
+    def withDefaultCharset(cs: Option[String]): this.type = {
+        if (charset.isDefined) this
+        else withCharset(cs)
+    }
+    def withDefaultCollate(cl: Option[String]): this.type = {
+        if (collate.isDefined) this
+        else withCollate(cl)
+    }
+}
+
+case class MysqlCharacterDataType(override val name: String, length: Option[Int],
+        charset: Option[String], collate: Option[String])
+    extends DataType(name) with MysqlCharsetAwareDataType
+{
+    require(MysqlDataTypes.characterDataTypeNames.contains(name))
+    
+    override def customProperties =
+        Seq[(Any, Any)]() ++
+        length.map(DataTypeLengthKey -> _) ++
+        charset.map(MysqlCharacterSetKey -> _) ++
+        collate.map(MysqlCollateKey -> _)
+    
+    override def withCharset(cs: Option[String]): this.type =
+        (new MysqlCharacterDataType(name, length, cs, collate)).asInstanceOf[this.type]
+    
+    override def withCollate(cl: Option[String]): this.type =
+        (new MysqlCharacterDataType(name, length, charset, cl)).asInstanceOf[this.type]
+}
+
+object MysqlBinaryKey
+
+case class MysqlTextDataType(override val name: String, binary: Option[Boolean],
+        charset: Option[String], collate: Option[String])
+    extends DataType(name) with MysqlCharsetAwareDataType
+{
+    require(MysqlDataTypes.textDataTypeNames.contains(name))
+    
+    override def customProperties =
+        Seq[(Any, Any)]() ++
+        binary.map(MysqlBinaryKey -> _) ++
+        charset.map(MysqlCharacterSetKey -> _) ++
+        collate.map(MysqlCollateKey -> _)
+    
+    override def withCharset(cs: Option[String]): this.type =
+        (new MysqlTextDataType(name, binary, cs, collate)).asInstanceOf[this.type]
+    
+    override def withCollate(cl: Option[String]): this.type =
+        (new MysqlTextDataType(name, binary, charset, cl)).asInstanceOf[this.type]
+}
 
 object MysqlDataTypes extends DataTypes {
+    val numericDataTypeNames = Seq(
+        "TINYINT", "SMALLINT", "MEDIUMINT", "INT", "INTEGER", "BIGINT",
+        "REAL", "DOUBLE", "FLOAT", "DECIMAL", "NUMERIC")
+    
+    val characterDataTypeNames = Seq("CHAR", "VARCHAR")
+    
+    val textDataTypeNames = Seq("TINYTEXT", "TEXT", "MEDIUMTEXT", "LONGTEXT")
+    
+    override def make(name0: String, length: Option[Int]) = {
+        val name = name0.toUpperCase
+        if (numericDataTypeNames.contains(name))
+            new MysqlNumericDataType(name, length, None, None, None)
+        else if (characterDataTypeNames.contains(name))
+            new MysqlCharacterDataType(name, length, None, None)
+        else if (textDataTypeNames.contains(name))
+            new MysqlTextDataType(name, None, None, None)
+        else
+            super.make(name0, length)
+    }
+    
     def int = make("INT")
-
+    
+    override def isAnyNumber(name: String) = numericDataTypeNames.contains(name.toUpperCase)
+    
     // http://dev.mysql.com/doc/refman/5.0/en/numeric-type-overview.html
     override def normalize(dt: DataType) = super.normalize(dt) match {
         // XXX: only before 5.0.3
-        case DefaultDataType("BIT", _, options) => new DefaultDataType("TINYINT", Some(1), options)
-        case DefaultDataType("BOOLEAN", _, options) => new DefaultDataType("TINYINT", Some(1), options)
+        case dt if dt.name == "BIT" => make("TINYINT", Some(1))
+        case dt if dt.name == "BOOLEAN" => make("TINYINT", Some(1))
         case dt => dt
     }
     
@@ -74,6 +180,12 @@ object MysqlDataTypesTests extends org.specs.Specification {
         dataTypes.equivalent(
             new MysqlEnumDataType(List("abc", "def")),
             new MysqlEnumDataType(Seq("abc", "def"))) must beTrue
+    }
+    
+    "VARCHAR(100) CHARACTER SET utf8 COLLATE utf8_general_ci equivalent" in {
+        val dt = new MysqlCharacterDataType("VARCHAR", Some(100),
+                Some("utf8"), Some("utf8_general_ci"))
+        dataTypes.equivalent(dt, dt) must beTrue
     }
 }
 
@@ -268,9 +380,20 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         table.options.find(MysqlCharacterSetTableOptionType).map(_.name).orElse(defaultCharset)
     }
     
-    protected override def parseCreateTableExtra(e: Entry) = e match {
-        case MysqlForeignKey(fk, indexName) => Seq(fk, IndexModel(indexName, fk.localColumns))
-        case e => super.parseCreateTableExtra(e)
+    protected override def parseCreateTableExtra(e: Entry, ct: CreateTableStatement) = e match {
+        case MysqlForeignKey(fk, indexName) =>
+            // another MySQL magic
+            val haveAnotherIndex = ct.entries.exists {
+                case Index(IndexModel(_, columns)) =>
+                    columns.toList.take(fk.localColumns.length) == fk.localColumns.toList
+                case UniqueKey(UniqueKeyModel(_, columns)) =>
+                    columns.toList.take(fk.localColumns.length) == fk.localColumns.toList
+                // XXX: what about two foreign keys sharing same index
+                case _ => false
+            }
+            if (haveAnotherIndex) Seq(fk)
+            else Seq(fk, IndexModel(indexName, fk.localColumns))
+        case e => super.parseCreateTableExtra(e, ct)
     }
     
     override def parseCreateTable(ct: script.CreateTableStatement): TableModel = {
@@ -295,28 +418,12 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         // Unspecified collation and charset are taken from table defaults
         // http://dev.mysql.com/doc/refman/5.1/en/charset-column.html
         
-        val defaultCharset: Option[MysqlCharacterSet] = dataType match {
-            case DefaultDataType(name, _, options) if dataTypes.isAnyChar(name) =>
-                options.find(MysqlCollateType).flatMap {
-                        cl: MysqlCollate => MysqlCharsets.defaultCharset(cl.name) }
-                    .orElse(tableCharacterSet(table))
-                    .map(MysqlCharacterSet(_))
-            case _ => None
-        }
-        val defaultCollation: Option[MysqlCollate] = dataType match {
-            case DefaultDataType(name, _, options) if dataTypes.isAnyChar(name) =>
-                options.find(MysqlCharacterSetType).flatMap {
-                        cs: MysqlCharacterSet => MysqlCharsets.defaultCollation(cs.name) }
-                    .orElse(tableCollation(table))
-                    .map(MysqlCollate(_))
-            case _ => None
-        }
-        
-        val defaultOptions: Seq[DataTypeOption] = List[DataTypeOption]() ++ defaultCharset ++ defaultCollation
-        
-        dataType match {
-            case d: DefaultDataType => d.withDefaultOptions(defaultOptions)
-            case d if defaultOptions.isEmpty => d
+        super.fixDataType(dataType, column, table) match {
+            case dt: MysqlCharsetAwareDataType =>
+                dt
+                    .withDefaultCharset(tableCharacterSet(table))
+                    .withDefaultCollate(tableCollation(table))
+            case dt => dt
         }
     }
     
@@ -340,14 +447,6 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
 
 object MysqlModelParserTests extends ModelParserTests(MysqlContext) {
     import MysqlContext._
-    
-    "INT column must have no collation" in {
-        val t = modelParser.parseCreateTableScript(
-            "CREATE TABLE users (id INT) CHARACTER SET utf8 COLLATE utf8_bin")
-        val c = t.column("id")
-        c.dataType.asInstanceOf[DefaultDataType].options.find(MysqlCollateType) must_== None
-        c.dataType.asInstanceOf[DefaultDataType].options.find(MysqlCharacterSetType) must_== None
-    }
     
     "parse CREATE TABLE LIKE" in {
         val s = "CREATE TABLE a (id INT); CREATE TABLE b LIKE a"
@@ -382,6 +481,14 @@ object MysqlModelParserTests extends ModelParserTests(MysqlContext) {
             "CREATE TABLE a (b_id INT, FOREIGN KEY (id) REFERENCES b(b_id)) ENGINE=InnoDB")
         t.foreignKeys must haveSize(1)
     }
+    
+}
+
+class MysqlModelSerializer(context: Context) extends ModelSerializer(context) {
+    import context._
+    
+    import script.TableDdlStatement._
+    import MysqlTableDdlStatement._
     
 }
 

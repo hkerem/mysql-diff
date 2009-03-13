@@ -10,7 +10,7 @@ import util._
 
 object MysqlTestDataSourceParameters extends TestDataSourceParameters {
     
-    override val defaultTestDsUrl = "jdbc:mysql://localhost:3306/mysql_diff_test"
+    override val defaultTestDsUrl = "jdbc:mysql://localhost:3306/mysql_diff_tests"
     override val testDsUser = "test"
     override val testDsPassword = "test"
     
@@ -46,6 +46,24 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             "CREATE TABLE servers (id INT, dc_id INT, " +
                     "CONSTRAINT dc_fk FOREIGN KEY dc_idx (dc_id) REFERENCES datacenters(id)) ENGINE=InnoDB")
         t2.foreignKeys must haveSize(1)
+    }
+    
+    "FOREIGN KEY with overlapping INDEX" in {
+        ddlTemplate.dropTableIfExists("yyyy")
+        ddlTemplate.recreateTable("CREATE TABLE zzzz (id INT PRIMARY KEY) ENGINE=InnoDB")
+        checkTwoTables(
+            "CREATE TABLE yyyy (id INT, zzzz_id INT, CONSTRAINT zzzz_c FOREIGN KEY zzzz_i (zzzz_id) REFERENCES zzzz(id), INDEX(zzzz_id, id)) ENGINE=InnoDB",
+            "CREATE TABLE yyyy (id INT, zzzz_id INT, CONSTRAINT zzzz_c FOREIGN KEY zzzz_i (zzzz_id) REFERENCES zzzz(id)) ENGINE=InnoDB"
+            )
+    }
+    
+    "FOREIGN KEY with overlapping UNIQUE" in {
+        ddlTemplate.dropTableIfExists("uuuu")
+        ddlTemplate.recreateTable("CREATE TABLE qqqq (id INT PRIMARY KEY) ENGINE=InnoDB")
+        checkTwoTables(
+            "CREATE TABLE uuuu (id INT, qqqq_id INT, CONSTRAINT qqqq_c FOREIGN KEY qqqq_i (qqqq_id) REFERENCES qqqq(id), UNIQUE(qqqq_id, id)) ENGINE=InnoDB",
+            "CREATE TABLE uuuu (id INT, qqqq_id INT, CONSTRAINT qqqq_c FOREIGN KEY qqqq_i (qqqq_id) REFERENCES qqqq(id)) ENGINE=InnoDB"
+            )
     }
     
     "diff, apply collate" in {
@@ -133,6 +151,11 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
     "BOOLEAN with DEFAULT 1" in {
         checkTable(
             "CREATE TABLE boolean_with_default_true (available BOOLEAN NOT NULL default 1)")
+    }
+    
+    "MEDIUMINT UNSIGNED" in {
+        checkTable(
+            "CREATE TABLE service_with_mediumint_unsigned (bg_color MEDIUMINT UNSIGNED)")
     }
 }
 

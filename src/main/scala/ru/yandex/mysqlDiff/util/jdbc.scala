@@ -4,6 +4,16 @@ import java.sql._
 import javax.sql.DataSource
 import scala.collection.mutable.ArrayBuffer
 
+trait JdbcImplicits {
+    implicit def jdbcTemplate(ds: LiteDataSource) = new JdbcTemplate(ds)
+    
+    implicit def resultSetExtras(rs: ResultSet) = new ResultSetExtras(rs)
+}
+
+object JdbcImplicits extends JdbcImplicits
+
+import JdbcImplicits._
+
 /**
  * Slightly different variant of <code>javax.sql.DataSource</code>
  * 
@@ -48,8 +58,6 @@ object LiteDataSource extends Logging {
     /** Data source that always feeds same connection. Connection is never closed by data source */
     def singleConnection(c: Connection) = new SingleConnectionLiteDataSource(c)
     
-    implicit def jdbcTemplate(ds: LiteDataSource) =
-        new JdbcTemplate(ds)
 }
 
 /**
@@ -123,20 +131,12 @@ trait JdbcOperations extends Logging {
                 }
             }
         
-        private def read[T](rs: ResultSet, rm: ResultSet => T): Seq[T] = {
-            val r = new ArrayBuffer[T]
-            while (rs.next()) {
-                r += rm(rs)
-            }
-            r
-        }
-        
         def seq[T](rm: ResultSet => T): Seq[T] =
-            execute { rs => read(rs, rm) }
+            execute { rs => rs.read(rm) }
         
         private def singleColumnSeq[T](rm: ResultSet => T): Seq[T] = execute { rs =>
             if (rs.getMetaData.getColumnCount != 1) throw new Exception("expecting single column") // XXX
-            read(rs, rm)
+            rs.read(rm)
         }
         
         def ints(): Seq[Int] = singleColumnSeq { rs => rs.getInt(1) }
@@ -237,6 +237,24 @@ class JdbcTemplate(override val ds: LiteDataSource) extends JdbcOperations {
     def this(ds: () => Connection) = this(LiteDataSource(ds))
     def this(ds: DataSource) = this(LiteDataSource(ds))
 
+}
+
+class ResultSetExtras(rs: ResultSet) {
+    def read[T](rm: ResultSet => T): Seq[T] = {
+        val r = new ArrayBuffer[T]
+        while (rs.next()) {
+            r += rm(rs)
+        }
+        r
+    }
+    
+    def readValues() =
+        read {
+            rs =>
+                (1 to rs.getMetaData.getColumnCount)
+                    .map(i => (rs.getMetaData.getColumnName(i), rs.getObject(i)))
+                    .toList
+        }
 }
 
 // vim: set ts=4 sw=4 et:
