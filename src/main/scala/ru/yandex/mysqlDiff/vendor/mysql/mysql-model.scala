@@ -359,7 +359,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
     import MysqlTableDdlStatement._
     
     protected override def alterTableOperation(op: Operation, table: TableModel): TableModel = op match {
-        case AddEntry(MysqlForeignKey(fk, indexNameOption)) =>
+        case AddExtra(MysqlForeignKey(fk, indexNameOption)) =>
             table.addForeignKey(fk).addIndex(IndexModel(indexNameOption, fk.localColumns))
         case _ => super.alterTableOperation(op, table)
     }

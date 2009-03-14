@@ -64,6 +64,11 @@ object TableDdlStatement {
     /** Object inside table */
     abstract class Entry
     
+    // XXX: MySQL-specific
+    abstract class ColumnPosition
+    case class ColumnAfter(name: String) extends ColumnPosition
+    case object ColumnFirst extends ColumnPosition
+    
     /** Something can be specified with column */
     abstract class ColumnPropertyDecl
     
@@ -94,9 +99,13 @@ object TableDdlStatement {
         def addProperty(c: ColumnPropertyDecl) = new Column(name, dataType, properties ++ List(c))
     }
     
-    trait Constraint extends Entry
+    /** Anithing except column */
+    trait Extra extends Entry
     
-    case class Index(index: model.IndexModel) extends Entry
+    /** CONSTRAINT */
+    trait Constraint extends Extra
+    
+    case class Index(index: model.IndexModel) extends Extra
     
     case class UniqueKey(uk: model.UniqueKeyModel) extends Constraint
     
@@ -115,25 +124,19 @@ object TableDdlStatement {
     trait ColumnOperation extends Operation
     trait ExtraOperation extends Operation
     
-    // XXX: use it
-    abstract case class ColumnPosition()
-    case class ColumnAfter(name: String) extends ColumnPosition
-    case object ColumnFirst extends ColumnPosition
+    abstract class AddSomething extends Operation
+    case class AddExtra(e: Extra) extends AddSomething
+    case class AddColumn(c: Column, position: Option[ColumnPosition]) extends AddSomething
     
-    case class AddEntry(e: Entry) extends Operation
+    def AddPrimaryKey(pk: PrimaryKeyModel) = AddExtra(new PrimaryKey(pk))
+    def AddForeignKey(fk: ForeignKeyModel) = AddExtra(new ForeignKey(fk))
+    def AddUniqueKey(un: UniqueKeyModel) = AddExtra(new UniqueKey(un))
+    def AddIndex(index: IndexModel) = AddExtra(new Index(index))
     
-    // XXX: AFTER
-    def AddColumn(c: ColumnModel) = AddEntry(new Column(c))
-    def AddPrimaryKey(pk: PrimaryKeyModel) = AddEntry(new PrimaryKey(pk))
-    def AddForeignKey(fk: ForeignKeyModel) = AddEntry(new ForeignKey(fk))
-    def AddUniqueKey(un: UniqueKeyModel) = AddEntry(new UniqueKey(un))
-    def AddIndex(index: IndexModel) = AddEntry(new Index(index))
-    
-    // XXX: AFTER
-    case class ChangeColumn(oldName: String, model: ColumnModel)
+    case class ChangeColumn(oldName: String, model: ColumnModel, position: Option[ColumnPosition])
         extends ModifyOperation with ColumnOperation
     
-    case class ModifyColumn(model: ColumnModel)
+    case class ModifyColumn(model: ColumnModel, position: Option[ColumnPosition])
         extends ModifyOperation with ColumnOperation
     
     /** @param value None means DROP DEFAULT */

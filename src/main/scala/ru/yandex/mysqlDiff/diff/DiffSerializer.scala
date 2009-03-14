@@ -11,16 +11,21 @@ import Implicits._
 class DiffSerializer(val context: Context) {
     import context._
     
+    import TableDdlStatement._
+    
     def alterColumnScript(cd: ColumnDiff, table: TableModel) =
         AlterTableStatement(table.name, List(alterColumnStmt(cd, table)))
     
     def alterColumnStmt(cd: ColumnDiff, table: TableModel) = cd match {
-        case CreateColumnDiff(c) => TableDdlStatement.AddColumn(c)
+        // XXX: position
+        case CreateColumnDiff(ColumnModel(name, dataType, properties)) =>
+            TableDdlStatement.AddColumn(
+                new Column(name, dataType, properties.properties.map(p => new ModelColumnProperty(p))), None)
         case DropColumnDiff(name) => TableDdlStatement.DropColumn(name)
         case ChangeColumnDiff(name, Some(newName), diff) =>
-                TableDdlStatement.ChangeColumn(name, table.column(newName))
+                TableDdlStatement.ChangeColumn(name, table.column(newName), None)
         case ChangeColumnDiff(name, None, diff) =>
-                TableDdlStatement.ModifyColumn(table.column(name))
+                TableDdlStatement.ModifyColumn(table.column(name), None)
     }
     
     def dropExtraStmt(k: TableExtra) = k match {
@@ -70,11 +75,12 @@ class DiffSerializer(val context: Context) {
             case _: TableDdlStatement.ColumnOperation => 12
             case _ => 13
         }
+        
         case _: TableDdlStatement.ModifyOperation => 20
-        case TableDdlStatement.AddEntry(e) => e match {
-            case _: TableDdlStatement.Column => 31
-            case _ => 32
-        }
+        
+        case _: TableDdlStatement.AddColumn => 31
+        case _: TableDdlStatement.AddSomething => 32
+        
         case _ => 99
     }
     
@@ -107,7 +113,7 @@ class DiffSerializer(val context: Context) {
             require(addPkSingleColumnDiffs.length <= 1)
             
             val addPkSingleColumnDiffProper = addPkSingleColumnDiffs.firstOption
-                    .map(x => new TableDdlStatement.AddEntry(new TableDdlStatement.Column(x.asInstanceOf[CreateColumnDiff].column) addProperty TableDdlStatement.InlinePrimaryKey))
+                    .map(x => new TableDdlStatement.AddColumn(new TableDdlStatement.Column(x.asInstanceOf[CreateColumnDiff].column) addProperty TableDdlStatement.InlinePrimaryKey, None))
             
             // end of CAP-101
             
@@ -194,10 +200,10 @@ object DiffSerializerTests extends org.specs.Specification {
             pftp { case DropIndex("ni") => true })
         
         val addLoginI = altStmt.findIndexOf(
-            pftp { case AddEntry(c: Column) if c.name == "login" => true })
+            pftp { case AddColumn(c: Column, _) if c.name == "login" => true })
         
         val addLiI = altStmt.findIndexOf(
-            pftp { case AddEntry(Index(c: IndexModel)) if c.name == Some("li") => true })
+            pftp { case AddExtra(Index(c: IndexModel)) if c.name == Some("li") => true })
         
         dropNiI must be_>=(0)
         dropNameI must be_>=(0)

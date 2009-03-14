@@ -130,14 +130,17 @@ case class ModelParser(val context: Context) {
     protected def alterTableOperation(op: Operation, table: TableModel): TableModel = {
         import AlterTableStatement._
         op match {
-            case AddEntry(c: Column) => table.addColumn(fixColumn(parseColumn(c), table))
-            case AddEntry(Index(i)) => table.addExtra(i)
-            case AddEntry(PrimaryKey(pk)) => table.addExtra(pk)
-            case AddEntry(ForeignKey(fk)) => table.addExtra(fk)
-            case AddEntry(UniqueKey(uk)) => table.addExtra(uk)
+            // XXX: respect position in AddColumn, ChangeColumn, ModifyColumn
             
-            case ChangeColumn(oldName, model) => table.alterColumn(oldName, ignored => model)
-            case ModifyColumn(model) => table.alterColumn(model.name, ignored => model)
+            case AddColumn(c, position) => table.addColumn(fixColumn(parseColumn(c), table))
+            
+            case AddExtra(Index(i)) => table.addExtra(i)
+            case AddExtra(PrimaryKey(pk)) => table.addExtra(pk)
+            case AddExtra(ForeignKey(fk)) => table.addExtra(fk)
+            case AddExtra(UniqueKey(uk)) => table.addExtra(uk)
+            
+            case ChangeColumn(oldName, model, pos) => table.alterColumn(oldName, ignored => model)
+            case ModifyColumn(model, pos) => table.alterColumn(model.name, ignored => model)
             case DropColumn(name) => table.dropColumn(name)
             case DropPrimaryKey => table.dropPrimaryKey
             case DropIndex(name) => table.dropIndexOrUniqueKey(name) // XXX: should drop unique key only on MySQL

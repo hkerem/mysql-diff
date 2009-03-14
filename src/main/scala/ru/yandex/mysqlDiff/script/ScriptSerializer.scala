@@ -215,12 +215,45 @@ class ScriptSerializer(context: Context) {
         "ALTER TABLE " + st.name + " " +
             st.ops.map(serializeAlterTableOperation(_)).mkString(", ")
     
+    def serializeColumnPosition(position: ColumnPosition) = position match {
+        case ColumnFirst => "FIRST"
+        case ColumnAfter(column) => "AFTER " + column
+    }
+    
+    def serializeAddColumn(ac: AddColumn) = {
+        val AddColumn(column, pos) = ac
+        val words = new ArrayBuffer[String]
+        words += "ADD COLUMN"
+        words += serializeTableEntry(column)
+        words ++= pos.map(serializeColumnPosition _)
+        words.mkString(" ")
+    }
+    
+    def serializeChangeColumn(cc: ChangeColumn) = {
+        val ChangeColumn(oldName, column, pos) = cc
+        val words = new ArrayBuffer[String]
+        words += "CHANGE COLUMN"
+        words += oldName
+        words += serializeColumn(column)
+        words ++= pos.map(serializeColumnPosition _)
+        words.mkString(" ")
+    }
+    
+    def serializeModifyColumn(mc: ModifyColumn) = {
+        val ModifyColumn(column, pos) = mc
+        val words = new ArrayBuffer[String]
+        words += "MODIFY COLUMN"
+        words += serializeColumn(column)
+        words ++= pos.map(serializeColumnPosition _)
+        words.mkString(" ")
+    }
+    
     def serializeAlterTableOperation(op: Operation) = op match {
-        case AddEntry(column: Column) => "ADD COLUMN " + serializeTableEntry(column)
-        case AddEntry(e) => "ADD " + serializeTableEntry(e)
+        case ac: AddColumn => serializeAddColumn(ac)
+        case AddExtra(e) => "ADD " + serializeTableEntry(e)
         
-        case ChangeColumn(oldName, column) => "CHANGE COLUMN " + oldName + " " + serializeColumn(column)
-        case ModifyColumn(column) => "MODIFY COLUMN " + serializeColumn(column)
+        case cc: ChangeColumn => serializeChangeColumn(cc)
+        case mc: ModifyColumn => serializeModifyColumn(mc)
         case DropColumn(name) => "DROP COLUMN " + name
         
         case DropPrimaryKey => "DROP PRIMARY KEY"

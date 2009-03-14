@@ -82,7 +82,7 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
                     throw new MysqlDiffException("UNIQUE KEY name specified twice")
                 model.UniqueKeyModel(n1.orElse(n2), cs) }
     
-    override def fk: Parser[TableDdlStatement.Entry] =
+    override def fk: Parser[TableDdlStatement.Extra] =
         (constraint <~ "FOREIGN KEY") ~ opt(name) ~ nameList ~ references ^^
             { case cn ~ in ~ lcs ~ r =>
                     MysqlForeignKey(
@@ -186,7 +186,7 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         val a = parse(alterTable)("ALTER TABLE event ADD UNIQUE INDEX idx2 (cr, d, ex)")
         a must beLike {
             case AlterTableStatement("event",
-                    Seq(AddEntry(UniqueKey(UniqueKeyModel(Some("idx2"), Seq("cr", "d", "ex")))))) => true }
+                    Seq(AddExtra(UniqueKey(UniqueKeyModel(Some("idx2"), Seq("cr", "d", "ex")))))) => true }
     }
     
     "enum" in {

@@ -228,7 +228,8 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
             { case cn ~ lcs ~ r =>
                     ForeignKeyModel(cn, lcs, r.table, r.columns, r.updateRule, r.deleteRule) }
     
-    def fk: Parser[TableDdlStatement.Entry] = fkModel ^^ { fk => TableDdlStatement.ForeignKey(fk) }
+    /** Must not be <code>Parser[TableDdlStatement.ForeignKey]</code> to be overrideable */
+    def fk: Parser[TableDdlStatement.Extra] = fkModel ^^ { fk => TableDdlStatement.ForeignKey(fk) }
     
     def pkModel: Parser[PrimaryKeyModel] =
         (constraint <~ "PRIMARY KEY") ~ indexColNameList ^^
@@ -268,12 +269,15 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def dropView = "DROP VIEW" ~> name ^^ { name => DropViewStatement(name) }
     
-    def columnPosition: Parser[Any] = opt("FIRST" | ("AFTER" ~> name))
+    def columnPosition: Parser[TableDdlStatement.ColumnPosition] =
+        ( "FIRST" ^^^ TableDdlStatement.ColumnFirst
+        | "AFTER" ~> name ^^ { TableDdlStatement.ColumnAfter(_) }
+        )
     
     // XXX: add multiple column
     // XXX: use FIRST, AFTER
-    def addColumn = "ADD" ~> opt("COLUMN") ~> column <~ columnPosition ^^
-            { column => TableDdlStatement.AddEntry(column) }
+    def addColumn = "ADD" ~> opt("COLUMN") ~> column ~ opt(columnPosition) ^^
+            { case c ~ p => TableDdlStatement.AddColumn(c, p) }
     
     def addIndex = "ADD" ~> indexModel ^^ { ind => TableDdlStatement.AddIndex(ind) }
     
@@ -281,18 +285,18 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def addPk = "ADD" ~> pkModel ^^ { pk => TableDdlStatement.AddPrimaryKey(pk) }
     
-    def addFk = "ADD" ~> fk ^^ { fk => TableDdlStatement.AddEntry(fk) }
+    def addFk = "ADD" ~> fk ^^ { fk => TableDdlStatement.AddExtra(fk) }
     
     def alterColumn = "ALTER" ~> opt("COLUMN") ~> name ~
         (("SET DEFAULT" ~> sqlValue ^^ { x => Some(x) }) | ("DROP DEFAULT" ^^^ None)) ^^
             { case n ~ v => TableDdlStatement.AlterColumnSetDefault(n, v) }
     
     // XXX: use column position
-    def changeColumn = "CHANGE" ~> opt("COLUMN") ~> name ~ columnModel <~ columnPosition ^^
-        { case n ~ c => TableDdlStatement.ChangeColumn(n, c) }
+    def changeColumn = "CHANGE" ~> opt("COLUMN") ~> name ~ columnModel ~ opt(columnPosition) ^^
+        { case n ~ c ~ p => TableDdlStatement.ChangeColumn(n, c, p) }
     
-    def modifyColumn = "MODIFY" ~> opt("COLUMN") ~> columnModel <~ columnPosition ^^
-        { case c => TableDdlStatement.ModifyColumn(c) }
+    def modifyColumn = "MODIFY" ~> opt("COLUMN") ~> columnModel ~ opt(columnPosition) ^^
+        { case c ~ p => TableDdlStatement.ModifyColumn(c, p) }
     
     def dropColumn = "DROP" ~> opt("COLUMN") ~> name ^^ { n => TableDdlStatement.DropColumn(n) }
     
@@ -590,7 +594,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         val a = parse(alterTable)("ALTER TABLE users ADD INDEX (login)")
         a must beLike {
             case AlterTableStatement("users",
-                    Seq(AddEntry(Index(IndexModel(None, Seq("login")))))) => true }
+                    Seq(AddExtra(Index(IndexModel(None, Seq("login")))))) => true }
     }
     
     "parser ALTER TABLE ADD UNIQUE" in {
@@ -598,7 +602,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         val a = parse(alterTable)("ALTER TABLE convert_queue ADD UNIQUE(user_id, file_id)")
         a must beLike {
             case AlterTableStatement("convert_queue",
-                    Seq(AddEntry(UniqueKey(UniqueKeyModel(None, Seq("user_id", "file_id")))))) => true }
+                    Seq(AddExtra(UniqueKey(UniqueKeyModel(None, Seq("user_id", "file_id")))))) => true }
     }
     
     "parse ALTER TABLE DROP INDEX" in {

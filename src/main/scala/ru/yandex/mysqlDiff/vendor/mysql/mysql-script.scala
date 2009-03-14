@@ -13,7 +13,7 @@ object MysqlTableDdlStatement {
     case class ConvertToCharacterSet(name: String, collate: Option[String]) extends Operation
     case class ChangeCharacterSet(name: String, collate: Option[String]) extends Operation
     
-    case class MysqlForeignKey(fk: ForeignKeyModel, indexName: Option[String]) extends Entry
+    case class MysqlForeignKey(fk: ForeignKeyModel, indexName: Option[String]) extends Extra
 }
 
 case class MysqlSetNamesStatement(value: String) extends ScriptStatement
