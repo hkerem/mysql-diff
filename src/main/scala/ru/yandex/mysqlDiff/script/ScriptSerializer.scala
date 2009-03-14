@@ -266,11 +266,6 @@ class ScriptSerializer(context: Context) {
         case ChangeTableOption(o) => serializeTableOption(o)
     }
     
-    def serializeDataTypeOption(o: DataTypeOption) = o match {
-        case MysqlCharacterSet(cs) => Some("CHARACTER SET " + cs)
-        case MysqlCollate(collate) => Some("COLLATE " + collate)
-    }
-    
     def serializeDefaultDataType(dataType: DefaultDataType) =
         dataType.name + dataType.length.map("(" + _ + ")").getOrElse("")
    

@@ -31,12 +31,6 @@ object Implicits extends util.CollectionImplicits with util.JdbcImplicits with u
     implicit def fromColumnProperties(ps: ColumnProperties) =
         ps.properties
     
-    implicit def toDataTypeOptions(os: Seq[DataTypeOption]) =
-        new DataTypeOptions(os)
-    
-    implicit def fromDataTypeOptions(os: DataTypeOptions) =
-        os.properties
-    
     implicit def toTableOptions(to: Seq[TableOption]) =
         new TableOptions(to)
     

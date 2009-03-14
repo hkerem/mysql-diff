@@ -3,36 +3,6 @@ package ru.yandex.mysqlDiff.vendor.mysql
 import model._
 import script._
 
-// XXX: data type options are unused now, shold be used for automated comparison
-case class MysqlZerofill(set: Boolean) extends DataTypeOption {
-    override def propertyType = MysqlZerofillType
-}
-case object MysqlZerofillType extends DataTypeOptionType {
-    override type Value = MysqlZerofill
-}
-
-case class MysqlUnsigned(set: Boolean) extends DataTypeOption {
-    override def propertyType = MysqlUnsignedType
-}
-case object MysqlUnsignedType extends DataTypeOptionType {
-    override type Value = MysqlUnsigned
-}
-
-
-case class MysqlCharacterSet(name: String) extends DataTypeOption {
-    override def propertyType = MysqlCharacterSetType
-}
-case object MysqlCharacterSetType extends DataTypeOptionType {
-    override type Value = MysqlCharacterSet
-}
-
-case class MysqlCollate(name: String) extends DataTypeOption {
-    override def propertyType = MysqlCollateType
-}
-case object MysqlCollateType extends DataTypeOptionType {
-    override type Value = MysqlCollate
-}
-
 object DataTypeValuesKey
 
 // XXX: character set, collation

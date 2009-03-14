@@ -84,21 +84,6 @@ case class TimeWithTimeZoneValue(override val value: String) extends WithTimeZon
 // used as default value
 case object NowValue extends SqlValue
 
-// XXX: rename to DataTypeProperties
-abstract class DataTypeOption extends Property {
-    override def propertyType: DataTypeOptionType
-}
-
-abstract class DataTypeOptionType extends PropertyType {
-    override type Value <: DataTypeOption
-}
-
-case class DataTypeOptions(ps: Seq[DataTypeOption])
-    extends PropertyMap[DataTypeOptionType, DataTypeOption](ps)
-{
-    override def copy(options: Seq[DataTypeOption]) = new DataTypeOptions(options).asInstanceOf[this.type]
-}
-
 object DataTypeNameKey
 object DataTypeLengthKey
 
