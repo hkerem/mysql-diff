@@ -59,7 +59,7 @@ class MysqlScriptSerializer(context: Context) extends ScriptSerializer(context) 
         case _ => super.serializeDataType(dataType)
     }
     
-    override def serializeTableEntry(e: TableDdlStatement.Entry) = e match {
+    override def serializeTableElement(e: TableDdlStatement.TableElement) = e match {
         case MysqlForeignKey(fk, indexName) =>
             val words = new ArrayBuffer[String]
             words ++= fk.name.map("CONSTRAINT " + _)
@@ -68,7 +68,7 @@ class MysqlScriptSerializer(context: Context) extends ScriptSerializer(context) 
             words += "(" + fk.localColumns.mkString(", ") + ")"
             words += "REFERENCES " + fk.externalTable + "(" + fk.externalColumns.mkString(", ") + ")"
             words.mkString(" ")
-        case _ => super.serializeTableEntry(e)
+        case _ => super.serializeTableElement(e)
     }
     
 }

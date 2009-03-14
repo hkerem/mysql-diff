@@ -380,10 +380,10 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         table.options.find(MysqlCharacterSetTableOptionType).map(_.name).orElse(defaultCharset)
     }
     
-    protected override def parseCreateTableExtra(e: Entry, ct: CreateTableStatement) = e match {
+    protected override def parseCreateTableExtra(e: TableElement, ct: CreateTableStatement) = e match {
         case MysqlForeignKey(fk, indexName) =>
             // another MySQL magic
-            val haveAnotherIndex = ct.entries.exists {
+            val haveAnotherIndex = ct.elements.exists {
                 case Index(IndexModel(_, columns)) =>
                     columns.toList.take(fk.localColumns.length) == fk.localColumns.toList
                 case UniqueKey(UniqueKeyModel(_, columns)) =>
@@ -396,14 +396,15 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         case e => super.parseCreateTableExtra(e, ct)
     }
     
-    override def parseCreateTable(ct: script.CreateTableStatement): TableModel = {
+    override def parseCreateTable(ct: script.CreateTableStatement, db: DatabaseModel): DatabaseModel = {
         ct.columns.flatMap(_.properties).foreach {
             case f: script.TableDdlStatement.InlineReferences =>
                 // http://dev.mysql.com/doc/refman/5.1/en/create-table.html
                 throw new UnsupportedFeatureException("inline REFERENCES is not supported by MySQL")
             case _ =>
         }
-        val t = super.parseCreateTable(ct)
+        val dbr = super.parseCreateTable(ct, db)
+        val t = dbr.table(ct.name)
         t.options.find(MysqlEngineTableOptionType) match {
             // XXX: ignore case
             case Some(MysqlEngineTableOption("InnoDB")) =>
@@ -411,7 +412,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
                 if (!t.foreignKeys.isEmpty)
                     throw new UnsupportedFeatureException("FOREIGN KEY is supported only by InnoDB")
         }
-        t
+        dbr
     }
     
     protected override def fixDataType(dataType: DataType, column: ColumnModel, table: TableModel) = {

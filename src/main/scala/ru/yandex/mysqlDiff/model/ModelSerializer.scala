@@ -11,6 +11,8 @@ import Implicits._
 class ModelSerializer(context: Context) {
     import context._
     
+    import TableDdlStatement._
+    
     def serializeColumn(column: ColumnModel) =
         new TableDdlStatement.Column(column.name, column.dataType, column.properties)
     
@@ -36,7 +38,8 @@ class ModelSerializer(context: Context) {
     
     def serializeTable(table: TableModel) =
         CreateTableStatement(table.name, false,
-            table.entries.map(serializeTableEntry _), table.options.properties)
+            TableDdlStatement.TableElementList(table.entries.map(serializeTableEntry _)),
+            table.options.properties)
 
     def serializeTableToText(table: TableModel) =
         scriptSerializer.serialize(serializeTable(table))

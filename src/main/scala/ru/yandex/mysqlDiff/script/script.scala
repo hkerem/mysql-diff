@@ -37,32 +37,44 @@ abstract class DdlStatement extends ScriptStatement
 abstract class TableDdlStatement(name: String) extends DdlStatement
 
 // http://dev.mysql.com/doc/refman/5.1/en/create-table.html
+/*
 case class CreateTableStatement(name: String, ifNotExists: Boolean,
-        entries: Seq[TableDdlStatement.Entry], options: Seq[TableOption])
+        entries: Seq[TableDdlStatement.TableElement], options: Seq[TableOption])
     extends TableDdlStatement(name)
 {
-    def this(name: String, ifNotExists: Boolean, entries: Seq[TableDdlStatement.Entry]) =
+    def this(name: String, ifNotExists: Boolean, entries: Seq[TableDdlStatement.TableElement]) =
         this(name, ifNotExists, entries, Nil)
 
     import TableDdlStatement._
     
-    def columns: Seq[Column] = entries.flatMap { case c: Column => Some(c); case _ => None }
-    def indexes: Seq[Index] = entries.flatMap { case c: Index => Some(c); case _=> None }
-    def uniqueKeys: Seq[UniqueKey] = entries.flatMap { case c: UniqueKey => Some(c); case _ => None }
-    def foreignKeys: Seq[ForeignKey] = entries.flatMap { case c: ForeignKey => Some(c); case _ => None }
+}
+*/
+
+// options is for MySQL
+case class CreateTableStatement(name: String, ifNotExists: Boolean,
+        contentsSource: TableDdlStatement.TableContentsSource, options: Seq[TableOption])
+    extends TableDdlStatement(name)
+{
+    import TableDdlStatement._
+    
+    def elements: Seq[TableElement] = contentsSource match {
+        case TableElementList(seq) => seq
+    }
+    
+    def columns: Seq[Column] = elements.flatMap { case c: Column => Some(c); case _ => None }
+    def indexes: Seq[Index] = elements.flatMap { case c: Index => Some(c); case _=> None }
+    def uniqueKeys: Seq[UniqueKey] = elements.flatMap { case c: UniqueKey => Some(c); case _ => None }
+    def foreignKeys: Seq[ForeignKey] = elements.flatMap { case c: ForeignKey => Some(c); case _ => None }
     
     def column(name: String) = columns.find(_.name == name).get
 }
 
-// http://dev.mysql.com/doc/refman/5.1/en/create-table.html
-case class CreateTableLikeStatement(name: String, ifNotExists: Boolean, likeWhat: String)
-    extends TableDdlStatement(name)
-{
-}
-
 object TableDdlStatement {
-    /** Object inside table */
-    abstract class Entry
+    abstract class TableContentsSource
+    case class TableElementList(elements: Seq[TableElement]) extends TableContentsSource
+    
+    /** Object inside table, XXX: rename to TableElement */
+    abstract class TableElement
     
     // XXX: MySQL-specific
     abstract class ColumnPosition
@@ -87,7 +99,7 @@ object TableDdlStatement {
         require(references.columns.length == 1)
     }
     
-    case class Column(name: String, dataType: DataType, properties: Seq[ColumnPropertyDecl]) extends Entry {
+    case class Column(name: String, dataType: DataType, properties: Seq[ColumnPropertyDecl]) extends TableElement {
         def this(model: ColumnModel) =
             this(model.name, model.dataType, model.properties.properties.map(new ModelColumnProperty(_)))
         
@@ -100,7 +112,7 @@ object TableDdlStatement {
     }
     
     /** Anithing except column */
-    trait Extra extends Entry
+    trait Extra extends TableElement
     
     /** CONSTRAINT */
     trait Constraint extends Extra
@@ -113,7 +125,10 @@ object TableDdlStatement {
     
     case class ForeignKey(fk: model.ForeignKeyModel) extends Constraint
     
-    case class Check(expr: Any) extends Entry
+    case class Check(expr: Any) extends TableElement
+    
+    // like options skipped
+    case class LikeClause(tableName: String) extends TableElement
     
     /** Operation on table */
     trait Operation

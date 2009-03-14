@@ -16,6 +16,7 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     override val lexical = new MysqlLexical
 
     import MysqlTableDdlStatement._
+    import TableDdlStatement._
     
     def enum: Parser[MysqlEnumDataType] = "ENUM (" ~> rep1sep(stringValue, ",") <~ ")" ^^
         { case s => MysqlEnumDataType(s.map(_.value)) }
@@ -125,9 +126,10 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     protected def optBraces[T](parser: Parser[T]): Parser[T] =
         ("(" ~> parser <~ ")") | parser
     
-    override def createTableLike: Parser[CreateTableLikeStatement] =
-            ("CREATE TABLE" ~> opt("IF NOT EXISTS")) ~ name ~ optBraces("LIKE" ~> name) ^^ {
-                case ifne ~ name ~ likeName => CreateTableLikeStatement(name, ifne.isDefined, likeName) }
+    protected def mysqlLike: Parser[TableContentsSource] =
+        "LIKE" ~> name ^^ { n => TableElementList(Seq(LikeClause(n))) }
+    
+    override def tableContentsSource: Parser[TableContentsSource] = super.tableContentsSource | mysqlLike
     
     def setNames: Parser[MysqlSetNamesStatement] = "SET NAMES" ~> stringValue ^^
             { s => MysqlSetNamesStatement(s.value) }
@@ -148,15 +150,16 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
     
     "parse CREATE TABLE ... LIKE" in {
         parse(createTable)("CREATE TABLE oranges LIKE lemons") must beLike {
-            case CreateTableLikeStatement("oranges", false, "lemons") => true
+            case CreateTableStatement("oranges", false,
+                    TableElementList(Seq(LikeClause("lemons"))), Seq()) => true
         }
     }
     
     "parser CONSTRAINT ... FOREIGN KEY" in {
-        val t = parseCreateTableRegular(
+        val t = parseCreateTable(
                 "CREATE TABLE servers (id INT, dc_id INT, " +
                         "CONSTRAINT dc_fk FOREIGN KEY dc_idx (dc_id) REFERENCES datacenters(id))")
-        val fks = t.entries.filter { case _: MysqlForeignKey => true; case _ => false }
+        val fks = t.elements.filter { case _: MysqlForeignKey => true; case _ => false }
         fks must haveSize(1)
         fks.first must beLike {
             case MysqlForeignKey(
@@ -167,19 +170,25 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
     }
     
     "TABLE options" in {
-        val t = parse(createTableRegular)("CREATE TABLE a (id INT) ENGINE=InnoDB MAX_ROWS 10 MIN_ROWS=20")
+        val t = parse(createTable)("CREATE TABLE a (id INT) ENGINE=InnoDB MAX_ROWS 10 MIN_ROWS=20")
         t.options must contain(MysqlMaxRowsTableOption(10))
         t.options must contain(MysqlMinRowsTableOption(20))
         t.options must contain(MysqlEngineTableOption("InnoDB"))
     }
     
     "CREATE TABLE named UNIQUE" in {
-        val t = parseCreateTableRegular(
+        val t = parseCreateTable(
             "CREATE TABLE users (login VARCHAR(10), UNIQUE KEY login_key(login))")
         t.uniqueKeys must haveSize(1)
         t.uniqueKeys.first must beLike {
             case UniqueKey(UniqueKeyModel(Some("login_key"), Seq("login"))) => true
         }
+    }
+    
+    "quotes in identifiers" in {
+        val t = parseCreateTable("""CREATE TABLE `a` (`id` INT, "login" VARCHAR(100))""")
+        t.name must_== "a"
+        t.columns must beLike { case Seq(Column("id", _, _), Column("login", _, _)) => true }
     }
     
     "parse ALTER TABLE ADD named UNIQUE INDEX" in {

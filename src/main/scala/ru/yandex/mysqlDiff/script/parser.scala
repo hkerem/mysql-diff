@@ -58,7 +58,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
 
     override val lexical = new SqlLexical
     
-    import CreateTableStatement._
+    import TableDdlStatement._
     
     def trueKeyword(chars: String): Parser[String] = {
         def itIs(elem: Elem) = elem.isInstanceOf[lexical.Identifier] && elem.chars.equalsIgnoreCase(chars)
@@ -235,30 +235,41 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         (constraint <~ "PRIMARY KEY") ~ indexColNameList ^^
             { case name ~ nameList => PrimaryKeyModel(name, nameList) }
     
-    def tableEntry: Parser[TableDdlStatement.Entry] = 
-      ( (pkModel ^^ { p => TableDdlStatement.PrimaryKey(p) })
-      | fk
-      | (ukModel ^^ { f => TableDdlStatement.UniqueKey(f) })
-      | (indexModel ^^ { i => TableDdlStatement.Index(i) })
-      | column
-      )
-    
     def ifNotExists: Parser[Any] = "IF NOT EXISTS"
     
     def ifExists: Parser[Any] = "IF EXISTS"
     
     def tableOption: Parser[TableOption] = failure("no table options in standard parser")
     
-    def createTableRegular = "CREATE TABLE" ~> opt(ifNotExists) ~ name ~
-             ("(" ~> repsep(tableEntry, ",") <~ ")") ~ rep(tableOption) ^^
-                     { case ifne ~ name ~ entries ~ options =>
-                            CreateTableStatement(name, ifne.isDefined, entries, options) }
+    // <table scope>
+    def tableScope: Parser[Any] = ("GLOBLAL" | "LOCAL") ~ "TEMPORARY"
     
-    def createTableLike: Parser[CreateTableLikeStatement] =
-            "CREATE TABLE" ~> name ~ ("(" ~> "LIKE" ~> name <~ ")") ^^ {
-                case name ~ likeName => CreateTableLikeStatement(name, false, likeName) }
-
-    def createTable = createTableLike | createTableRegular
+    // <like clause>
+    def likeClause: Parser[LikeClause] = "LIKE" ~> name ^^ { LikeClause(_) }
+    
+    // <table element>
+    def tableElement: Parser[TableElement] =
+        ( likeClause
+        | (pkModel ^^ { p => TableDdlStatement.PrimaryKey(p) })
+        | fk
+        | (ukModel ^^ { f => TableDdlStatement.UniqueKey(f) })
+        | (indexModel ^^ { i => TableDdlStatement.Index(i) })
+        | column
+        )
+    
+    
+    // <table element list>
+    def tableElementList: Parser[TableElementList] =
+        "(" ~> rep1sep(tableElement, ",") <~ ")" ^^ { TableElementList(_) }
+    
+    // <table contents source>
+    def tableContentsSource: Parser[TableContentsSource] = tableElementList
+    
+    // <table definition>
+    def createTable =
+        "CREATE" ~> opt(tableScope) ~> "TABLE" ~> opt(ifNotExists) ~ name ~
+            tableContentsSource ~ rep(tableOption) ^^
+                { case i ~ n ~ s ~ o => CreateTableStatement(n, i.isDefined, s, o) }
     
     def createView = "CREATE VIEW" ~> opt(ifNotExists) ~> name ~ ("AS" ~> select) ^^
         { case name ~ select => CreateViewStatement(name, select) }
@@ -371,9 +382,6 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def parseCreateTable(text: String) =
         parse(createTable)(text)
     
-    def parseCreateTableRegular(text: String) =
-        parse(createTableRegular)(text)
-    
     def parseCreateView(text: String) =
         parse(createView)(text)
     
@@ -426,7 +434,8 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     
     "parse CREATE TABLE ... (LIKE ...)" in {
         parse(createTable)("CREATE TABLE oranges (LIKE lemons)") must beLike {
-            case CreateTableLikeStatement("oranges", false, "lemons") => true
+            case CreateTableStatement("oranges", false,
+                    TableElementList(Seq(LikeClause("lemons"))), Seq()) => true
         }
     }
     
@@ -510,12 +519,6 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         c must beLike { case BinaryOpExpr(NumberValue(5), "=", NumberValue(6)) => true }
     }
     
-    "quotes in identifiers" in {
-        val t = parseCreateTableRegular("""CREATE TABLE `a` (`id` INT, "login" VARCHAR(100))""")
-        t.name must_== "a"
-        t.columns must beLike { case Seq(Column("id", _, _), Column("login", _, _)) => true }
-    }
-    
     "parseColumn default value" in {
         val column = parseColumn("friend_files_count INT NOT NULL DEFAULT 17")
         column.name must_== "friend_files_count"
@@ -551,7 +554,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     }
     
     "case insensitive" in {
-        val t = parseCreateTableRegular("CrEaTe TaBlE a (id InT nOt NuLl)")
+        val t = parseCreateTable("CrEaTe TaBlE a (id InT nOt NuLl)")
         t.name must_== "a"
         t.columns must haveSize(1)
         t.columns must exist({ c: Column => c.name == "id" })
@@ -560,7 +563,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     }
     
     "ignores spaces" in {
-        val t = parseCreateTableRegular("  CREATE   TABLE  a (id INT NOT NULL) ")
+        val t = parseCreateTable("  CREATE   TABLE  a (id INT NOT NULL) ")
         t.name must_== "a"
         t.columns must haveSize(1)
         t.columns must exist({ c: Column => c.name == "id" })
@@ -569,7 +572,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     }
     
     "parse references from column" in {
-        val t = parseCreateTableRegular(
+        val t = parseCreateTable(
                 "CREATE TABLE a (id INT PRIMARY KEY, city_id INT REFERENCES city(id), name VARCHAR(10) UNIQUE)")
         t.column("city_id").properties must beLike {
             case Seq(InlineReferences(References("city", Seq("id"), _, _))) => true }
@@ -578,7 +581,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     }
     
     "parse indexes" in {
-        val t = parseCreateTableRegular("CREATE TABLE a(id INT, UNIQUE(a), INDEX i2(b, c), UNIQUE KEY(d, e))")
+        val t = parseCreateTable("CREATE TABLE a(id INT, UNIQUE(a), INDEX i2(b, c), UNIQUE KEY(d, e))")
         t.indexes must haveSize(1)
         t.indexes(0).index must beLike { case IndexModel(Some("i2"), Seq("b", "c")) => true; case _ => false }
         

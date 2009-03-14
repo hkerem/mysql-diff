@@ -23,8 +23,7 @@ case class ModelParser(val context: Context) {
     
     def parseScriptElement(stmt: DdlStatement, db: DatabaseModel) = stmt match {
         // XXX: handle IF NOT EXISTS
-        case ct: CreateTableStatement => db.createTable(parseCreateTable(ct))
-        case CreateTableLikeStatement(name, _, like) => db.createTable(db.table(like).withName(name))
+        case ct: CreateTableStatement => parseCreateTable(ct, db)
         case DropTableStatement(name, _) => db.dropTable(name)
         case st @ AlterTableStatement(name, _) => db.alterTable(name, alterTable(st, _))
     }
@@ -38,19 +37,30 @@ case class ModelParser(val context: Context) {
         new ColumnModel(name, dataType, c.modelProperties)
     }
     
-    protected def parseCreateTableExtra(e: Entry, ct: CreateTableStatement) = Seq(e match {
+    protected def parseCreateTableExtra(e: TableElement, ct: CreateTableStatement) = Seq(e match {
         case Index(index) => index
         case PrimaryKey(pk) => pk
         case ForeignKey(fk) => fk
         case UniqueKey(uk) => uk
     })
     
-    def parseCreateTable(ct: CreateTableStatement): TableModel = {
+    // lite version
+    final def parseCreateTable(ct: CreateTableStatement): TableModel = {
+        parseCreateTable(ct, new DatabaseModel(Seq())).tables match {
+            case Seq(table) => table
+        }
+    }
+    
+    def parseCreateTable(ct: CreateTableStatement, db: DatabaseModel): DatabaseModel = {
+        val CreateTableStatement(name, ifNotExists, TableElementList(elements), options) = ct
         
-        val name = ct.name
         val columns = new ArrayBuffer[ColumnModel]
         val extras = new ArrayBuffer[TableExtra]
-        ct.entries.map {
+        elements.map {
+            case LikeClause(t) =>
+                columns ++= db.table(t).columns
+                extras ++= db.table(t).extras
+            
             case column @ Column(name, dataType, attrs) =>
                 
                 columns += parseColumn(column)
@@ -88,7 +98,7 @@ case class ModelParser(val context: Context) {
                 ColumnModel(c.name, c.dataType, properties)
         }
         
-        fixTable(TableModel(name, columns2.toList, extras, ct.options))
+        db.createTable(fixTable(TableModel(name, columns2.toList, extras, ct.options)))
     }
     
     protected def fixTable(table: TableModel) = {
@@ -125,7 +135,7 @@ case class ModelParser(val context: Context) {
         dataType
     
     def parseCreateTableScript(text: String) =
-        parseCreateTable(sqlParserCombinator.parseCreateTableRegular(text))
+        parseCreateTable(sqlParserCombinator.parseCreateTable(text))
     
     protected def alterTableOperation(op: Operation, table: TableModel): TableModel = {
         import AlterTableStatement._
@@ -170,10 +180,7 @@ class ModelParserTests(context: Context) extends org.specs.Specification {
     import modelParser._
     
     "unspecified nullability means nullable" in {
-        val ctc = TableDdlStatement.Column("age", dataTypes.int,
-            new ColumnProperties(List(DefaultValue(NumberValue(0)))))
-        val ct = CreateTableStatement("x", false, List(ctc), Nil)
-        val t = parseCreateTable(ct)
+        val t = parseCreateTableScript("CREATE TABLE x (age INT DEFAULT 0)")
         val tc = t.column("age")
         tc.properties.find(NullabilityPropertyType) must_== Some(Nullability(true))
     }
@@ -213,7 +220,7 @@ class ModelParserTests(context: Context) extends org.specs.Specification {
     */
     
     "Prohibit TIMESTAMP without DEFAULT value" in {
-        val ct = sqlParserCombinator.parseCreateTableRegular(
+        val ct = sqlParserCombinator.parseCreateTable(
             "CREATE TABLE x (a TIMESTAMP)")
         try {
             val t = parseCreateTable(ct)

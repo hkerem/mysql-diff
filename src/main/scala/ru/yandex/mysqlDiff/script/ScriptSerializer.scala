@@ -160,24 +160,26 @@ class ScriptSerializer(context: Context) {
             case UniqueKey(u) => serializeUniqueKey(u)
         }
     
-    def serializeTableEntry(e: Entry): String = e match {
+    def serializeTableElement(e: TableElement): String = e match {
         case c @ Column(name, dataType, attrs) =>
             name + " " + serializeDataType(dataType) +
                     (if (attrs.isEmpty) ""
                     else " " + attrs.flatMap(cp => serializeColumnProperty(cp, c)).mkString(" "))
         case Index(index) => serializeIndex(index)
+        case LikeClause(name) => "LIKE " + name
         case c: Constraint => serializeConstraint(c)
     }
     
-    def serializeCreateTable(t: CreateTableStatement, options: Options): String = {
-        def mapEntry(e: Entry) =
-            serializeTableEntry(e) + (if (options.verbose) " /* " + e.toString + " */" else "")
-        val l = t.entries.map(mapEntry _).reverse
+    def serializeCreateTable(ct: CreateTableStatement, options: Options): String = {
+        val CreateTableStatement(name, ifNotExists, TableElementList(elements), tableOptions) = ct
+        def mapTableElement(e: TableElement) =
+            serializeTableElement(e) + (if (options.verbose) " /* " + e.toString + " */" else "")
+        val l = elements.map(mapTableElement _).reverse
         val lines = (List(l.first) ++ l.drop(1).map(_ + "," + options.afterComma)).reverse.map(options.indent + _)
         
-        val firstLine = "CREATE TABLE " + serializeName(t.name) + " ("
+        val firstLine = "CREATE TABLE " + serializeName(name) + " ("
         val lastLine = ")" +
-            (if (t.options.isEmpty) "" else " " + t.options.map(serializeTableOption _).mkString(" "))
+            (if (tableOptions.isEmpty) "" else " " + tableOptions.map(serializeTableOption _).mkString(" "))
         
         (List(firstLine) ++ lines ++ List(lastLine)).mkString(options.stmtJoin)
     }
@@ -224,7 +226,7 @@ class ScriptSerializer(context: Context) {
         val AddColumn(column, pos) = ac
         val words = new ArrayBuffer[String]
         words += "ADD COLUMN"
-        words += serializeTableEntry(column)
+        words += serializeTableElement(column)
         words ++= pos.map(serializeColumnPosition _)
         words.mkString(" ")
     }
@@ -250,7 +252,7 @@ class ScriptSerializer(context: Context) {
     
     def serializeAlterTableOperation(op: Operation) = op match {
         case ac: AddColumn => serializeAddColumn(ac)
-        case AddExtra(e) => "ADD " + serializeTableEntry(e)
+        case AddExtra(e) => "ADD " + serializeTableElement(e)
         
         case cc: ChangeColumn => serializeChangeColumn(cc)
         case mc: ModifyColumn => serializeModifyColumn(mc)
@@ -277,7 +279,7 @@ class ScriptSerializer(context: Context) {
     }
     
     def serializeColumn(model: ColumnModel) =
-        serializeTableEntry(modelSerializer.serializeColumn(model))
+        serializeTableElement(modelSerializer.serializeColumn(model))
     
     def serializePrimaryKey(pk: PrimaryKeyModel) = {
         val words = new ArrayBuffer[String]

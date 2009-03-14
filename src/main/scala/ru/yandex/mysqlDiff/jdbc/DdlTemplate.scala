@@ -42,7 +42,7 @@ class DdlTemplate(connectedContext: ConnectedContext) {
     
     /** DROP TABLE IF EXISTS, then execute script */
     def recreateTable(script: String) = {
-        val cts = sqlParserCombinator.parseCreateTableRegular(script)
+        val cts = sqlParserCombinator.parseCreateTable(script)
         dropTableIfExists(cts.name)
         jt.execute(script)
     }

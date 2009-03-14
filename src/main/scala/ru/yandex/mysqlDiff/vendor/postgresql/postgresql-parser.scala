@@ -21,7 +21,7 @@ object PostgresqlParserCombinatorTests extends SqlParserCombinatorTests(Postgres
     
     // this test does not work for MySQL
     "parse FK" in {
-        val t = parseCreateTableRegular(
+        val t = parseCreateTable(
                 "CREATE TABLE a (id INT, " +
                 "FOREIGN KEY (x, y) REFERENCES b (x1, y1), " +
                 "CONSTRAINT fk1 FOREIGN KEY (z) REFERENCES c (z1))")
