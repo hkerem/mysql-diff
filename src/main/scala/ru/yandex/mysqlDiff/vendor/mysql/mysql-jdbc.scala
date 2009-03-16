@@ -175,16 +175,16 @@ class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
 
     protected override def newAllTablesSchemaExtractor() =
         new AllTablesSchemaExtractor with MysqlSchemaExtractor {
-            override def getMysqlColumns(tableName: String) =
-                metaDao.findMysqlTableColumns(currentCatalog, currentSchema, tableName)
-        }
-    
-    protected override def newSingleTableSchemaExtractor() =
-        new SingleTableSchemaExtractor with MysqlSchemaExtractor {
             val cachedMysqlColumns = new Lazy(metaDao.findMysqlTablesColumns(currentCatalog, currentSchema))
             
             override def getMysqlColumns(tableName: String) =
                 cachedMysqlColumns.get.find(_._1 == tableName).get._2
+        }
+    
+    protected override def newSingleTableSchemaExtractor() =
+        new SingleTableSchemaExtractor with MysqlSchemaExtractor {
+            override def getMysqlColumns(tableName: String) =
+                metaDao.findMysqlTableColumns(currentCatalog, currentSchema, tableName)
         }
 
 }
