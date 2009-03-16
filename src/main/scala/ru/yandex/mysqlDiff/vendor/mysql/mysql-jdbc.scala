@@ -14,10 +14,10 @@ object MysqlMetaDao {
     /** INFORMATION_SCHEMA.COLUMNS */
     case class MysqlColumnInfo(
         tableCatalog: String, tableSchema: String, tableName: String,
-        columnName: String, ordinalPosition: Int, columnDefault: String,
+        columnName: String, ordinalPosition: Long, columnDefault: String,
         isNullable: Boolean, dataType: String,
-        characterMaximumLength: Int, characterOctetLength: Double,
-        numericPrecision: Int, numericScale: Int,
+        characterMaximumLength: Long, characterOctetLength: Double,
+        numericPrecision: Long, numericScale: Long,
         characterSetName: String, collationName: String,
         columnType: String, /* skipped some columns */ columnComment: String
     )
@@ -28,8 +28,8 @@ object MysqlMetaDao {
             getString("table_catalog"), getString("table_schema"), getString("table_name"),
             getString("column_name"), getInt("ordinal_position"), getString("column_default"),
             getBoolean("is_nullable"), getString("data_type"),
-            getInt("character_maximum_length"), getDouble("character_octet_length"),
-            getInt("numeric_precision"), getInt("numeric_scale"),
+            getLong("character_maximum_length"), getDouble("character_octet_length"),
+            getLong("numeric_precision"), getLong("numeric_scale"),
             getString("character_set_name"), getString("collation_name"),
             getString("column_type"), getString("column_comment")
         )
@@ -149,9 +149,10 @@ class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
                         MysqlParserCombinator.parseDataType(mysqlColumn.columnType)
                     } else if (MysqlDataTypes.characterDataTypeNames.contains(columnType)) {
                         val length = mysqlColumn.characterMaximumLength match {
-                            case 0 => None
-                            case x => Some(x)
+                            case x if x <= 0 || x >= Math.MAX_INT => None
+                            case x => Some(x.toInt)
                         }
+                        
                         new MysqlCharacterDataType(columnType, length, characterSet, collate)
                     } else if (MysqlDataTypes.textDataTypeNames.contains(columnType)) {
                         new MysqlTextDataType(columnType, None, characterSet, collate)
@@ -312,6 +313,13 @@ object MysqlJdbcModelExtractorTests
         //table.column("d").defaultValue must_== None
         table.column("e").defaultValue must_== Some(StringValue(""))
         table.column("f").defaultValue must_== Some(StringValue("y"))
+    }
+    
+    "various types" in {
+        dropTable("various_types")
+        execute("CREATE TABLE various_types (t TEXT, lt LONGTEXT, v VARCHAR(100))")
+        val table = extractTable("various_types")
+        ()
     }
     
     "unspecified AUTO_INCREMENT" in {
