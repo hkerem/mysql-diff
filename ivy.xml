@@ -40,7 +40,7 @@
         <dependency org="joda-time" name="joda-time" rev="1.6" conf="compile->*"/>
         -->
         
-        <dependency org="org.scalaforge" name="scalax" rev="0.1" conf="compile->*">
+        <dependency org="org.scalaforge" name="scalax" rev="0.1" conf="api->*">
             <!--
                 Workaround ibiblio resolver: it does not cache maven-metadata.xml
                 See https://issues.apache.org/jira/browse/IVY-1039
