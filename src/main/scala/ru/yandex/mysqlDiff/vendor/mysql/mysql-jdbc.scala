@@ -26,7 +26,7 @@ object MysqlMetaDao {
         import rs._
         MysqlColumnInfo(
             getString("table_catalog"), getString("table_schema"), getString("table_name"),
-            getString("column_name"), getInt("ordinal_position"), getString("column_default"),
+            getString("column_name"), getLong("ordinal_position"), getString("column_default"),
             getBoolean("is_nullable"), getString("data_type"),
             getLong("character_maximum_length"), getDouble("character_octet_length"),
             getLong("numeric_precision"), getLong("numeric_scale"),
