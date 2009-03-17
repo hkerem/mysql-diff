@@ -16,8 +16,6 @@ object MysqlTableDdlStatement {
     case class MysqlForeignKey(fk: ForeignKeyModel, indexName: Option[String]) extends Extra
 }
 
-case class MysqlSetNamesStatement(value: String) extends ScriptStatement
-
 class MysqlScriptSerializer(context: Context) extends ScriptSerializer(context) {
     import TableDdlStatement._
     import MysqlTableDdlStatement._
@@ -71,6 +69,9 @@ class MysqlScriptSerializer(context: Context) extends ScriptSerializer(context) 
         case _ => super.serializeTableElement(e)
     }
     
+}
+
+case class MysqlSetOptionStatement(name: String, value: SqlValue) extends ScriptStatement {
 }
 
 // vim: set ts=4 sw=4 et:

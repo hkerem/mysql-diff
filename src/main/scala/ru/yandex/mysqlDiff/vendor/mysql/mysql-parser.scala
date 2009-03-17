@@ -4,11 +4,15 @@ import model._
 import script._
 
 class MysqlLexical extends script.SqlLexical {
+    import scala.util.parsing.input.CharArrayReader.EofCh
+    
     val hexDigits = Set[Char]() ++ "0123456789abcdefABCDEF".toArray
     def hexDigit = elem("hex digit", hexDigits.contains(_))
     
     override def token: Parser[Token] =
         ( '0' ~ 'x' ~ rep1(hexDigit) ^^ { case o ~ x ~ b => NumericLit("0x" + b.mkString("")) }
+        | '`' ~ rep( chrExcept('`', '\n', EofCh) ) ~ '`' ^^ { case '`' ~ chars ~ '`' => Identifier(chars mkString "") }
+        | '"' ~ rep( chrExcept('"', '\n', EofCh) ) ~ '"' ^^ { case '"' ~ chars ~ '"' => StringLit(chars mkString "") }
         | super.token )
 }
 
@@ -139,10 +143,12 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     
     override def tableContentsSource: Parser[TableContentsSource] = super.tableContentsSource | mysqlLike
     
-    def setNames: Parser[MysqlSetNamesStatement] = "SET NAMES" ~> stringValue ^^
-            { s => MysqlSetNamesStatement(s.value) }
+    def setOption: Parser[MysqlSetOptionStatement] =
+        ( "SET NAMES" ~> stringValue ^^ { s => MysqlSetOptionStatement("NAMES", s) }
+        | "SET" ~> name ~ ("=" ~> stringValue) ^^ { case n ~ v => MysqlSetOptionStatement(n, v) }
+        )
     
-    override def topLevel = setNames | super.topLevel
+    override def topLevel = setOption | super.topLevel
 }
 
 object MysqlParserCombinator extends MysqlParserCombinator(MysqlContext)
@@ -200,7 +206,7 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
     }
     
     "quotes in identifiers" in {
-        val t = parseCreateTable("""CREATE TABLE `a` (`id` INT, "login" VARCHAR(100))""")
+        val t = parseCreateTable("""CREATE TABLE `a` (`id` INT, login VARCHAR(100))""")
         t.name must_== "a"
         t.columns must beLike { case Seq(Column("id", _, _), Column("login", _, _)) => true }
     }

@@ -28,8 +28,7 @@ class SqlLexical extends StdLexical {
     
     /** Token with SQL-specific quotes */
     override def token: Parser[Token] =
-        ( '`' ~ rep( chrExcept('`', '\n', EofCh) ) ~ '`' ^^ { case '`' ~ chars ~ '`' => Identifier(chars mkString "") }
-        | '"' ~ rep( chrExcept('"', '\n', EofCh) ) ~ '"' ^^ { case '"' ~ chars ~ '"' => Identifier(chars mkString "") }
+        ( '"' ~ rep( chrExcept('"', '\n', EofCh) ) ~ '"' ^^ { case '"' ~ chars ~ '"' => Identifier(chars mkString "") }
         | super.token )
     
     //override def token: Parser[Token] =
