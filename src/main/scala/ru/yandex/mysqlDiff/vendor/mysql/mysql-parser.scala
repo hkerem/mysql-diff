@@ -83,6 +83,14 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
                     throw new MysqlDiffException("UNIQUE KEY name specified twice")
                 model.UniqueKeyModel(n1.orElse(n2), cs) }
     
+    // undocumented MySQL
+    override def pkModel: Parser[PrimaryKeyModel] =
+        (constraint <~ "PRIMARY KEY") ~ opt(name) ~ indexColNameList ^^
+            { case n1 ~ n2 ~ nameList =>
+                if (n1.isDefined && n2.isDefined)
+                    throw new MysqlDiffException("PRIMARY KEY name specified twice")
+                PrimaryKeyModel(n1.orElse(n2), nameList) }
+    
     override def fk: Parser[TableDdlStatement.Extra] =
         (constraint <~ "FOREIGN KEY") ~ opt(name) ~ nameList ~ references ^^
             { case cn ~ in ~ lcs ~ r =>
@@ -183,6 +191,12 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         t.uniqueKeys.first must beLike {
             case UniqueKey(UniqueKeyModel(Some("login_key"), Seq("login"))) => true
         }
+    }
+    
+    "PRIMARY KEY name undocumented grammar" in {
+        val t = parseCreateTable(
+            "CREATE TABLE df (id INT, PRIMARY KEY pk (id))")
+        t.primaryKeys must beLike { case Seq(_) => true }
     }
     
     "quotes in identifiers" in {
