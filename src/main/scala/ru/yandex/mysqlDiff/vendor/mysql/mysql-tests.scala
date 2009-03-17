@@ -157,6 +157,11 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             "CREATE TABLE IF NOT EXISTS tag_cloud_global (tag varchar(64) collate utf8_bin) DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
     }
     
+    "PRIMARY KEY not declared as NOT NULL" in {
+        checkTable(
+            "CREATE TABLE pk_null (id VARCHAR(10), PRIMARY KEY(id))")
+    }
+    
     "BOOLEAN with DEFAULT TRUE" in {
         checkTable(
             "CREATE TABLE boolean_with_default_true (available BOOLEAN NOT NULL default TRUE)")
