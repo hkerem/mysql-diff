@@ -203,10 +203,36 @@ trait JdbcOperations extends Logging {
         }
     }
     
-    def execute(q: String) {
-        execute { conn =>
-            conn.createStatement().execute(q)
+    private def setObject(ps: PreparedStatement, n: Int, value: Any) = value match {
+        case i: Int => ps.setInt(n, i)
+        case l: Long => ps.setLong(n, l)
+        case s: String => ps.setString(n, s)
+        case b: Boolean => ps.setBoolean(n, b)
+        case x => ps.setObject(n, x)
+    }
+    
+    def execute(q: String, args: Any*): Unit = execute { conn =>
+        val ps = conn.prepareStatement(q)
+        for ((arg, index) <- args.toList.zipWithIndex) {
+            setObject(ps, index + 1, arg)
         }
+        ps.executeUpdate()
+        ps.close()
+    }
+
+    /**
+     * Batch update
+     */
+    def executeBatch(q: String, argSeq: Seq[Seq[Any]]) = execute { conn =>
+        val ps = conn.prepareStatement(q)
+        for (args <- argSeq) {
+            for ((arg, index) <- args.toList.zipWithIndex) {
+                setObject(ps, index + 1, arg)
+            }
+            ps.addBatch()
+        }
+        ps.executeBatch()
+        ps.close()
     }
     
     class ParamsQuery(q: String, params: Any*) extends Query {
