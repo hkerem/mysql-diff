@@ -11,6 +11,10 @@ class DdlTemplate(connectedContext: ConnectedContext) {
     def execute(s: ScriptElement) =
         jt.execute(scriptSerializer.serialize(s))
     
+    def executeScript(s: String) =
+        for (e <- parser.parse(s).statements)
+            execute(e)
+    
     def dropTable(name: String) =
         execute(new DropTableStatement(name, false))
     

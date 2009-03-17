@@ -41,10 +41,17 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
     import context._
     
     private def checkTwoSimilarTableModels(a: TableModel, b: TableModel) = {
-        diffMaker.compareTables(a, b) must beLike { case None => true }
-        diffMaker.compareTables(b, a) must beLike { case None => true }
         diffMaker.compareTables(a, a) must beLike { case None => true }
         diffMaker.compareTables(b, b) must beLike { case None => true }
+        diffMaker.compareTables(a, b) must beLike { case None => true }
+        diffMaker.compareTables(b, a) must beLike { case None => true }
+    }
+    
+    private def checkTwoSimilarDatabaseModels(a: DatabaseModel, b: DatabaseModel) = {
+        diffMaker.compareDatabases(a, a).tableDiff must beEmpty
+        diffMaker.compareDatabases(b, b).tableDiff must beEmpty
+        diffMaker.compareDatabases(a, b).tableDiff must beEmpty
+        diffMaker.compareDatabases(b, a).tableDiff must beEmpty
     }
     
     
@@ -84,6 +91,31 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
         
     }
     
+    private def dropTables(m: DatabaseModel) =
+        for (t <- m.tables)
+            ddlTemplate.dropTableWithExportedKeysIfExists(t.name)
+    
+    def checkDatabase(script: String) = {
+        val m = modelParser.parseModel(script)
+        
+        {
+            // execute script, compare with parsed model
+            dropTables(m)
+            ddlTemplate.executeScript(script)
+            val d = new DatabaseModel(m.tables.map(_.name).map(jdbcModelExtractor.extractTable(_)))
+            checkTwoSimilarDatabaseModels(m, d)
+        }
+        
+        {
+            // execute serialized parsed model, compare with parsed model
+            dropTables(m)
+            val recreatedScript = modelSerializer.serializeDatabaseToText(m)
+            ddlTemplate.executeScript(recreatedScript)
+            val d = new DatabaseModel(m.tables.map(_.name).map(jdbcModelExtractor.extractTable(_)))
+            checkTwoSimilarDatabaseModels(m, d)
+        }
+    }
+    
     /**
      * Perform various tests comparing two <b>different</b> tables
      * @return database model of the second table after applying patch from first to second
@@ -101,6 +133,7 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
             
             // tables are required to be different
             diffMaker.compareTables(t1, t2) must beLike { case Some(_) => true }
+            diffMaker.compareTables(t2, t1) must beLike { case Some(_) => true }
             
             ddlTemplate.dropTableIfExists(t1.name)
             ddlTemplate.dropTableIfExists(t2.name)
@@ -128,6 +161,42 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
         checkTwoTables12(script2, script1)
         if (printExecutedStmts) println("checking first to second")
         checkTwoTables12(script1, script2)
+    }
+    
+    def checkTwoDatabases(script1: String, script2: String) = {
+        checkDatabase(script1)
+        checkDatabase(script2)
+        // XXX: check transitions
+        
+        def checkTwoDatabases12(script1: String, script2: String) = {
+            val t1 = modelParser.parseModel(script1)
+            val t2 = modelParser.parseModel(script2)
+            
+            diffMaker.compareDatabases(t1, t2).tableDiff must notBeEmpty
+            diffMaker.compareDatabases(t2, t1).tableDiff must notBeEmpty
+            
+            dropTables(t1)
+            dropTables(t2)
+            
+            ddlTemplate.executeScript(script1)
+            
+            val d1 = new DatabaseModel(t1.tables.map(_.name).map(jdbcModelExtractor.extractTable(_)))
+            // compare and then apply difference
+            val diff = diffMaker.compareDatabases(d1, t2)
+            diff.tableDiff must notBeEmpty
+            for (st <- diffSerializer.serializeToScript(diff, d1, t2).ddlStatements) {
+                execute(scriptSerializer.serialize(st))
+            }
+            val d2 = new DatabaseModel(t2.tables.map(_.name).map(jdbcModelExtractor.extractTable(_)))
+            
+            // check result
+            checkTwoSimilarDatabaseModels(t2, d2)
+            
+            d2
+        }
+        
+        checkTwoDatabases12(script2, script1)
+        checkTwoDatabases12(script1, script2)
     }
     
     "identical, simple table" in {

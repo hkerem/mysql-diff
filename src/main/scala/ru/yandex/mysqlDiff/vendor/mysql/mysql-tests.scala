@@ -189,6 +189,20 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             "CREATE TABLE im_cs (c1 INT, c2 INT, added INT)")
     }
     
+    "bug with non-unique CONSTRAINT names" in {
+        checkTwoDatabases(
+            """
+            CREATE TABLE nu_a (id INT PRIMARY KEY) ENGINE=InnoDB;
+            CREATE TABLE nu_b (a_id INT) ENGINE=InnoDB;
+            CREATE TABLE nu_c (a_id INT, CONSTRAINT c866 FOREIGN KEY zc (a_id) REFERENCES nu_a(id)) ENGINE=InnoDB
+            """,
+            """
+            CREATE TABLE nu_a (id INT PRIMARY KEY) ENGINE=InnoDB;
+            CREATE TABLE nu_b (a_id INT, CONSTRAINT c866 FOREIGN KEY zb (a_id) REFERENCES nu_a(id)) ENGINE=InnoDB;
+            CREATE TABLE nu_c (a_id INT) ENGINE=InnoDB
+            """)
+    }
+    
 }
 
 object MysqlDdlTemplateTests extends DdlTemplateTests(MysqlTestDataSourceParameters.connectedContext) {
