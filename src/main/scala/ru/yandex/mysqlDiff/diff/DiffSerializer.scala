@@ -121,7 +121,7 @@ class DiffSerializer(val context: Context) {
             val ops = rest2.flatMap(alterTableEntryStmts(_, table)) ++ addPkSingleColumnDiffProper
             val sorted = scala.util.Sorting.stableSort(ops, operationOrder _)
             // XXX: make configurable
-            if (false) sorted.map { op: TableDdlStatement.Operation => AlterTableStatement(table.name, List(op)) } 
+            if (false) sorted.map { op: TableDdlStatement.Operation => AlterTableStatement(table.name, List(op)) }
             else List(AlterTableStatement(table.name, sorted))
         }
         

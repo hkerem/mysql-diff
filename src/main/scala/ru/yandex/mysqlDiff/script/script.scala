@@ -186,7 +186,7 @@ case class RenameTableStatement(name: String, newName: String) extends TableDdlS
 case class AlterTableStatement(name: String, ops: Seq[TableDdlStatement.Operation])
         extends TableDdlStatement(name)
 {
-    require(ops.length > 0)
+    require(ops.length > 0, "AlterTableStatement must have ops")
     
     def this(name: String, op: TableDdlStatement.Operation) = this(name, List(op))
     
