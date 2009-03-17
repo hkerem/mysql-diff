@@ -176,6 +176,13 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
         checkTable(
             "CREATE TABLE service_with_mediumint_unsigned (bg_color MEDIUMINT UNSIGNED)")
     }
+    
+    "bug with two PRIMARY KEYs added" in {
+        checkTwoTables(
+            "CREATE TABLE im_cs (c1 INT, c2 INT, added INT, PRIMARY KEY(c1, c2))",
+            "CREATE TABLE im_cs (c1 INT, c2 INT, added INT)")
+    }
+    
 }
 
 object MysqlDdlTemplateTests extends DdlTemplateTests(MysqlTestDataSourceParameters.connectedContext) {
