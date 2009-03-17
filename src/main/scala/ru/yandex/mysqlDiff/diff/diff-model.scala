@@ -59,6 +59,9 @@ case class ChangeTableDiff(override val name: String, override val renameTo: Opt
     extends TableDiff with ChangeSomethingDiff
 {
     def entriesDiff: Seq[TableEntryDiff] = columnDiff ++ extraDiff ++ tableOptionDiff
+    
+    // must have something in the diff
+    require(renameTo.isDefined || !entriesDiff.isEmpty)
 }
 
 
