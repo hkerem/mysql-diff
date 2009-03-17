@@ -89,7 +89,9 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
      * @return database model of the second table after applying patch from first to second
      */
     protected def checkTwoTables(script1: String, script2: String) = {
+        if (printExecutedStmts) println("checking first script equal to itself")
         checkTable(script1)
+        if (printExecutedStmts) println("checking second script equal to itself")
         checkTable(script2)
         
         // perform asymmetric table comparison, treat script1 as source and script2 as target
@@ -110,6 +112,7 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
             // compare and then apply difference
             val diff = diffMaker.compareTables(d1, t2)
             diff must beSomething
+            if (printExecutedStmts) println("d1 -> t2: " + diff.get)
             for (st <- diffSerializer.serializeChangeTableDiff(diff.get, t2).ddlStatements) {
                 execute(scriptSerializer.serialize(st))
             }
@@ -121,7 +124,9 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
             d2
         }
         
+        if (printExecutedStmts) println("checking second to first")
         checkTwoTables12(script2, script1)
+        if (printExecutedStmts) println("checking first to second")
         checkTwoTables12(script1, script2)
     }
     

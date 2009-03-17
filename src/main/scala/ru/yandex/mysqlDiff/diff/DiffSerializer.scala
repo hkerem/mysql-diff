@@ -92,10 +92,11 @@ class DiffSerializer(val context: Context) {
 
         List[ScriptElement](CommentElement("-- " + diff.toString)) ++
         {
-            // for CAP-101
             // XXX: simplify
-            val (addPks, rest) = diff.entriesDiff.toList.partition {
-                case CreateExtraDiff(_: PrimaryKeyModel) => true
+            
+            val addPks = diff.entriesDiff.toList.filter {
+                // single column only
+                case CreateExtraDiff(PrimaryKeyModel(_, Seq(_))) => true
                 case _ => false
             }
             
@@ -103,19 +104,26 @@ class DiffSerializer(val context: Context) {
             
             val addPk: Option[PrimaryKeyModel] =
                 addPks.firstOption.map { case CreateExtraDiff(pk: PrimaryKeyModel) => pk }
-            val addPkSingleColumn = addPk.filter(_.columns.length == 1).map(_.columns.first)
+            val addPkSingleColumn = addPk.map(_.columns.first).filter(cn => diff.entriesDiff.exists {
+                    case CreateColumnDiff(c) if c.name == cn => true
+                    case _ => false
+                })
             
-            val (addPkSingleColumnDiffs, rest2) = rest.partition {
+            val (addPkSingleColumnDiffs0, rest2) = diff.entriesDiff.toList.partition {
                 case CreateColumnDiff(c) if Some(c.name) == addPkSingleColumn => true
+                case CreateExtraDiff(PrimaryKeyModel(_, Seq(c))) if Some(c) == addPkSingleColumn => true
                 case _ => false
+            }
+            
+            val addPkSingleColumnDiffs = addPkSingleColumnDiffs0.filter {
+                case CreateColumnDiff(_) => true
+                case CreateExtraDiff(PrimaryKeyModel(_, Seq(_))) => false
             }
             
             require(addPkSingleColumnDiffs.length <= 1)
             
             val addPkSingleColumnDiffProper = addPkSingleColumnDiffs.firstOption
                     .map(x => new TableDdlStatement.AddColumn(new TableDdlStatement.Column(x.asInstanceOf[CreateColumnDiff].column) addProperty TableDdlStatement.InlinePrimaryKey, None))
-            
-            // end of CAP-101
             
             import TableDdlStatement._
             val ops = rest2.flatMap(alterTableEntryStmts(_, table)) ++ addPkSingleColumnDiffProper
