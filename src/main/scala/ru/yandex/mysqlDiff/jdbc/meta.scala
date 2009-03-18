@@ -140,7 +140,7 @@ class MetaDao(jt: JdbcTemplate) {
      * @return empty Seq in this implementation
      */
     def findTableOptions(catalog: String, schema: String, tableName: String): Seq[TableOption] = {
-        return Seq()
+        Seq()
     }
     
 

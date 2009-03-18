@@ -129,7 +129,7 @@ abstract class DataTypes {
         make(name, None)
     
     def make(name: String, length: Option[Int]): DataType =
-        return new DefaultDataType(name.toUpperCase, length)
+        new DefaultDataType(name.toUpperCase, length)
 
     def resolveTypeNameAlias(name: String) = name.toUpperCase
     
