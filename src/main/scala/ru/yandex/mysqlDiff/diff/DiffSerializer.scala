@@ -71,15 +71,23 @@ class DiffSerializer(val context: Context) {
     
     private def operationOrder(op: TableDdlStatement.Operation) = op match {
         case _: TableDdlStatement.DropOperation => op match {
-            case _: TableDdlStatement.ExtraOperation => 11
-            case _: TableDdlStatement.ColumnOperation => 12
+            // FOREIGN must be dropped first
+            case _: TableDdlStatement.DropForeignKey => 11
+            // COLUMN must be dropped last
+            case _: TableDdlStatement.ColumnOperation => 15
             case _ => 13
         }
         
         case _: TableDdlStatement.ModifyOperation => 20
         
-        case _: TableDdlStatement.AddColumn => 31
-        case _: TableDdlStatement.AddSomething => 32
+        case _: TableDdlStatement.AddSomething => op match {
+            // COLUMN must be added first
+            case _: TableDdlStatement.AddColumn => 31
+            // FOREIGN KEY must be added last
+            case TableDdlStatement.AddExtra(_: ForeignKeyModel) => 35
+            case _: TableDdlStatement.AddSomething => 33
+            case _ => 33
+        }
         
         case _ => 99
     }
@@ -90,7 +98,9 @@ class DiffSerializer(val context: Context) {
      */
     def alterScript(diff: ChangeTableDiff, table: TableModel): Seq[ScriptElement] = {
 
-        List[ScriptElement](CommentElement("-- " + diff.toString)) ++
+        if (diff.entriesDiff.isEmpty)
+            Seq()
+        else List[ScriptElement](CommentElement("-- change table " + table.name + ": " + diff.entriesDiff)) ++
         {
             // XXX: simplify
             
@@ -137,22 +147,45 @@ class DiffSerializer(val context: Context) {
             }
         }
         
-        // XXX: sort: drop, then change, then create
     }
-    
-    def serializeCreateTableDiff(c: CreateTableDiff) =
-        modelSerializer.serializeTable(c.table) :: Nil
-    
-    def serializeDropTableDiff(d: DropTableDiff) =
-        DropTableStatement(d.name, false) :: Nil
     
     def serializeChangeTableDiff(d: ChangeTableDiff, newTable: TableModel)
         : Seq[ScriptElement] =
     {
-        val ChangeTableDiff(name, renameTo, columnDiff, indexDiff, optionDiff) = d
-        require(renameTo.isEmpty || renameTo.get == newTable.name)
-        renameTo.map(RenameTableStatement(name, _)).toSeq ++
-                alterScript(d, newTable)
+        serializeChangeTableDiffs(Seq((d, newTable)))
+    }
+    
+    def serializeChangeTableDiffs(diff: Seq[(ChangeTableDiff, TableModel)]) = {
+        val rename = new ArrayBuffer[ScriptElement]
+        val drop = new ArrayBuffer[ScriptElement]
+        val change = new ArrayBuffer[ScriptElement]
+        val create = new ArrayBuffer[ScriptElement]
+        for ((d, newTable) <- diff) {
+            val ChangeTableDiff(name, renameTo, columnDiff, indexDiff, optionDiff) = d
+            require(renameTo.isEmpty || renameTo.get == newTable.name)
+            if (renameTo.isDefined)
+                rename += RenameTableStatement(name, renameTo.get)
+        }
+        for ((d, newTable) <- diff) {
+            val ChangeTableDiff(name, renameTo, columnDiff, indexDiff, optionDiff) = d
+            val (dr, ch, cr) = d.dropChangeCreate
+            drop ++= alterScript(dr, newTable)
+            change ++= alterScript(ch, newTable)
+            create ++= alterScript(cr, newTable)
+        }
+        Seq[ScriptElement]() ++ rename ++ drop ++ change ++ create
+    }
+    
+    def serializeCreateTableDiff(c: CreateTableDiff) =
+        Seq(modelSerializer.serializeTable(c.table))
+    
+    def serializeDropTableDiff(d: DropTableDiff) =
+        Seq(DropTableStatement(d.name, false))
+    
+    def serializeTableDiff(diff: TableDiff, newTable: TableModel) = diff match {
+        case c: CreateTableDiff => serializeCreateTableDiff(c)
+        case d: DropTableDiff => serializeDropTableDiff(d)
+        case d: ChangeTableDiff => serializeChangeTableDiff(d, newTable)
     }
     
     // XXX: rename to serialize
@@ -161,12 +194,16 @@ class DiffSerializer(val context: Context) {
     {
         val newTablesMap: Map[String, TableModel] = Map(newModel.declarations.map(o => (o.name, o)): _*)
         val oldTablesMap: Map[String, TableModel] = Map(oldModel.declarations.map(o => (o.name, o)): _*)
-        diff.tableDiff.flatMap(_ match {
-            case c: CreateTableDiff => serializeCreateTableDiff(c)
-            case d: DropTableDiff => serializeDropTableDiff(d)
-            case d @ ChangeTableDiff(name, renameTo, columnDiff, indexDiff, optionDiff) =>
-                    serializeChangeTableDiff(d, newTablesMap(d.newName))
-        })
+        val (cr, ch, dr) = diff.tableDiff.partition3 {
+            case _: CreateTableDiff => 1
+            case _: ChangeTableDiff => 2
+            case _: DropTableDiff => 3
+        }
+        
+        val chs = serializeChangeTableDiffs(ch.map { case c: ChangeTableDiff => (c, newTablesMap(c.newName)) })
+        val drs = dr.flatMap { case d: DropTableDiff => serializeDropTableDiff(d) }
+        val crs = cr.flatMap { case c: CreateTableDiff => serializeCreateTableDiff(c) }
+        drs ++ chs ++ crs
     }
     
     def serializeToScriptStrings(diff: DatabaseDiff, oldModel: DatabaseModel, newModel: DatabaseModel)

@@ -138,8 +138,26 @@ case class DiffMaker(val context: Context) {
         val dropExtrasDiff = fromExtras.map(k => DropExtraDiff(k))
         val createExtrasDiff = toExtras.map(k => CreateExtraDiff(k))
         val changeExtrasDiff = Nil // we have no alter index
+        
+        // workaround MySQL whose FOREIGN KEYs must have explicit INDEX
+        val recreateFksDiff = {
+            // XXX: write findCommonElements method
+            val keptIns = compareSeqs(from.indexes, to.indexes, indexesEquivalent _)._3.map(_._1)
+            val keptUks = compareSeqs(from.uniqueKeys, to.uniqueKeys, uksEquivalent _)._3.map(_._1)
+            val keptPks = compareSeqs(from.primaryKey.toList, to.primaryKey.toList, pksEquivalent _)._3.map(_._1)
+            
+            val keptIndexColumns = keptIns.map(_.columns) ++ keptUks.map(_.columns) ++ keptPks.map(_.columns)
+            
+            val keptFks = compareSeqs(from.foreignKeys, to.foreignKeys, fksEquivalent _)._3.map(_._1)
+            
+            val recreateFks = keptFks.filter(
+                fk => !keptIndexColumns.exists(
+                    c => c.take(fk.localColumns.length).toList == fk.localColumns.toList))
+            
+            recreateFks.flatMap(fk => Seq(DropExtraDiff(fk), CreateExtraDiff(fk)))
+        }
 
-        val alterExtrasDiff = dropExtrasDiff ++ createExtrasDiff ++ changeExtrasDiff
+        val alterExtrasDiff = dropExtrasDiff ++ createExtrasDiff ++ changeExtrasDiff ++ recreateFksDiff
         
         
         val (fromOptions, toOptions, changeOptionPairs) =

@@ -1,6 +1,7 @@
 package ru.yandex.mysqlDiff.util
 
 import scala.collection.immutable.Set
+import scala.collection.mutable.ArrayBuffer
 
 trait CollectionImplicits {
     implicit def seqExtras[A](seq: Seq[A]) = new SeqExtras(seq)
@@ -9,6 +10,19 @@ trait CollectionImplicits {
 
 class SeqExtras[A](seq: Seq[A]) {
     def unique = Set(seq: _*)
+    
+    def partition3(f: A => Int): (Seq[A], Seq[A], Seq[A]) = {
+        val r = (new ArrayBuffer[A], new ArrayBuffer[A], new ArrayBuffer[A])
+        for (e <- seq) {
+            val b = f(e) match {
+                case 1 => r._1
+                case 2 => r._2
+                case 3 => r._3
+            }
+            b += e
+        }
+        r
+    }
 }
 
 class OptionExtras[A](option: Option[A]) {

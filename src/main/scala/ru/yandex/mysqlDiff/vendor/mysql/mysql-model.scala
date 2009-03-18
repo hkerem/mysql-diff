@@ -358,7 +358,12 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
                     columns.toList.take(fk.localColumns.length) == fk.localColumns.toList
                 case UniqueKey(UniqueKeyModel(_, columns)) =>
                     columns.toList.take(fk.localColumns.length) == fk.localColumns.toList
-                // XXX: what about two foreign keys sharing same index
+                case PrimaryKey(PrimaryKeyModel(_, columns)) =>
+                    columns.toList.take(fk.localColumns.length) == fk.localColumns.toList
+                case c @ Column(name, _, props) if props.exists(_ == InlinePrimaryKey) =>
+                    List(name).take(fk.localColumns.length) == fk.localColumns.toList
+                
+                // XXX: what about two foreign keys sharing same index?
                 case _ => false
             }
             if (haveAnotherIndex) Seq(fk)

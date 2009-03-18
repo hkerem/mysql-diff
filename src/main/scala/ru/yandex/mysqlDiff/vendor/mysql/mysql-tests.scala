@@ -68,6 +68,16 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             )
     }
     
+    "FOREIGN KEY with overlapping PRIMARY KEY" in {
+        ddlTemplate.dropTableWithExportedKeysIfExists("mmmm")
+        ddlTemplate.dropTableWithExportedKeysIfExists("nnnn")
+        ddlTemplate.recreateTable("CREATE TABLE mmmm (id INT PRIMARY KEY) ENGINE=InnoDB")
+        checkTwoTables(
+            "CREATE TABLE nnnn (id INT, mmmm_id INT, CONSTRAINT mmmm_c FOREIGN KEY mmmm_i (mmmm_id) REFERENCES mmmm(id), PRIMARY KEY(mmmm_id, id)) ENGINE=InnoDB",
+            "CREATE TABLE nnnn (id INT, mmmm_id INT, CONSTRAINT mmmm_c FOREIGN KEY mmmm_i (mmmm_id) REFERENCES mmmm(id)) ENGINE=InnoDB"
+            )
+    }
+    
     "FOREIGN KEY ... ON UPDATE ... ON DELETE" in {
         ddlTemplate.dropTableWithExportedKeysIfExists("o_u_o_d")
         ddlTemplate.dropTableWithExportedKeysIfExists("o_u_o_d_pri")

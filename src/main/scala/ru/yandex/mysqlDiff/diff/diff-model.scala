@@ -58,10 +58,33 @@ case class ChangeTableDiff(override val name: String, override val renameTo: Opt
         columnDiff: Seq[ColumnDiff], extraDiff: Seq[ExtraDiff], tableOptionDiff: Seq[TableOptionDiff])
     extends TableDiff with ChangeSomethingDiff
 {
+    // must have something in the diff
+    //require(renameTo.isDefined || !entriesDiff.isEmpty)
+    
     def entriesDiff: Seq[TableEntryDiff] = columnDiff ++ extraDiff ++ tableOptionDiff
     
-    // must have something in the diff
-    require(renameTo.isDefined || !entriesDiff.isEmpty)
+    def dropChangeCreate: (ChangeTableDiff, ChangeTableDiff, ChangeTableDiff) = {
+        val column3 = columnDiff.partition3 {
+            case _: DropColumnDiff => 1
+            case _: ChangeColumnDiff => 2
+            case _: CreateColumnDiff => 3
+        }
+        val extra3 = extraDiff.partition3 {
+            case _: DropExtraDiff => 1
+            case _: ChangeExtraDiff => 2
+            case _: CreateExtraDiff => 3
+        }
+        val option3 = tableOptionDiff.partition3 {
+            case _: DropTableOptionDiff => 1
+            case _: ChangeTableOptionDiff => 2
+            case _: CreateTableOptionDiff => 3
+        }
+        (
+            new ChangeTableDiff(name, renameTo, column3._1, extra3._1, option3._1),
+            new ChangeTableDiff(name, renameTo, column3._2, extra3._2, option3._2),
+            new ChangeTableDiff(name, renameTo, column3._3, extra3._3, option3._3)
+        )
+    }
 }
 
 
