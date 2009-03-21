@@ -53,7 +53,7 @@ case class ChangeTableOptionDiff(oldOption: TableOption, newOption: TableOption)
 abstract class TableDiff
 
 case class CreateTableDiff(table: TableModel) extends TableDiff
-case class DropTableDiff(name: String) extends TableDiff
+case class DropTableDiff(table: TableModel) extends TableDiff
 case class ChangeTableDiff(override val name: String, override val renameTo: Option[String],
         columnDiff: Seq[ColumnDiff], extraDiff: Seq[ExtraDiff], tableOptionDiff: Seq[TableOptionDiff])
     extends TableDiff with ChangeSomethingDiff

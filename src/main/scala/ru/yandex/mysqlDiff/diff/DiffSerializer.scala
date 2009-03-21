@@ -180,7 +180,7 @@ class DiffSerializer(val context: Context) {
         Seq(modelSerializer.serializeTable(c.table))
     
     def serializeDropTableDiff(d: DropTableDiff) =
-        Seq(DropTableStatement(d.name, false))
+        Seq(DropTableStatement(d.table.name, false))
     
     def serializeTableDiff(diff: TableDiff, newTable: TableModel) = diff match {
         case c: CreateTableDiff => serializeCreateTableDiff(c)

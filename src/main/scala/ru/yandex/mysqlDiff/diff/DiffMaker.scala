@@ -197,7 +197,7 @@ case class DiffMaker(val context: Context) {
     /** Compare two database models */
     def compareDatabases(from: DatabaseModel, to: DatabaseModel): DatabaseDiff = {
         val (toIsEmpty, fromIsEmpty, tablesForCompare) = compareSeqs(from.declarations, to.declarations, (x: TableModel, y: TableModel) => x.name == y.name)
-        val dropTables = toIsEmpty.map(tbl => new DropTableDiff(tbl.name))
+        val dropTables = toIsEmpty.map(tbl => new DropTableDiff(tbl))
         val createTables = fromIsEmpty.map(tbl => new CreateTableDiff(tbl))
         val alterTable = tablesForCompare.map(tbl => compareTables(tbl._1, tbl._2))
         new DatabaseDiff(dropTables ++ createTables ++ alterTable.flatMap(tbl => tbl.toList))
