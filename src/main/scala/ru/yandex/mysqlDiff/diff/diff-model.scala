@@ -52,8 +52,14 @@ case class ChangeTableOptionDiff(oldOption: TableOption, newOption: TableOption)
 
 abstract class TableDiff
 
-case class CreateTableDiff(table: TableModel) extends TableDiff
-case class DropTableDiff(table: TableModel) extends TableDiff
+case class CreateTableDiff(table: TableModel) extends TableDiff {
+    def cutForeignKeys: (CreateTableDiff, Seq[ForeignKeyModel]) =
+        (CreateTableDiff(table.dropForeignKeys), table.foreignKeys)
+}
+case class DropTableDiff(table: TableModel) extends TableDiff {
+    def cutForeignKeys: (DropTableDiff, Seq[ForeignKeyModel]) =
+        (DropTableDiff(table.dropForeignKeys), table.foreignKeys)
+}
 case class ChangeTableDiff(override val name: String, override val renameTo: Option[String],
         columnDiff: Seq[ColumnDiff], extraDiff: Seq[ExtraDiff], tableOptionDiff: Seq[TableOptionDiff])
     extends TableDiff with ChangeSomethingDiff
@@ -63,26 +69,36 @@ case class ChangeTableDiff(override val name: String, override val renameTo: Opt
     
     def entriesDiff: Seq[TableEntryDiff] = columnDiff ++ extraDiff ++ tableOptionDiff
     
-    def dropChangeCreate: (ChangeTableDiff, ChangeTableDiff, ChangeTableDiff) = {
-        val column3 = columnDiff.partition3 {
-            case _: DropColumnDiff => 1
-            case _: ChangeColumnDiff => 2
-            case _: CreateColumnDiff => 3
+    def splitForOrder: (ChangeTableDiff, ChangeTableDiff, ChangeTableDiff, ChangeTableDiff, ChangeTableDiff) = {
+        val column5 = columnDiff.partition5 {
+            case _: DropColumnDiff => 2
+            case _: ChangeColumnDiff => 3
+            case _: CreateColumnDiff => 4
         }
-        val extra3 = extraDiff.partition3 {
-            case _: DropExtraDiff => 1
-            case _: ChangeExtraDiff => 2
-            case _: CreateExtraDiff => 3
+        val extra5 = extraDiff.partition5 {
+            case DropExtraDiff(e) =>
+                e match {
+                    case _: ForeignKeyModel => 1
+                    case _ => 2
+                }
+            case _: ChangeExtraDiff => 3
+            case CreateExtraDiff(e) =>
+                e match {
+                    case _: ForeignKeyModel => 5
+                    case _ => 4
+                }
         }
-        val option3 = tableOptionDiff.partition3 {
-            case _: DropTableOptionDiff => 1
-            case _: ChangeTableOptionDiff => 2
-            case _: CreateTableOptionDiff => 3
+        val option5 = tableOptionDiff.partition5 {
+            case _: DropTableOptionDiff => 2
+            case _: ChangeTableOptionDiff => 3
+            case _: CreateTableOptionDiff => 4
         }
         (
-            new ChangeTableDiff(name, renameTo, column3._1, extra3._1, option3._1),
-            new ChangeTableDiff(name, renameTo, column3._2, extra3._2, option3._2),
-            new ChangeTableDiff(name, renameTo, column3._3, extra3._3, option3._3)
+            new ChangeTableDiff(name, renameTo, column5._1, extra5._1, option5._1),
+            new ChangeTableDiff(name, renameTo, column5._2, extra5._2, option5._2),
+            new ChangeTableDiff(name, renameTo, column5._3, extra5._3, option5._3),
+            new ChangeTableDiff(name, renameTo, column5._4, extra5._4, option5._4),
+            new ChangeTableDiff(name, renameTo, column5._5, extra5._5, option5._5)
         )
     }
 }

@@ -421,6 +421,9 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
         withExtras(extras.filter { case ForeignKeyModel(Some(`name`), _, _, _, _, _) => false; case _ => true })
     }
     
+    def dropForeignKeys =
+        withExtras(extras.filter { case ForeignKeyModel(_, _, _, _, _, _) => false; case _ => true })
+    
     def addPrimaryKey(pk: PrimaryKeyModel) =
         addExtra(pk)
     

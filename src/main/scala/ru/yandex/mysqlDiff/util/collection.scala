@@ -23,6 +23,21 @@ class SeqExtras[A](seq: Seq[A]) {
         }
         r
     }
+    
+    def partition5(f: A => Int): (Seq[A], Seq[A], Seq[A], Seq[A], Seq[A]) = {
+        val r = (new ArrayBuffer[A], new ArrayBuffer[A], new ArrayBuffer[A], new ArrayBuffer[A], new ArrayBuffer[A])
+        for (e <- seq) {
+            val b = f(e) match {
+                case 1 => r._1
+                case 2 => r._2
+                case 3 => r._3
+                case 4 => r._4
+                case 5 => r._5
+            }
+            b += e
+        }
+        r
+    }
 }
 
 class OptionExtras[A](option: Option[A]) {
