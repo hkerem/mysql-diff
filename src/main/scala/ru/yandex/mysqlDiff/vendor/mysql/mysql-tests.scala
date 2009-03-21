@@ -213,6 +213,18 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             """)
     }
     
+    "bug with ADD FOREIGN KEY referenced to newly created table" in {
+        checkTwoDatabases(
+            """
+            CREATE TABLE cities (id INT PRIMARY KEY) ENGINE=InnoDB
+            """,
+            """
+            CREATE TABLE countries (id INT PRIMARY KEY) ENGINE=InnoDB;
+            CREATE TABLE cities (id INT PRIMARY KEY, cid INT, CONSTRAINT ccid FOREIGN KEY icid (cid) REFERENCES countries(id))
+                    ENGINE=InnoDB
+            """)
+    }
+    
 }
 
 object MysqlDdlTemplateTests extends DdlTemplateTests(MysqlTestDataSourceParameters.connectedContext) {
