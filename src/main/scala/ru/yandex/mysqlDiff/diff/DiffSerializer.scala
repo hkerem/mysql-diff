@@ -100,8 +100,7 @@ class DiffSerializer(val context: Context) {
 
         if (diff.entriesDiff.isEmpty)
             Seq()
-        else List[ScriptElement](CommentElement("-- change table " + table.name + ": " + diff.entriesDiff)) ++
-        {
+        else {
             // XXX: simplify
             
             val addPks = diff.entriesDiff.toList.filter {

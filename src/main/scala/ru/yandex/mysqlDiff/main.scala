@@ -94,36 +94,57 @@ abstract class MainSupport {
         printCl("system classloader", ClassLoader.getSystemClassLoader)
     }
     
-    def main(args: Array[String])
+    def main(args: Array[String]): Unit = {
+        args match {
+            case Seq("--debugenv") =>
+                debug()
+                exit(0)
+            case Seq("--version") =>
+                println(MysqlDiffVersion.version)
+                exit(0)
+            case _ =>
+        }
+    }
 }
 
 object Diff extends MainSupport {
     override val helpBanner = "mysqlDiff.sh from_file|from_jdbc_url to_file|to_jdbc_url"
     import Environment.defaultContext._
 
-    override def main(args: Array[String]) {
+    override def main(args: Array[String]): Unit = {
+        super.main(args)
         
-        val (fromdb, todb) = args match {
-            case Seq("-debugenv") =>
-                debug()
-                exit(0)
-            case Seq("-version") =>
-                println(MysqlDiffVersion.version)
-                exit(0)
+        val verbose = args.contains("--verbose")
+        
+        val (fromdb, todb, descr) = args.filter(_ != "--verbose") match {
             case Seq(from, to) =>
-                (getModelFromArgsLine(from), getModelFromArgsLine(to))
+                (getModelFromArgsLine(from), getModelFromArgsLine(to),
+                        "diff from %s to %s" % (from, to))
             case Seq(from, to, table) =>
-                (getModelFromArgsLine(from, table), getModelFromArgsLine(to, table))
+                (getModelFromArgsLine(from, table), getModelFromArgsLine(to, table),
+                        "diff of table %s from %s to %s" % (table, from, to))
             case _ =>
                 usage()
                 exit(1)
         }
         
         val dbDiff = diffMaker.compareDatabases(fromdb, todb)
+        
+        if (dbDiff.tableDiff.isEmpty) {
+            if (verbose)
+                println("-- "+ descr +" is empty")
+        } else {
+            if (verbose) {
+                println("-- " + descr +":")
+                for (d <- dbDiff.tableDiff)
+                    println("-- "+ d)
+            }
+            
+            val script = diffSerializer.serialize(fromdb, todb, dbDiff)
 
-        val script = diffSerializer.serialize(fromdb, todb, dbDiff)
+            print(script)
+        }
 
-        print(script)
 
     }
 }
@@ -131,7 +152,9 @@ object Diff extends MainSupport {
 object Dump extends MainSupport {
     override val helpBanner = "$0 file|jdbc_url"
     
-    override def main(args: Array[String]) {
+    override def main(args: Array[String]): Unit = {
+        super.main(args)
+        
         val verboseOpt = args.contains("--verbose")
         val db = args.filter(_ != "--verbose") match {
             case Seq(db) => getModelFromArgsLine(db)
