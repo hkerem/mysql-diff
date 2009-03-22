@@ -359,9 +359,9 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def dmlStmt: Parser[DmlStatement] = insert | update | select | delete
     
-    def topLevel: Parser[Any] = ddlStmt | dmlStmt
+    def topLevel: Parser[ScriptStatement] = ddlStmt | dmlStmt
     
-    def script: Parser[Seq[Any]] = repsep(topLevel, ";") <~ opt(";") ~ lexical.EOF
+    def script: Parser[Seq[ScriptStatement]] = rep(";") ~> repsep(topLevel, rep1(";")) <~ rep(";") ~ lexical.EOF
     
     def parse[T](parser: Parser[T])(text: String) = {
         val tokens = new lexical.Scanner(text)
@@ -637,6 +637,11 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     
     "parseValue TIMSTAMP WITHOUT TIME ZONE" in {
         parseValue("TIMESTAMP WITHOUT TIME ZONE 'now'") must_== new TimestampValue("now")
+    }
+    
+    "ignore semicolons" in {
+        val stmts = parse(script)("CREATE TABLE a (id INT); ; CREATE TABLE b (id INT) ;;")
+        stmts must haveSize(2)
     }
 }
 
