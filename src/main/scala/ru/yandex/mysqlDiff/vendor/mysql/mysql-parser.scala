@@ -117,11 +117,15 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
         | "MAX_ROWS" ~> opt("=") ~> intNumber ^^ { MysqlMaxRowsTableOption(_) }
         )
     
+    def tableComment: Parser[TableOption] =
+        ( "COMMENT" ~> opt("=") ~> stringConstant ^^ { MysqlCommentTableOption(_) } )
+    
     override def tableOption: Parser[TableOption] =
         ( tableEngine
         | tableDefaultCharset
         | tableCollate
         | tableMinMaxRows
+        | tableComment
         )
     
     def convertToCharacterSet =
@@ -184,10 +188,12 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
     }
     
     "TABLE options" in {
-        val t = parse(createTable)("CREATE TABLE a (id INT) ENGINE=InnoDB MAX_ROWS 10 MIN_ROWS=20")
+        val t = parse(createTable)(
+            "CREATE TABLE a (id INT) ENGINE=InnoDB MAX_ROWS 10 MIN_ROWS=20 COMMENT 'comm'")
         t.options must contain(MysqlMaxRowsTableOption(10))
         t.options must contain(MysqlMinRowsTableOption(20))
         t.options must contain(MysqlEngineTableOption("InnoDB"))
+        t.options must contain(MysqlCommentTableOption("comm"))
     }
     
     "CREATE TABLE named UNIQUE" in {
