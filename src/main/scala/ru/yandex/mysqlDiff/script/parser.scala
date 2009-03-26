@@ -388,7 +388,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         parse(column)(text)
     
     def parseValue(text: String) = {
-        require(text != null && text.length >= 0, "value must be not empty string")
+        require(text != null && text.trim.length > 0, "value not be a blank string")
         try {
             parse(sqlValue)(text)
         } catch {
