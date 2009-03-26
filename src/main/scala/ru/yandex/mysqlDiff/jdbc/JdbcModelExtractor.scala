@@ -96,7 +96,14 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
             
             val dataType = dataTypes.make(colType, colTypeSize)
             
-            val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
+            val defaultValue =
+                try {
+                    parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
+                } catch {
+                    case e: Exception =>
+                        throw new MysqlDiffException(
+                            "failed to parse column \""+ colName +"\" default value: " + e, e)
+                }
             
             val props = Seq[ColumnProperty]() ++ nullable ++ defaultValue ++ autoIncrement
             new ColumnModel(colName, dataType, props)
@@ -182,7 +189,8 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
             else Some(StringValue(s))
         }
         else if (dataTypes.isAnyNumber(dataType.name)) {
-            Some(sqlParserCombinator.parseValue(s))
+            if (s == "") Some(NumberValue(0))
+            else Some(sqlParserCombinator.parseValue(s))
         }
         else Some(StringValue(s))
     }
