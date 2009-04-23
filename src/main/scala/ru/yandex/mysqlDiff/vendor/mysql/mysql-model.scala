@@ -190,36 +190,6 @@ case object MysqlAutoIncrementPropertyType extends ColumnPropertyType {
 ///
 // table options
 
-///
-// column properties
-
-case class MysqlOnUpdateCurrentTimestamp(set: Boolean) extends ColumnProperty {
-    override def propertyType = MysqlOnUpdateCurrentTimestampPropertyType
-}
-
-case object MysqlOnUpdateCurrentTimestampPropertyType extends ColumnPropertyType {
-    override type Value = MysqlOnUpdateCurrentTimestamp
-}
-
-case class MysqlComment(comment: String) extends ColumnProperty {
-    override def propertyType = MysqlCommentPropertyType
-}
-
-case object MysqlCommentPropertyType extends ColumnPropertyType {
-    override type Value = MysqlComment
-}
-
-case class MysqlAutoIncrement(autoIncrement: Boolean) extends ColumnProperty {
-    override def propertyType = MysqlAutoIncrementPropertyType
-}
-
-case object MysqlAutoIncrementPropertyType extends ColumnPropertyType {
-    override type Value = MysqlAutoIncrement
-}
-
-///
-// table options
-
 case class MysqlEngineTableOption(engine: String) extends TableOption {
     override def propertyType = MysqlEngineTableOptionType
 }
