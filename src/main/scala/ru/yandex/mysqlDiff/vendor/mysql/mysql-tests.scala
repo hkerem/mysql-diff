@@ -27,7 +27,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             "CREATE TABLE a (id INT PRIMARY KEY AUTO_INCREMENT, kk INT)")
         // extra checks
         t2.primaryKey.get.columns must beLike { case Seq("id") => true }
-        t2.column("id").properties.find(AutoIncrementPropertyType) must_== Some(AutoIncrement(true))
+        t2.column("id").properties.find(MysqlAutoIncrementPropertyType) must_== Some(MysqlAutoIncrement(true))
     }
     
     "diff unspecified default to script with default 0" in {

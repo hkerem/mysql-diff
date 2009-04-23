@@ -6,6 +6,12 @@ import model._
 
 import util.CollectionUtils._
 
+// XXX: drop
+import vendor.mysql._
+
+// XXX: drop
+import vendor.mysql._
+
 import Implicits._
 
 /**
@@ -45,9 +51,11 @@ case class DiffMaker(val context: Context) {
     def compareColumns(from: ColumnModel, to: ColumnModel): Option[ChangeColumnDiff] = {
         var diff = new ArrayBuffer[ColumnPropertyDiff]
         
+        // XXX: just compare all properties
         val comparePropertyTypes = List[ColumnPropertyType](
-            CommentPropertyType,
-            AutoIncrementPropertyType,
+            MysqlCommentPropertyType,
+            MysqlAutoIncrementPropertyType,
+            MysqlCommentPropertyType,
             NullabilityPropertyType,
             DefaultValuePropertyType
         )
@@ -281,8 +289,11 @@ object DiffMakerTests extends org.specs.Specification {
     }
     
     "compareColumn drop AutoIncrement(false) to none" in {
+        import vendor.mysql._
+        
         // we must not output ALTER because we are unsure that result is not AUTO_INCREMENT
-        val oldC = new ColumnModel("user", dataTypes.varchar(10), new ColumnProperties(List(AutoIncrement(false))))
+        val oldC = new ColumnModel("user", dataTypes.varchar(10),
+                new ColumnProperties(List(MysqlAutoIncrement(false))))
         val newC = new ColumnModel("user", dataTypes.varchar(10), new ColumnProperties(List()))
         diffMaker.compareColumns(oldC, newC) must_== None
     }

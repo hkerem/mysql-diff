@@ -85,9 +85,10 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
                 case "" => None
             }
             
+            // XXX: drop mysql
             val autoIncrement = columns.getString("IS_AUTOINCREMENT") match {
-                case "YES" => Some(AutoIncrement(true))
-                case "NO" => Some(AutoIncrement(false))
+                case "YES" => Some(vendor.mysql.MysqlAutoIncrement(true))
+                case "NO" => Some(vendor.mysql.MysqlAutoIncrement(false))
                 case "" => None
             }
             

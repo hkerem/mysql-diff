@@ -117,14 +117,13 @@ class ScriptSerializer(context: Context) {
         case s: CastExpr => serializeCast(s)
     }
     
+    // XXX: drop mysql
     def serializeModelColumnProperty(cp: ColumnProperty): Option[String] = cp match {
+        case vendor.mysql.MysqlAutoIncrement(true) => Some("AUTO_INCREMENT")
+        case vendor.mysql.MysqlAutoIncrement(false) => None
         case Nullability(true) => Some("NULL")
         case Nullability(false) => Some("NOT NULL")
         case DefaultValue(value) => Some("DEFAULT " + serializeValue(value))
-        case AutoIncrement(true) => Some("AUTO_INCREMENT")
-        case AutoIncrement(false) => None
-        case OnUpdateCurrentTimestamp(true) => Some("ON UPDATE CURRENT_TIMESTAMP")
-        case OnUpdateCurrentTimestamp(false) => None
     }
     
     def serializeImportedKeyRule(p: ImportedKeyRule) = p match {

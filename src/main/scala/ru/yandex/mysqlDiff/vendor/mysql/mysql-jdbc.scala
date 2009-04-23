@@ -327,7 +327,7 @@ object MysqlJdbcModelExtractorTests
         execute("CREATE TABLE ships (id INT NOT NULL, name VARCHAR(10), PRIMARY KEY(id))")
         
         val t = extractTable("ships")
-        t.column("id").properties.autoIncrement must_== Some(false)
+        t.column("id").properties.find(MysqlAutoIncrementPropertyType) must_== Some(MysqlAutoIncrement(false))
         //t.column("name").properties.autoIncrement must_== None
     }
     

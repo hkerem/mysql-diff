@@ -73,12 +73,14 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     
     override def sqlValue = super.sqlValue | nowValue
     
-    def autoIncrementability = "AUTO_INCREMENT" ^^^ AutoIncrement(true)
+    def autoIncrementability = "AUTO_INCREMENT" ^^^ MysqlAutoIncrement(true)
     
-    def onUpdateCurrentTimestamp = "ON" ~ "UPDATE" ~ "CURRENT_TIMESTAMP" ^^^ OnUpdateCurrentTimestamp(true)
+    def onUpdateCurrentTimestamp = "ON" ~ "UPDATE" ~ "CURRENT_TIMESTAMP" ^^^ MysqlOnUpdateCurrentTimestamp(true)
+    
+    def columnComment = "COMMENT" ~> stringConstant ^^ { MysqlComment(_) }
     
     override def columnProperty =
-        super.columnProperty | autoIncrementability | onUpdateCurrentTimestamp
+        super.columnProperty | autoIncrementability | onUpdateCurrentTimestamp | columnComment
     
     override def ukModel: Parser[UniqueKeyModel] =
         (constraint <~ "UNIQUE" <~ opt("INDEX" | "KEY")) ~ opt(name) ~ nameList ^^

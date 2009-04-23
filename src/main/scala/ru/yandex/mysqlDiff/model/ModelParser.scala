@@ -90,7 +90,8 @@ case class ModelParser(val context: Context) {
         val columns2 = columns.map {
             c =>
                 // XXX: drop here, reasonable only for PK columns
-                val defaultAutoincrement = AutoIncrement(false)
+                // XXX: autoincrement is meaningful only for MySQL
+                val defaultAutoincrement = vendor.mysql.MysqlAutoIncrement(false)
                 
                 val properties = c.properties
                     .withDefaultProperty(defaultAutoincrement)
@@ -189,12 +190,6 @@ class ModelParserTests(context: Context) extends org.specs.Specification {
         val t = parseCreateTableScript("CREATE TABLE users (login VARCHAR(10))")
         val c = t.column("login")
         c.properties.defaultValue must_== Some(NullValue)
-    }
-    
-    "unspecified autoincrement" in {
-        val t = parseCreateTableScript("CREATE TABLE user (id INT, login VARCHAR(10), PRIMARY KEY(id))")
-        t.column("id").properties.autoIncrement must_== Some(false)
-        //t.column("login").properties.autoIncrement must_== None
     }
     
     "PK is automatically NOT NULL" in {

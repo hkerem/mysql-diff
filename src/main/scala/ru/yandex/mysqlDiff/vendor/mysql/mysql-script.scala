@@ -38,6 +38,20 @@ class MysqlScriptSerializer(context: Context) extends ScriptSerializer(context) 
         words.mkString(" ")
     }
     
+    override def serializeModelColumnProperty(p: ColumnProperty) = p match {
+        case MysqlOnUpdateCurrentTimestamp(true) => Some("ON UPDATE CURRENT_TIMESTAMP")
+        case MysqlOnUpdateCurrentTimestamp(false) => None
+        case MysqlComment(comment) => Some("COMMENT "+ serializeString(comment))
+        case _ => super.serializeModelColumnProperty(p)
+    }
+    
+    override def serializeModelColumnProperty(p: ColumnProperty) = p match {
+        case MysqlOnUpdateCurrentTimestamp(true) => Some("ON UPDATE CURRENT_TIMESTAMP")
+        case MysqlOnUpdateCurrentTimestamp(false) => None
+        case MysqlComment(comment) => Some("COMMENT "+ serializeString(comment))
+        case _ => super.serializeModelColumnProperty(p)
+    }
+    
     def serializeTextDataType(dt: MysqlTextDataType) = {
         val words = new ArrayBuffer[String]
         words += dt.name

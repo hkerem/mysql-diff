@@ -141,6 +141,7 @@ object MysqlDataTypes extends DataTypes {
 
 object MysqlDataTypesTests extends org.specs.Specification {
     import MysqlContext._
+    import modelParser._
     
     "TINYINT(1) equivalent to BIT" in {
         dataTypes.equivalent(dataTypes.make("BIT"), dataTypes.make("TINYINT", Some(1))) must beTrue
@@ -158,6 +159,66 @@ object MysqlDataTypesTests extends org.specs.Specification {
         dataTypes.equivalent(dt, dt) must beTrue
     }
 }
+
+///
+// column properties
+
+case class MysqlOnUpdateCurrentTimestamp(set: Boolean) extends ColumnProperty {
+    override def propertyType = MysqlOnUpdateCurrentTimestampPropertyType
+}
+
+case object MysqlOnUpdateCurrentTimestampPropertyType extends ColumnPropertyType {
+    override type Value = MysqlOnUpdateCurrentTimestamp
+}
+
+case class MysqlComment(comment: String) extends ColumnProperty {
+    override def propertyType = MysqlCommentPropertyType
+}
+
+case object MysqlCommentPropertyType extends ColumnPropertyType {
+    override type Value = MysqlComment
+}
+
+case class MysqlAutoIncrement(autoIncrement: Boolean) extends ColumnProperty {
+    override def propertyType = MysqlAutoIncrementPropertyType
+}
+
+case object MysqlAutoIncrementPropertyType extends ColumnPropertyType {
+    override type Value = MysqlAutoIncrement
+}
+
+///
+// table options
+
+///
+// column properties
+
+case class MysqlOnUpdateCurrentTimestamp(set: Boolean) extends ColumnProperty {
+    override def propertyType = MysqlOnUpdateCurrentTimestampPropertyType
+}
+
+case object MysqlOnUpdateCurrentTimestampPropertyType extends ColumnPropertyType {
+    override type Value = MysqlOnUpdateCurrentTimestamp
+}
+
+case class MysqlComment(comment: String) extends ColumnProperty {
+    override def propertyType = MysqlCommentPropertyType
+}
+
+case object MysqlCommentPropertyType extends ColumnPropertyType {
+    override type Value = MysqlComment
+}
+
+case class MysqlAutoIncrement(autoIncrement: Boolean) extends ColumnProperty {
+    override def propertyType = MysqlAutoIncrementPropertyType
+}
+
+case object MysqlAutoIncrementPropertyType extends ColumnPropertyType {
+    override type Value = MysqlAutoIncrement
+}
+
+///
+// table options
 
 case class MysqlEngineTableOption(engine: String) extends TableOption {
     override def propertyType = MysqlEngineTableOptionType
@@ -423,6 +484,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
 
 object MysqlModelParserTests extends ModelParserTests(MysqlContext) {
     import MysqlContext._
+    import modelParser._
     
     "parse CREATE TABLE LIKE" in {
         val s = "CREATE TABLE a (id INT); CREATE TABLE b LIKE a"
@@ -456,6 +518,18 @@ object MysqlModelParserTests extends ModelParserTests(MysqlContext) {
         val t = modelParser.parseCreateTableScript(
             "CREATE TABLE a (b_id INT, FOREIGN KEY (id) REFERENCES b(b_id)) ENGINE=InnoDB")
         t.foreignKeys must haveSize(1)
+    }
+    
+    "unspecified autoincrement" in {
+        val t = parseCreateTableScript("CREATE TABLE user (id INT, login VARCHAR(10), PRIMARY KEY(id))")
+        t.column("id").properties.find(MysqlAutoIncrementPropertyType) must_== Some(MysqlAutoIncrement(false))
+        //t.column("login").properties.autoIncrement must_== None
+    }
+    
+    "unspecified autoincrement" in {
+        val t = parseCreateTableScript("CREATE TABLE user (id INT, login VARCHAR(10), PRIMARY KEY(id))")
+        t.column("id").properties.find(MysqlAutoIncrementPropertyType) must_== Some(MysqlAutoIncrement(false))
+        //t.column("login").properties.autoIncrement must_== None
     }
     
 }

@@ -175,14 +175,7 @@ case class ColumnProperties(ps: Seq[ColumnProperty])
     /** True iff NOT NULL or unknown */
     def isNotNull = find(NullabilityPropertyType).map(!_.nullable).getOrElse(false)
     
-    def comment: Option[String] = find(CommentPropertyType).map(_.comment)
-    
-    /** False iff true or unknown */
-    def isAutoIncrement = find(AutoIncrementPropertyType).map(_.autoIncrement).getOrElse(false)
-    
     def defaultValue: Option[SqlValue] = find(DefaultValuePropertyType).map(_.value)
-    
-    def autoIncrement: Option[Boolean] = find(AutoIncrementPropertyType).map(_.autoIncrement)
     
     /** True iff all properties are model properties */
     def isModelProperties = properties.forall(_.isModelProperty)
@@ -200,24 +193,28 @@ object ColumnPropertiesTests extends org.specs.Specification {
     }
     
     "removeProperty" in {
+        import vendor.mysql._
+        
         val cp = new ColumnProperties(List(Nullability(false), DefaultValue(NumberValue(3))))
         
         cp.removeProperty(NullabilityPropertyType).properties mustNot contain(Nullability(false))
         cp.removeProperty(NullabilityPropertyType).properties must contain(DefaultValue(NumberValue(3)))
         
-        cp.removeProperty(AutoIncrementPropertyType).properties must contain(Nullability(false))
+        cp.removeProperty(MysqlAutoIncrementPropertyType).properties must contain(Nullability(false))
     }
     
     "overrideProperty" in {
+        import vendor.mysql._
+        
         val cp = new ColumnProperties(List(Nullability(false), DefaultValue(NumberValue(3))))
         
         cp.overrideProperty(Nullability(true)).properties must contain(Nullability(true))
         cp.overrideProperty(Nullability(true)).properties mustNot contain(Nullability(false))
         cp.overrideProperty(Nullability(true)).properties must contain(DefaultValue(NumberValue(3)))
         
-        cp.overrideProperty(AutoIncrement(true)).properties must contain(AutoIncrement(true))
-        cp.overrideProperty(AutoIncrement(true)).properties must contain(Nullability(false))
-        cp.overrideProperty(AutoIncrement(true)).properties must contain(DefaultValue(NumberValue(3)))
+        cp.overrideProperty(MysqlAutoIncrement(true)).properties must contain(MysqlAutoIncrement(true))
+        cp.overrideProperty(MysqlAutoIncrement(true)).properties must contain(Nullability(false))
+        cp.overrideProperty(MysqlAutoIncrement(true)).properties must contain(DefaultValue(NumberValue(3)))
     }
 }
 
@@ -245,9 +242,7 @@ case class ColumnModel(val name: String, val dataType: DataType, properties: Col
         new ColumnModel(n, this.dataType, this.properties)
     
     def isNotNull = properties.isNotNull
-    def isAutoIncrement = properties.isAutoIncrement
     def defaultValue = properties.defaultValue
-    def comment = properties.comment
 }
 
 /*
@@ -520,30 +515,6 @@ case class DefaultValue(value: SqlValue) extends ColumnProperty {
 
 case object DefaultValuePropertyType extends ColumnPropertyType {
     override type Value = DefaultValue
-}
-
-case class AutoIncrement(autoIncrement: Boolean) extends ColumnProperty {
-    override def propertyType = AutoIncrementPropertyType
-}
-
-case object AutoIncrementPropertyType extends ColumnPropertyType {
-    override type Value = AutoIncrement
-}
-
-case class OnUpdateCurrentTimestamp(set: Boolean) extends ColumnProperty {
-    override def propertyType = OnUpdateCurrentTimestampPropertyType
-}
-
-case object OnUpdateCurrentTimestampPropertyType extends ColumnPropertyType {
-    override type Value = OnUpdateCurrentTimestamp
-}
-
-case class CommentProperty(comment: String) extends ColumnProperty {
-    override def propertyType = CommentPropertyType
-}
-
-case object CommentPropertyType extends ColumnPropertyType {
-    override type Value = CommentProperty
 }
 
 case class DataTypeProperty(dataType: DataType) extends ColumnProperty {
