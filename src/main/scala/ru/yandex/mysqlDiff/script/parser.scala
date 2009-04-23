@@ -211,10 +211,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def indexColNameList: Parser[Seq[String]] = "(" ~> repsep(indexColName, ",") <~ ")"
     
-    // XXX: not sure name conforms ANSI SQL
-    def indexModel: Parser[IndexModel] =
-        ("KEY" | "INDEX") ~> opt(name) ~ indexColNameList ^^
-            { case n ~ cs => model.IndexModel(n, cs) }
+    def indexModel: Parser[IndexModel] = failure("no inline index in ANSI SQL")
     
     def constraint: Parser[Option[String]] = opt("CONSTRAINT" ~> name)
     
@@ -577,26 +574,6 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
             case Seq(InlineReferences(References("city", Seq("id"), _, _))) => true }
         t.column("id").properties must beSameSeqAs(List(InlinePrimaryKey))
         t.column("name").properties must beSameSeqAs(List(InlineUnique))
-    }
-    
-    "parse indexes" in {
-        val t = parseCreateTable("CREATE TABLE a(id INT, UNIQUE(a), INDEX i2(b, c), UNIQUE KEY(d, e))")
-        t.indexes must haveSize(1)
-        t.indexes(0).index must beLike { case IndexModel(Some("i2"), Seq("b", "c")) => true; case _ => false }
-        
-        t.uniqueKeys must haveSize(2)
-        t.uniqueKeys(0).uk must beLike {
-            case UniqueKeyModel(None, Seq("a")) => true }
-        t.uniqueKeys(1).uk must beLike {
-            case UniqueKeyModel(None, Seq("d", "e")) => true }
-    }
-    
-    "parse ALTER TABLE ADD INDEX" in {
-        import AlterTableStatement._
-        val a = parse(alterTable)("ALTER TABLE users ADD INDEX (login)")
-        a must beLike {
-            case AlterTableStatement("users",
-                    Seq(AddExtra(Index(IndexModel(None, Seq("login")))))) => true }
     }
     
     "parser ALTER TABLE ADD UNIQUE" in {

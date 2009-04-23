@@ -101,7 +101,11 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
                     MysqlForeignKey(
                             ForeignKeyModel(cn, lcs, r.table, r.columns, r.updateRule, r.deleteRule),
                             in) }
-
+    
+    // XXX: index type is ignored
+    override def indexModel: Parser[IndexModel] =
+        ("KEY" | "INDEX") ~> opt(name) ~ opt("USING" ~> ("BTREE" | "HASH" | "RTREE")) ~ indexColNameList ^^
+            { case n ~ t ~ cs => model.IndexModel(n, cs) }
    
     def tableDefaultCharset: Parser[TableOption] =
         opt("DEFAULT") ~> ("CHARSET" | ("CHARACTER SET")) ~> opt("=") ~> ident ^^
@@ -222,6 +226,26 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         a must beLike {
             case AlterTableStatement("event",
                     Seq(AddExtra(UniqueKey(UniqueKeyModel(Some("idx2"), Seq("cr", "d", "ex")))))) => true }
+    }
+    
+    "parse ALTER TABLE ADD INDEX" in {
+        import AlterTableStatement._
+        val a = parse(alterTable)("ALTER TABLE users ADD INDEX (login)")
+        a must beLike {
+            case AlterTableStatement("users",
+                    Seq(AddExtra(Index(IndexModel(None, Seq("login")))))) => true }
+    }
+    
+    "parse indexes" in {
+        val t = parseCreateTable("CREATE TABLE a(id INT, UNIQUE(a), INDEX i2(b, c), UNIQUE KEY(d, e))")
+        t.indexes must haveSize(1)
+        t.indexes(0).index must beLike { case IndexModel(Some("i2"), Seq("b", "c")) => true; case _ => false }
+        
+        t.uniqueKeys must haveSize(2)
+        t.uniqueKeys(0).uk must beLike {
+            case UniqueKeyModel(None, Seq("a")) => true }
+        t.uniqueKeys(1).uk must beLike {
+            case UniqueKeyModel(None, Seq("d", "e")) => true }
     }
     
     "enum" in {
