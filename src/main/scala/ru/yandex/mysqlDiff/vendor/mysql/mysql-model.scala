@@ -434,21 +434,21 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         }
     }
     
-    private def fixDefaultValue(v: SqlValue) = v match {
+    // XXX: pull to common
+    private def fixDefaultValue(v: SqlValue, dt: DataType) = v match {
         // MySQL boolean is actually int:
         // http://dev.mysql.com/doc/refman/5.0/en/boolean-values.html
         case BooleanValue(true) => NumberValue(1)
         case BooleanValue(false) => NumberValue(0)
+        case StringValue(s) if dataTypes.isAnyNumber(dt.name) => NumberValue(s)
         case x => x
     }
-    
-    private def fixDefaultValueProperty(v: DefaultValue) =
-        DefaultValue(fixDefaultValue(v.value))
     
     protected override def fixColumn(column: ColumnModel, table: TableModel) = {
         val superFixed = super.fixColumn(column, table)
         superFixed.overrideProperties(
-                superFixed.properties.find(DefaultValuePropertyType).map(fixDefaultValueProperty _).toList)
+                superFixed.properties.find(DefaultValuePropertyType).map(
+                        x => DefaultValue(fixDefaultValue(x.value, column.dataType))).toList)
     }
 }
 

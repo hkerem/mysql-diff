@@ -182,6 +182,10 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             "CREATE TABLE boolean_with_default_true (available BOOLEAN NOT NULL default 1)")
     }
     
+    "DECIMAL DEFAULT VALUE" in {
+        checkTable("CREATE TABLE decimal_dv (id INT, deci DECIMAL(10, 6) DEFAULT '0.000000')")
+    }
+    
     "MEDIUMINT UNSIGNED" in {
         checkTable(
             "CREATE TABLE service_with_mediumint_unsigned (bg_color MEDIUMINT UNSIGNED)")
