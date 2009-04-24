@@ -13,6 +13,7 @@
   * Basic PostgreSQL support
   * FOREIGN KEY support
   * parse more DML statements
+  * parse floating point constants
   * ...
 
 - 0.2 -

@@ -60,7 +60,24 @@ abstract class SqlValue extends script.SqlExpr
 
 case object NullValue extends SqlValue
 
-case class NumberValue(value: Int) extends SqlValue
+class NumberValue(val value: BigDecimal) extends SqlValue {
+    require(value != null)
+    
+    override def equals(that: Any) =
+        if (that.isInstanceOf[NumberValue]) {
+            value.compare(that.asInstanceOf[NumberValue].value) == 0
+        } else false
+    
+    override def toString = value.toString
+}
+
+object NumberValue {
+    def apply(value: BigDecimal): NumberValue = new NumberValue(value)
+    def apply(value: Int): NumberValue = apply(BigDecimal(value))
+    def apply(value: String): NumberValue = apply(BigDecimal(value))
+    // XXX: bad idea
+    def unapply(nv: NumberValue): Option[Int] = Some(nv.value.intValue)
+}
 
 case class StringValue(value: String) extends SqlValue
 

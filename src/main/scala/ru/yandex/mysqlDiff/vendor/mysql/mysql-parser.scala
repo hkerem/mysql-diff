@@ -34,7 +34,7 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
         anyWord(MysqlDataTypes.numericDataTypeNames) ^^ { _.toUpperCase }
     
     def mysqlNumericDataType: Parser[MysqlNumericDataType] =
-        mysqlNumericDataTypeName ~ opt("(" ~> naturalNumber ~ opt("," ~> intNumber) <~ ")") ~
+        mysqlNumericDataTypeName ~ opt("(" ~> naturalNumber ~ opt("," ~> naturalNumber) <~ ")") ~
                 opt("UNSIGNED") ~ opt("ZEROFILL") ^^
             { case n ~ s ~ u ~ z =>
                 val (l, d) = s match {
@@ -67,9 +67,16 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
         // please keep spaces
         ("NOW ( )" | "CURRENT_TIMESTAMP") ^^^ NowValue
     
-    override def naturalNumber: Parser[Int] = numericLit ^^
-            { case x if x.startsWith("0x") => Integer.parseInt(x.substring(2), 16)
-              case x => x.toInt }
+    private def parseInt(x: String) =
+        if (x startsWith "0x") Integer.parseInt(x.substring(2), 16)
+        else x.toInt
+    
+    override def naturalNumber: Parser[Int] = numericLit ^^ { case x => parseInt(x) }
+    
+    override def bigDecimal: Parser[BigDecimal] = numericLit ^^ {
+        case x if x startsWith "0x" => BigDecimal(parseInt(x))
+        case x => BigDecimal(x)
+    }
     
     override def sqlValue = super.sqlValue | nowValue
     
@@ -119,8 +126,8 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
         ("ENGINE" | "TYPE") ~> opt("=") ~> ident ^^ { MysqlEngineTableOption(_) }
     
     def tableMinMaxRows: Parser[TableOption] =
-        ( "MIN_ROWS" ~> opt("=") ~> intNumber ^^ { MysqlMinRowsTableOption(_) }
-        | "MAX_ROWS" ~> opt("=") ~> intNumber ^^ { MysqlMaxRowsTableOption(_) }
+        ( "MIN_ROWS" ~> opt("=") ~> naturalNumber ^^ { MysqlMinRowsTableOption(_) }
+        | "MAX_ROWS" ~> opt("=") ~> naturalNumber ^^ { MysqlMaxRowsTableOption(_) }
         )
     
     def tableComment: Parser[TableOption] =

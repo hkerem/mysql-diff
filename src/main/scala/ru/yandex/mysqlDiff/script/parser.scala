@@ -26,9 +26,18 @@ class SqlLexical extends StdLexical {
     // XXX: % is a hack for Yandex.Video
     override def letter = elem("letter", x => x.isLetter || x == '_' || x == '%') // ?
     
-    /** Token with SQL-specific quotes */
+    protected def join(a: Any): String = a match {
+        case a ~ b => join(a) + join(b)
+        case x: Seq[_] => x.map(join _).mkString("")
+        case Some(x) => join(x)
+        case None => ""
+        case c: Char => c.toString
+    }
+    
+    /** SQL-specific hacks */
     override def token: Parser[Token] =
         ( '"' ~ rep( chrExcept('"', '\n', EofCh) ) ~ '"' ^^ { case '"' ~ chars ~ '"' => Identifier(chars mkString "") }
+        | opt('-') ~ digit ~ rep(digit) ~ opt('.' ~ digit ~ rep(digit)) ^^ { case x => NumericLit(join(x)) }
         | super.token )
     
     //override def token: Parser[Token] =
@@ -88,9 +97,9 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def naturalNumber: Parser[Int] = numericLit ^^ { x => x.toInt }
     
-    def intNumber: Parser[Int] = opt("-") ~ naturalNumber ^^ { case sign ~ value => (if (sign.isDefined) -1 else 1) * value }
+    def bigDecimal: Parser[BigDecimal] = numericLit ^^ { x => BigDecimal(x) }
     
-    def numberValue: Parser[NumberValue] = intNumber ^^ { x => NumberValue(x) } // silly
+    def numberValue: Parser[NumberValue] = bigDecimal ^^ { x => NumberValue(x) }
     
     def stringValue: Parser[StringValue] = stringConstant ^^ { x => StringValue(x) }
     
@@ -605,6 +614,10 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     
     "parseValue -1" in {
         parseValue("-1") must_== NumberValue(-1)
+    }
+    
+    "parseValue 1.123" in {
+        parseValue("1.123") must_== NumberValue("1.123")
     }
     
     "parseValue BOOLEAN" in {
