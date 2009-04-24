@@ -27,8 +27,9 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
 
     /** Database name from JDBC URL */
     lazy val currentDb = {
-        val db = jt.metaData(_.getURL.replaceFirst("\\?.*", "").replaceFirst(".*[/:]", ""))
-        require(db.matches("\\w+"), "could not extract database name from URL")
+        val url = jt.metaData(_.getURL)
+        val db = url.replaceFirst("\\?.*", "").replaceFirst(".*[/:]", "")
+        require(db.matches("\\w+"), "could not extract database name from URL: " + url)
         db
     }
     
