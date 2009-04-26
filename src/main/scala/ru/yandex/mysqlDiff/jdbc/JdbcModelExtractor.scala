@@ -14,10 +14,17 @@ import Implicits._
 
 class JdbcModelExtractorException(msg: String, cause: Throwable) extends Exception(msg, cause)
 
+object JdbcModelExtractor {
+    def dbNameFromUrl(url: String) =
+        url.replaceFirst("\\?.*", "").replaceFirst(".*[/:]", "")
+            .ensuring(_.matches("(\\w|-)+"), "could not extract database name from URL: " + url)
+}
+
 /*
  * Table model from the live database.
  */
 class JdbcModelExtractor(connectedContext: ConnectedContext) {
+    import JdbcModelExtractor._
     import JdbcUtils._
     
     import connectedContext._
@@ -26,12 +33,8 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
     import MetaDao._
 
     /** Database name from JDBC URL */
-    lazy val currentDb = {
-        val url = jt.metaData(_.getURL)
-        val db = url.replaceFirst("\\?.*", "").replaceFirst(".*[/:]", "")
-        require(db.matches("\\w+"), "could not extract database name from URL: " + url)
-        db
-    }
+    lazy val currentDb =
+        dbNameFromUrl(jt.metaData(_.getURL))
     
     /**
      * True iff last part of URL denotes DB catalog (PostgreSQL),
@@ -230,6 +233,12 @@ class JdbcModelExtractorTests(connectedContext: ConnectedContext)
     
     protected def extractTable(tableName: String) = {
         jdbcModelExtractor.extractTable(tableName)
+    }
+    
+    // XXX: no need to execute in each vendor
+    "dbNameFromUrl" in {
+        JdbcModelExtractor.dbNameFromUrl(
+            "jdbc:mysql://localhost:3306/dev-supersaveit?user=web") must_== "dev-supersaveit"
     }
 }
 
