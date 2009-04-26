@@ -178,8 +178,11 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def cast: Parser[CastExpr] = "CAST (" ~> sqlExpr ~ ("AS" ~> dataType <~ ")") ^^
             { case e ~ t => CastExpr(e, t) }
     
+    def variable: Parser[VariableExpr] = failure("no variables in common parser")
+    
     def sqlExpr: Parser[SqlExpr] =
-        ( sqlValue
+        ( variable
+        | sqlValue
         | cast
         | ("*" ^^^ SelectStar)
         | (name ^^ { case name => new NameExpr(name) })

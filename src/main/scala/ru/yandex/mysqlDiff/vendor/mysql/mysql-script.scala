@@ -78,7 +78,7 @@ class MysqlScriptSerializer(context: Context) extends ScriptSerializer(context) 
     
 }
 
-case class MysqlSetOptionStatement(name: String, value: SqlValue) extends ScriptStatement {
+case class MysqlSetStatement(target: SqlExpr, value: SqlExpr) extends ScriptStatement {
 }
 
 // vim: set ts=4 sw=4 et:

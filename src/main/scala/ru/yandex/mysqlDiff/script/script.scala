@@ -239,6 +239,7 @@ case object SelectStar extends SqlExpr
 case class NameExpr(name: String) extends SqlExpr
 case class BinaryOpExpr(left: SqlExpr, op: String, right: SqlExpr) extends SqlExpr
 
+case class VariableExpr(name: String) extends SqlExpr
 
 object ScriptTests extends org.specs.Specification {
 }

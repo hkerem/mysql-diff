@@ -6,11 +6,16 @@ import script._
 class MysqlLexical extends script.SqlLexical {
     import scala.util.parsing.input.CharArrayReader.EofCh
     
+    case class MysqlVariable(chars: String) extends Token
+    
     val hexDigits = Set[Char]() ++ "0123456789abcdefABCDEF".toArray
     def hexDigit = elem("hex digit", hexDigits.contains(_))
     
+    def identChar = letter | elem('_')
+    
     override def token: Parser[Token] =
         ( '0' ~ 'x' ~ rep1(hexDigit) ^^ { case o ~ x ~ b => NumericLit("0x" + b.mkString("")) }
+        | '@' ~ identChar ~ rep( identChar | digit ) ^^ { x => MysqlVariable(join(x)) }
         | '`' ~ rep( chrExcept('`', '\n', EofCh) ) ~ '`' ^^ { case '`' ~ chars ~ '`' => Identifier(chars mkString "") }
         | '"' ~ rep( chrExcept('"', '\n', EofCh) ) ~ '"' ^^ { case '"' ~ chars ~ '"' => StringLit(chars mkString "") }
         | super.token )
@@ -77,6 +82,10 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
         case x if x startsWith "0x" => BigDecimal(parseInt(x))
         case x => BigDecimal(x)
     }
+    
+    override def variable: Parser[VariableExpr] =
+        elem("mysql variable", _.isInstanceOf[lexical.MysqlVariable]) ^^ {
+                x => VariableExpr(x.chars.replaceFirst("^@", "")) }
     
     override def sqlValue = super.sqlValue | nowValue
     
@@ -160,12 +169,12 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     
     override def tableContentsSource: Parser[TableContentsSource] = super.tableContentsSource | mysqlLike
     
-    def setOption: Parser[MysqlSetOptionStatement] =
-        ( "SET NAMES" ~> stringValue ^^ { s => MysqlSetOptionStatement("NAMES", s) }
-        | "SET" ~> name ~ ("=" ~> stringValue) ^^ { case n ~ v => MysqlSetOptionStatement(n, v) }
+    def setSomething: Parser[MysqlSetStatement] =
+        ( "SET NAMES" ~> sqlExpr ^^ { s => MysqlSetStatement(NameExpr("NAMES"), s) }
+        | "SET" ~> sqlExpr ~ ("=" ~> sqlExpr) ^^ { case n ~ v => MysqlSetStatement(n, v) }
         )
     
-    override def topLevel = setOption | super.topLevel
+    override def topLevel = setSomething | super.topLevel
 }
 
 object MysqlParserCombinator extends MysqlParserCombinator(MysqlContext)
@@ -255,6 +264,22 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
             case UniqueKeyModel(None, Seq("a")) => true }
         t.uniqueKeys(1).uk must beLike {
             case UniqueKeyModel(None, Seq("d", "e")) => true }
+    }
+    
+    "SET option unquoted" in {
+        val st = parse(setSomething)("SET character_set_client = utf8")
+        //st must_== MysqlSetStatement(NameExpr("character_set_client"), StringValue("utf8"))
+        ()
+    }
+    
+    "SET option quoted" in {
+        val st = parse(setSomething)("SET character_set_client = \"utf8\"")
+        st must_== MysqlSetStatement(NameExpr("character_set_client"), StringValue("utf8"))
+    }
+    
+    "SET variable" in {
+        val st = parse(setSomething)("SET @three = 3")
+        st must_== MysqlSetStatement(VariableExpr("three"), NumberValue(3))
     }
     
     "enum" in {
