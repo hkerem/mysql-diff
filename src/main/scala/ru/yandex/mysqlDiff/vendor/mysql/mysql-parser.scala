@@ -99,7 +99,7 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
         super.columnProperty | autoIncrementability | onUpdateCurrentTimestamp | columnComment
     
     override def ukModel: Parser[UniqueKeyModel] =
-        (constraint <~ "UNIQUE" <~ opt("INDEX" | "KEY")) ~ opt(name) ~ nameList ^^
+        (constraint <~ "UNIQUE" <~ opt("INDEX" | "KEY")) ~ opt(name) ~ indexColumnList ^^
             { case n1 ~ n2 ~ cs =>
                 if (n1.isDefined && n2.isDefined)
                     throw new MysqlDiffException("UNIQUE KEY name specified twice")
@@ -107,14 +107,14 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     
     // undocumented MySQL
     override def pkModel: Parser[PrimaryKeyModel] =
-        (constraint <~ "PRIMARY KEY") ~ opt(name) ~ indexColNameList ^^
+        (constraint <~ "PRIMARY KEY") ~ opt(name) ~ indexColumnList ^^
             { case n1 ~ n2 ~ nameList =>
                 if (n1.isDefined && n2.isDefined)
                     throw new MysqlDiffException("PRIMARY KEY name specified twice")
                 PrimaryKeyModel(n1.orElse(n2), nameList) }
     
     override def fk: Parser[TableDdlStatement.Extra] =
-        (constraint <~ "FOREIGN KEY") ~ opt(name) ~ nameList ~ references ^^
+        (constraint <~ "FOREIGN KEY") ~ opt(name) ~ indexColumnList ~ references ^^
             { case cn ~ in ~ lcs ~ r =>
                     MysqlForeignKey(
                             ForeignKeyModel(cn, lcs, r.table, r.columns, r.updateRule, r.deleteRule),
@@ -122,7 +122,7 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     
     // XXX: index type is ignored
     override def indexModel: Parser[IndexModel] =
-        ("KEY" | "INDEX") ~> opt(name) ~ opt("USING" ~> ("BTREE" | "HASH" | "RTREE")) ~ indexColNameList ^^
+        ("KEY" | "INDEX") ~> opt(name) ~ opt("USING" ~> ("BTREE" | "HASH" | "RTREE")) ~ indexColumnList ^^
             { case n ~ t ~ cs => model.IndexModel(n, cs) }
    
     def tableDefaultCharset: Parser[TableOption] =
@@ -203,7 +203,7 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         fks must haveSize(1)
         fks.first must beLike {
             case MysqlForeignKey(
-                    ForeignKeyModel(Some("dc_fk"), Seq("dc_id"), "datacenters", Seq("id"), _, _),
+                    ForeignKeyModel(Some("dc_fk"), Seq(IndexColumn("dc_id", true, None)), "datacenters", Seq("id"), _, _),
                     Some("dc_idx"))
                 => true
         }
@@ -222,9 +222,8 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         val t = parseCreateTable(
             "CREATE TABLE users (login VARCHAR(10), UNIQUE KEY login_key(login))")
         t.uniqueKeys must haveSize(1)
-        t.uniqueKeys.first must beLike {
-            case UniqueKey(UniqueKeyModel(Some("login_key"), Seq("login"))) => true
-        }
+        val UniqueKey(UniqueKeyModel(Some("login_key"), columns)) = t.uniqueKeys.first
+        columns.map(_.name).toList must_== List("login")
     }
     
     "PRIMARY KEY name undocumented grammar" in {
@@ -241,29 +240,30 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
     
     "parse ALTER TABLE ADD named UNIQUE INDEX" in {
         val a = parse(alterTable)("ALTER TABLE event ADD UNIQUE INDEX idx2 (cr, d, ex)")
-        a must beLike {
-            case AlterTableStatement("event",
-                    Seq(AddExtra(UniqueKey(UniqueKeyModel(Some("idx2"), Seq("cr", "d", "ex")))))) => true }
+        val AlterTableStatement("event", ops) = a
+        val Seq(AddExtra(UniqueKey(UniqueKeyModel(Some("idx2"), columns)))) = ops
+        columns.map(_.name).toList must_== List("cr", "d", "ex")
     }
     
     "parse ALTER TABLE ADD INDEX" in {
         import AlterTableStatement._
         val a = parse(alterTable)("ALTER TABLE users ADD INDEX (login)")
-        a must beLike {
-            case AlterTableStatement("users",
-                    Seq(AddExtra(Index(IndexModel(None, Seq("login")))))) => true }
+        val AlterTableStatement("users", ops) = a
+        val Seq(AddExtra(Index(IndexModel(None, columns)))) = ops
+        columns.map(_.name).toList must_== List("login")
     }
     
     "parse indexes" in {
         val t = parseCreateTable("CREATE TABLE a(id INT, UNIQUE(a), INDEX i2(b, c), UNIQUE KEY(d, e))")
         t.indexes must haveSize(1)
-        t.indexes(0).index must beLike { case IndexModel(Some("i2"), Seq("b", "c")) => true; case _ => false }
+        val IndexModel(Some("i2"), indexColumns) = t.indexes(0).index
+        indexColumns.map(_.name).toList must_== List("b", "c")
         
         t.uniqueKeys must haveSize(2)
         t.uniqueKeys(0).uk must beLike {
-            case UniqueKeyModel(None, Seq("a")) => true }
+            case UniqueKeyModel(None, Seq(IndexColumn("a", _, _))) => true }
         t.uniqueKeys(1).uk must beLike {
-            case UniqueKeyModel(None, Seq("d", "e")) => true }
+            case UniqueKeyModel(None, Seq(IndexColumn("d", _, _), IndexColumn("e", _, _))) => true }
     }
     
     "SET option unquoted" in {

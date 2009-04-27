@@ -275,11 +275,18 @@ class ScriptSerializer(context: Context) {
     def serializeColumn(model: ColumnModel) =
         serializeTableElement(modelSerializer.serializeColumn(model))
     
+    def serializeIndexColumn(ik: IndexColumn) = {
+        val words = new ArrayBuffer[String]
+        words += serializeName(ik.name) + ik.length.map("(" + _ + ")").getOrElse("")
+        if (!ik.asc) words += "DESC"
+        words.mkString(" ")
+    }
+    
     def serializePrimaryKey(pk: PrimaryKeyModel) = {
         val words = new ArrayBuffer[String]
         if (pk.name.isDefined) words += "CONSTRAINT " + pk.name.get
         words += "PRIMARY KEY"
-        words += ("(" + pk.columns.mkString(", ") + ")")
+        words += ("(" + pk.columns.map(serializeIndexColumn _).mkString(", ") + ")")
         words.mkString(" ")
     }
     
@@ -289,7 +296,7 @@ class ScriptSerializer(context: Context) {
         val words = new ArrayBuffer[String]
         if (name.isDefined) words += "CONSTRAINT " + fk.name.get
         words += "FOREIGN KEY"
-        words += ("(" + localColumns.mkString(", ") + ")")
+        words += ("(" + localColumns.map(serializeIndexColumn _).mkString(", ") + ")")
         words += "REFERENCES"
         words += externalTable
         words += ("(" + externalColumns.mkString(", ") + ")")
@@ -301,7 +308,7 @@ class ScriptSerializer(context: Context) {
     def serializeUniqueKey(uk: UniqueKeyModel) = {
         val words = new ArrayBuffer[String]
         if (uk.name.isDefined) words += "CONSTRAINT " + uk.name.get
-        words += "UNIQUE KEY(" + uk.columns.mkString(", ") + ")"
+        words += "UNIQUE KEY(" + uk.columns.map(serializeIndexColumn _).mkString(", ") + ")"
         words.mkString(" ")
     }
     
@@ -309,7 +316,7 @@ class ScriptSerializer(context: Context) {
         val words = new ArrayBuffer[String]
         words += "INDEX"
         words ++= index.name
-        words += ("(" + index.columns.mkString(", ") + ")")
+        words += ("(" + index.columns.map(serializeIndexColumn _).mkString(", ") + ")")
         words.mkString(" ")
     }
     

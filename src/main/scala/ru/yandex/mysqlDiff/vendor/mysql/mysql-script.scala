@@ -70,7 +70,7 @@ class MysqlScriptSerializer(context: Context) extends ScriptSerializer(context) 
             words ++= fk.name.map("CONSTRAINT " + _)
             words += "FOREIGN KEY"
             words ++= indexName
-            words += "(" + fk.localColumns.mkString(", ") + ")"
+            words += "(" + fk.localColumns.map(serializeIndexColumn _).mkString(", ") + ")"
             words += "REFERENCES " + fk.externalTable + "(" + fk.externalColumns.mkString(", ") + ")"
             words.mkString(" ")
         case _ => super.serializeTableElement(e)

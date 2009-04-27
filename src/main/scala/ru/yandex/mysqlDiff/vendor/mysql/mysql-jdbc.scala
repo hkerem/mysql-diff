@@ -214,7 +214,7 @@ object MysqlJdbcModelExtractorTests
             case MysqlCharacterDataType("VARCHAR", Some(100), _, _) => true
         }
         
-        assert(List("id") == table.primaryKey.get.columns.toList)
+        table.primaryKey.get.columnNames.toList must_== List("id")
     }
     
     "Indexes" in {
@@ -224,7 +224,7 @@ object MysqlJdbcModelExtractorTests
         val table = extractTable("users")
         
         val ageK = table.indexes.find(_.name.get == "age_k").get
-        List("age") must_== ageK.columns.toList
+        List("age") must_== ageK.columnNames.toList
         
         val firstLastK = table.uniqueKeyWithColumns("first_name", "last_name")
         
@@ -237,7 +237,7 @@ object MysqlJdbcModelExtractorTests
         execute("CREATE TABLE files (id INT, PRIMARY KEY(id))")
         
         val table = extractTable("files")
-        table.primaryKey.get.columns.toList must_== List("id")
+        table.primaryKey.get.columnNames.toList must_== List("id")
     }
     
     "Foreign keys" in {
@@ -260,18 +260,18 @@ object MysqlJdbcModelExtractorTests
         citizen.foreignKeys must haveSize(2)
         citizen.indexes must haveSize(2)
         
-        val fkc = citizen.foreignKeys.find(_.localColumns.toList == List("city_id")).get
-        fkc.localColumns must beLike { case Seq("city_id") => true }
+        val fkc = citizen.foreignKeys.find(_.localColumnNames.toList == List("city_id")).get
+        fkc.localColumnNames.toList must_== List("city_id")
         fkc.externalColumns must beLike { case Seq("id") => true }
         fkc.externalTable must_== "city"
-        val ic = citizen.indexes.find(_.columns.toList == List("city_id"))
+        val ic = citizen.indexes.find(_.columnNames.toList == List("city_id"))
         
-        val fkp = citizen.foreignKeys.find(_.localColumns.toList == List("pid1", "pid2")).get
-        fkp.localColumns must beLike { case Seq("pid1", "pid2") => true }
+        val fkp = citizen.foreignKeys.find(_.localColumnNames.toList == List("pid1", "pid2")).get
+        fkp.localColumnNames.toList must_== List("pid1", "pid2")
         fkp.externalColumns must beLike { case Seq("id1", "id2") => true }
         fkp.externalTable must_== "person"
         fkp.name must_== Some("fk2c")
-        val ip = citizen.indexes.find(_.columns.toList == List("pid1", "pid2")).get
+        val ip = citizen.indexes.find(_.columnNames.toList == List("pid1", "pid2")).get
         ip.name must_== Some("fk2i")
         
         city.foreignKeys must haveSize(0)

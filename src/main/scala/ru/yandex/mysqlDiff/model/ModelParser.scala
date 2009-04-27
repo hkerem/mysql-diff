@@ -67,12 +67,12 @@ case class ModelParser(val context: Context) {
                 
                 attrs foreach {
                     case InlinePrimaryKey =>
-                        extras += PrimaryKeyModel(None, Seq(column.name))
+                        extras += PrimaryKeyModel(None, Seq(IndexColumn(column.name)))
                     
                     case InlineReferences(References(table, Seq(tColumn), updateRule, deleteRule)) =>
-                        extras += ForeignKeyModel(None, Seq(column.name), table, Seq(tColumn),
+                        extras += ForeignKeyModel(None, Seq(IndexColumn(column.name)), table, Seq(tColumn),
                                 updateRule, deleteRule)
-                        extras += IndexModel(None, Seq(column.name))
+                        extras += IndexModel(None, Seq(IndexColumn(column.name)))
                     
                     // XXX: other inline properties
                     
@@ -201,7 +201,7 @@ class ModelParserTests(context: Context) extends org.specs.Specification {
     "inline PK" in {
         val t = parseCreateTableScript("CREATE TABLE users (id INT PRIMARY KEY, login VARCHAR(10))")
         t.columns.length must_== 2
-        t.primaryKey.get.columns must beLike { case Seq("id") => true; case _ => false }
+        t.primaryKey.get.columnNames.toList must_== List("id")
     }
     
     /*

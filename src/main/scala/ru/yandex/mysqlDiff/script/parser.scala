@@ -218,21 +218,23 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def select: Parser[SelectStatement] = ("SELECT" ~> rep1sep(sqlExpr, ",")) ~ from ~ opt("WHERE" ~> searchCondition) ^^
         { case exprs ~ names ~ where => SelectStatement(exprs, names, where) }
     
-    // XXX: length ignored
-    def indexColName: Parser[String] = name <~ opt("(" ~> naturalNumber <~ ")") <~ opt("ASC" | "DESC")
+    // XXX: length is mysql-specific
+    def indexColumn: Parser[IndexColumn] =
+        name ~ opt("(" ~> naturalNumber <~ ")") ~ opt("ASC" | "DESC") ^^ {
+                case name ~ length ~ asc => IndexColumn(name, asc != Some("DESC"), length) }
     
-    def indexColNameList: Parser[Seq[String]] = "(" ~> repsep(indexColName, ",") <~ ")"
+    def indexColumnList: Parser[Seq[IndexColumn]] = "(" ~> repsep(indexColumn, ",") <~ ")"
     
     def indexModel: Parser[IndexModel] = failure("no inline index in ANSI SQL")
     
     def constraint: Parser[Option[String]] = opt("CONSTRAINT" ~> name)
     
     def ukModel: Parser[UniqueKeyModel] =
-        (constraint <~ "UNIQUE" <~ opt("INDEX" | "KEY")) ~ nameList ^^
+        (constraint <~ "UNIQUE" <~ opt("INDEX" | "KEY")) ~ indexColumnList ^^
             { case n ~ cs => model.UniqueKeyModel(n, cs) }
     
     def fkModel: Parser[ForeignKeyModel] =
-        (constraint <~ "FOREIGN KEY") ~ nameList ~ references ^^
+        (constraint <~ "FOREIGN KEY") ~ indexColumnList ~ references ^^
             { case cn ~ lcs ~ r =>
                     ForeignKeyModel(cn, lcs, r.table, r.columns, r.updateRule, r.deleteRule) }
     
@@ -240,7 +242,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def fk: Parser[TableDdlStatement.Extra] = fkModel ^^ { fk => TableDdlStatement.ForeignKey(fk) }
     
     def pkModel: Parser[PrimaryKeyModel] =
-        (constraint <~ "PRIMARY KEY") ~ indexColNameList ^^
+        (constraint <~ "PRIMARY KEY") ~ indexColumnList ^^
             { case name ~ nameList => PrimaryKeyModel(name, nameList) }
     
     def ifNotExists: Parser[Any] = "IF NOT EXISTS"
@@ -591,9 +593,9 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     "parser ALTER TABLE ADD UNIQUE" in {
         import AlterTableStatement._
         val a = parse(alterTable)("ALTER TABLE convert_queue ADD UNIQUE(user_id, file_id)")
-        a must beLike {
-            case AlterTableStatement("convert_queue",
-                    Seq(AddExtra(UniqueKey(UniqueKeyModel(None, Seq("user_id", "file_id")))))) => true }
+        a must beLike { case AlterTableStatement("convert_queue", _) => true }
+        val Seq(AddExtra(UniqueKey(UniqueKeyModel(None, columns)))) = a.ops
+        columns.map(_.name).toList must_== List("user_id", "file_id")
     }
     
     "parse ALTER TABLE DROP INDEX" in {

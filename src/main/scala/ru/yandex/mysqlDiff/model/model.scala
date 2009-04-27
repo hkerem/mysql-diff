@@ -276,22 +276,33 @@ case object ForeignKey extends KeyType
 abstract class TableExtra extends TableEntry
 
 trait UniqueOrIndexModel extends TableExtra {
-    def columns: Seq[String]
+    def columns: Seq[IndexColumn]
+    def columnNames = columns.map(_.name)
 }
 
-case class IndexModel(name: Option[String], override val columns: Seq[String]) extends UniqueOrIndexModel {
+// length and asc is for MySQL
+case class IndexColumn(name: String, asc: Boolean, length: Option[Int])
+
+object IndexColumn {
+    def apply(name: String) = new IndexColumn(name, true, None)
+}
+
+case class IndexModel(name: Option[String], override val columns: Seq[IndexColumn]) extends UniqueOrIndexModel {
     require(columns.length > 0)
-    require(columns.unique.size == columns.length)
+    require(columnNames.unique.size == columnNames.length)
 }
 
 abstract case class ConstraintModel(name: Option[String]) extends TableExtra {
     require(name.isEmpty || name.get.length > 0)
 }
-case class UniqueKeyModel(override val name: Option[String], override val columns: Seq[String])
+case class UniqueKeyModel(override val name: Option[String], override val columns: Seq[IndexColumn])
     extends ConstraintModel(name) with UniqueOrIndexModel
 
-case class PrimaryKeyModel(override val name: Option[String], columns: Seq[String])
+case class PrimaryKeyModel(override val name: Option[String], columns: Seq[IndexColumn])
     extends ConstraintModel(name)
+{
+    def columnNames = columns.map(_.name)
+}
 
 abstract class ImportedKeyDeferrability
 object ImportedKeyInitiallyDeferred extends ImportedKeyDeferrability
@@ -305,13 +316,15 @@ object ImportedKeySetNull extends ImportedKeyRule
 object ImportedKeySetDefault extends ImportedKeyRule
 
 case class ForeignKeyModel(override val name: Option[String],
-        localColumns: Seq[String],
+        localColumns: Seq[IndexColumn],
         externalTable: String,
         externalColumns: Seq[String],
         updateRule: Option[ImportedKeyRule],
         deleteRule: Option[ImportedKeyRule])
     extends ConstraintModel(name)
 {
+    def localColumnNames = localColumns.map(_.name)
+    
     require(localColumns.length == externalColumns.length)
     // XXX: check externalColumns unique
     
@@ -382,10 +395,10 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     def constraintNames = constraints.flatMap(_.name)
     
     def indexWithColumns(columns: String*) =
-        indexes.find(_.columns.toList == columns.toList)
+        indexes.find(_.columnNames.toList == columns.toList)
             .getOrThrow("table " + this.name + " has no index with columns " + columns.mkString(", "))
     def uniqueKeyWithColumns(columns: String*) =
-        uniqueKeys.find(_.columns.toList == columns.toList)
+        uniqueKeys.find(_.columnNames.toList == columns.toList)
             .getOrThrow("table " + this.name + " has no unique keys with columns " + columns.mkString(", "))
     
     
@@ -449,7 +462,7 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     
     /** Columns is contained in PK */
     def isPk(name: String) =
-        primaryKey.isDefined && primaryKey.get.columns.contains(name)
+        primaryKey.isDefined && primaryKey.get.columnNames.contains(name)
     
     def withName(n: String) =
         new TableModel(n, columns, extras, options)
@@ -559,7 +572,7 @@ object ModelTests extends org.specs.Specification {
     
     "keys with repeating column names must not be allowed" in {
         try {
-            new IndexModel(None, List("a", "b", "a"))
+            new IndexModel(None, List(IndexColumn("a"), IndexColumn("b"), IndexColumn("a")))
             fail("two columns with same name should not be allowed in key")
         } catch {
             case e: IllegalArgumentException =>

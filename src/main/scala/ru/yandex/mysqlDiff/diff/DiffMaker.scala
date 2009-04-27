@@ -306,8 +306,8 @@ object DiffMakerTests extends org.specs.Specification {
     
     "ignore index name change to none" in {
         val columns = List(new ColumnModel("id", dataTypes.int), new ColumnModel("b", dataTypes.int))
-        val i1 = new IndexModel(Some("my_index"), List("b"))
-        val i2 = new IndexModel(None, List("b"))
+        val i1 = new IndexModel(Some("my_index"), List(IndexColumn("b")))
+        val i2 = new IndexModel(None, List(IndexColumn("b")))
         val t1 = new TableModel("a", columns, Seq(i1), Nil)
         val t2 = new TableModel("a", columns, Seq(i2), Nil)
         compareTables(t1, t2) must_== None

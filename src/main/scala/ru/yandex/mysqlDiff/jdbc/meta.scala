@@ -47,7 +47,8 @@ class MetaDao(jt: JdbcTemplate) {
                 // MySQL names primary key PRIMARY
                 val pkNameO = if (pkName != null && pkName != "PRIMARY") Some(pkName) else None
 
-                Some(new PrimaryKeyModel(pkNameO, r.map(_.columnName)))
+                // XXX: IndexColumn: asc, length
+                Some(new PrimaryKeyModel(pkNameO, r.map(x => IndexColumn(x.columnName))))
             }
         }
     
@@ -88,8 +89,9 @@ class MetaDao(jt: JdbcTemplate) {
             val unique = rows.first.unique
             val columnNames = rows.map(_.columnName)
             
-            if (unique) new UniqueKeyModel(Some(indexName), columnNames)
-            else new IndexModel(Some(indexName), columnNames)
+            // XXX: asc, length for IndexColumn
+            if (unique) new UniqueKeyModel(Some(indexName), columnNames.map(IndexColumn(_)))
+            else new IndexModel(Some(indexName), columnNames.map(IndexColumn(_)))
         }
     }
     
@@ -108,7 +110,8 @@ class MetaDao(jt: JdbcTemplate) {
                 throw new IllegalStateException(m)
             }
             
-            ForeignKeyModel(keyName, rows.map(_.fkColumnName),
+            // XXX: asc, length for IndexColumn
+            ForeignKeyModel(keyName, rows.map(x => IndexColumn(x.fkColumnName)),
                     externalTableNames.elements.next, rows.map(_.pkColumnName),
                     Some(rows.first.updateRule), Some(rows.first.deleteRule))
         }
