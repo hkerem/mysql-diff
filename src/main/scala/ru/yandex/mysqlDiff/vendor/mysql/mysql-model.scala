@@ -445,6 +445,10 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
     }
     
     protected override def fixColumn(column: ColumnModel, table: TableModel) = {
+        if (column.dataType.name == "TIMESTAMP" && column.defaultValue.isEmpty)
+            // because of MySQL-specifc features that are hard to deal with
+            throw new Exception(
+                    "TIMESTAMP without DEFAULT value is prohibited, column " + column.name) // XXX: report table
         val superFixed = super.fixColumn(column, table)
         superFixed.overrideProperties(
                 superFixed.properties.find(DefaultValuePropertyType).map(
@@ -501,7 +505,18 @@ object MysqlModelParserTests extends ModelParserTests(MysqlContext) {
         t.column("id").properties.find(MysqlAutoIncrementPropertyType) must_== Some(MysqlAutoIncrement(false))
         //t.column("login").properties.autoIncrement must_== None
     }
-    
+
+    "Prohibit TIMESTAMP without DEFAULT value" in {
+        val ct = sqlParserCombinator.parseCreateTable(
+            "CREATE TABLE x (a TIMESTAMP)")
+        try {
+            val t = parseCreateTable(ct)
+            fail("table should not be allowed, created " + t)
+        } catch {
+            case e: Exception if e.getMessage contains "prohibited" =>
+        }
+    }
+
 }
 
 class MysqlModelSerializer(context: Context) extends ModelSerializer(context) {

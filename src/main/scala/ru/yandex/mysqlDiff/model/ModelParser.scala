@@ -30,10 +30,6 @@ case class ModelParser(val context: Context) {
     
     private def parseColumn(c: Column) = {
         val Column(name, dataType, attrs) = c
-        if (dataType.name == "TIMESTAMP" && c.modelProperties.defaultValue.isEmpty)
-            // because of MySQL-specifc features that are hard to deal with
-            throw new Exception(
-                    "TIMESTAMP without DEFAULT value is prohibited, column " + name) // XXX: report table
         new ColumnModel(name, dataType, c.modelProperties)
     }
     
@@ -213,17 +209,6 @@ class ModelParserTests(context: Context) extends org.specs.Specification {
         c.properties.defaultValue must_== Some(NowValue)
     }
     */
-    
-    "Prohibit TIMESTAMP without DEFAULT value" in {
-        val ct = sqlParserCombinator.parseCreateTable(
-            "CREATE TABLE x (a TIMESTAMP)")
-        try {
-            val t = parseCreateTable(ct)
-            fail("table should not be allowed, created " + t)
-        } catch {
-            case e: Exception if e.getMessage contains "prohibited" =>
-        }
-    }
     
     "DROP TABLE" in {
         val db = modelParser.parseModel("CREATE TABLE a (id INT); CREATE TABLE b (id INT); DROP TABLE a")
