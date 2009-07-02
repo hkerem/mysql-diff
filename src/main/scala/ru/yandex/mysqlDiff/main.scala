@@ -160,19 +160,23 @@ object Dump extends MainSupport {
     override def main(args: Array[String]): Unit = {
         super.main(args)
         
-        import Environment.defaultContext._
-        import utils._ // XXX
-        
         val verboseOpt = args.contains("--verbose")
-        val db = args.filter(_ != "--verbose") match {
+        
+        val dbenv = args.find(_ startsWith "--dbenv=").map(_.replaceFirst("^--dbenv=", "")).getOrElse("mysql")
+        
+        val context = Environment.context(dbenv)
+        import context._
+        val utils = new Utils(context)
+        import utils._
+        
+        val restArgs = args.filter(a => a != "--verbose" && !(a startsWith "--dbenv="))
+        val db = restArgs match {
             case Seq(db) => getModelFromArgsLine(db)
             case Seq(db, table) => getModelFromArgsLine(db, table)
             case _ =>
                 usage()
                 exit(1)
         }
-        
-        import Environment.defaultContext._
         
         object options extends ScriptSerializer.Options.Multiline {
             override def verbose = verboseOpt
