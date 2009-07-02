@@ -12,8 +12,8 @@ import util._
 
 import Implicits._
 
-object Utils {
-    import Environment.defaultContext._
+class Utils(context: Context) {
+    import context._
     
     def getModelFromArgsLine(arg: String): DatabaseModel = {
         if (arg.startsWith("jdbc:"))
@@ -35,8 +35,6 @@ object Utils {
         }
     }
 }
-
-import Utils._
 
 abstract class MainSupport {
     val helpBanner: String
@@ -109,14 +107,21 @@ abstract class MainSupport {
 
 object Diff extends MainSupport {
     override val helpBanner = "mysqlDiff.sh from_file|from_jdbc_url to_file|to_jdbc_url"
-    import Environment.defaultContext._
 
     override def main(args: Array[String]): Unit = {
         super.main(args)
         
         val verbose = args.contains("--verbose")
         
-        val (fromdb, todb, descr) = args.filter(_ != "--verbose") match {
+        val dbenv = args.find(_ startsWith "--dbenv=").map(_.replaceFirst("^--dbenv=", "")).getOrElse("mysql")
+        
+        val context = Environment.context(dbenv)
+        import context._
+        val utils = new Utils(context)
+        import utils._
+        
+        val restArgs = args.filter(a => a != "--verbose" && !(a startsWith "--dbenv="))
+        val (fromdb, todb, descr) = restArgs match {
             case Seq(from, to) =>
                 (getModelFromArgsLine(from), getModelFromArgsLine(to),
                         "diff from %s to %s" % (from, to))
@@ -154,6 +159,9 @@ object Dump extends MainSupport {
     
     override def main(args: Array[String]): Unit = {
         super.main(args)
+        
+        import Environment.defaultContext._
+        import utils._ // XXX
         
         val verboseOpt = args.contains("--verbose")
         val db = args.filter(_ != "--verbose") match {

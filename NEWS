@@ -14,6 +14,7 @@
   * FOREIGN KEY support
   * parse more DML statements
   * parse floating point constants
+  * --dbenv=... command line options, to force scripts to be parsed as different database type
   * ...
 
 - 0.2 -

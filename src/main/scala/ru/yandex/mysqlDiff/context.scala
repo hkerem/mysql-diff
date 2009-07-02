@@ -17,6 +17,7 @@ class Context(val dataTypes: model.DataTypes) {
     val scriptSerializer = new script.ScriptSerializer(this)
     
     def connectedContext(ds: LiteDataSource) = new ConnectedContext(this, ds)
+    val utils = new Utils(this)
 }
 
 class ConnectedContext(val context: Context, val ds: LiteDataSource) {

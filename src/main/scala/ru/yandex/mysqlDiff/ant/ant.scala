@@ -29,8 +29,8 @@ class DiffTask extends Task {
         if (to eq null) throw new IllegalStateException("required parameter 'to' not set")
         if (output eq null) throw new IllegalStateException("required parameter 'output' not set")
         
-        val fromModel = Utils.getModelFromArgsLine(from)
-        val toModel = Utils.getModelFromArgsLine(to)
+        val fromModel = utils.getModelFromArgsLine(from)
+        val toModel = utils.getModelFromArgsLine(to)
         
         val dbDiff = diffMaker.compareDatabases(fromModel, toModel)
         val script = diffSerializer.serialize(fromModel, toModel, dbDiff)
