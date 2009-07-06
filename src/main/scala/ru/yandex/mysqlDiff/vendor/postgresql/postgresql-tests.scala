@@ -39,6 +39,10 @@ object PostgresqlOnlineTests extends OnlineTestsSupport(PostgresqlTestDataSource
     "change nullability" in {
         checkTwoTables("CREATE TABLE mags (id BIGINT)", "CREATE TABLE mags (id BIGINT NOT NULL)")
     }
+    
+    "change type" in {
+        checkTwoTables("CREATE TABLE cards (id INT)", "CREATE TABLE cards (id BIGINT)")
+    }
 }
 
 // vim: set ts=4 sw=4 et:

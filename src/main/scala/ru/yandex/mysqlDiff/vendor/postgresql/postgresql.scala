@@ -8,6 +8,7 @@ object PostgresqlContext extends Context(PostgresqlDataTypes) {
     override val sqlParserCombinator = new PostgresqlParserCombinator(this)
     override val dataTypes = PostgresqlDataTypes
     override val diffSerializer = new PostgresqlDiffSerializer(this)
+    override val scriptSerializer = new PostgresqlScriptSerializer(this)
     
     override def connectedContext(ds: LiteDataSource) = new PostgresqlConnectedContext(ds)
 }

@@ -12,6 +12,7 @@ class PostgresqlDiffSerializer(override val context: Context) extends DiffSerial
     private def changeColumnPropertyDiffStmt(pd: ChangeColumnPropertyDiff): AlterColumnOperation =
         pd.newProperty match {
             case Nullability(n) => SetNotNull(!n)
+            case DataTypeProperty(dt) => ChangeType(dt)
         }
     
     private def columnPropertyDiffStmt(pd: ColumnPropertyDiff): AlterColumnOperation =
