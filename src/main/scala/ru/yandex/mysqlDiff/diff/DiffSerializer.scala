@@ -14,18 +14,22 @@ class DiffSerializer(val context: Context) {
     import TableDdlStatement._
     
     def alterColumnScript(cd: ColumnDiff, table: TableModel) =
-        AlterTableStatement(table.name, List(alterColumnStmt(cd, table)))
+        AlterTableStatement(table.name, alterColumnStmts(cd, table))
     
-    def alterColumnStmt(cd: ColumnDiff, table: TableModel) = cd match {
-        // XXX: position
-        case CreateColumnDiff(ColumnModel(name, dataType, properties)) =>
-            TableDdlStatement.AddColumn(
-                new Column(name, dataType, properties.properties.map(p => new ModelColumnProperty(p))), None)
-        case DropColumnDiff(name) => TableDdlStatement.DropColumn(name)
+    def changeColumnStmts(cd: ChangeColumnDiff, table: TableModel): Seq[ColumnOperation] = List(cd match {
         case ChangeColumnDiff(name, Some(newName), diff) =>
                 TableDdlStatement.ChangeColumn(name, table.column(newName), None)
         case ChangeColumnDiff(name, None, diff) =>
                 TableDdlStatement.ModifyColumn(table.column(name), None)
+    })
+    
+    def alterColumnStmts(cd: ColumnDiff, table: TableModel): Seq[ColumnOperation] = cd match {
+        // XXX: position
+        case CreateColumnDiff(ColumnModel(name, dataType, properties)) =>
+            List(TableDdlStatement.AddColumn(
+                new Column(name, dataType, properties.properties.map(p => new ModelColumnProperty(p))), None))
+        case DropColumnDiff(name) => List(TableDdlStatement.DropColumn(name))
+        case cd: ChangeColumnDiff => changeColumnStmts(cd, table)
     }
     
     def dropExtraStmt(k: TableExtra) = k match {
@@ -65,7 +69,7 @@ class DiffSerializer(val context: Context) {
     
     def alterTableEntryStmts(d: TableEntryDiff, table: TableModel) = d match {
         case kd: ExtraDiff => alterExtraStmts(kd)
-        case cd: ColumnDiff => List(alterColumnStmt(cd, table))
+        case cd: ColumnDiff => alterColumnStmts(cd, table)
         case od: TableOptionDiff => List(alterTableOptionStmt(od, table))
     }
     

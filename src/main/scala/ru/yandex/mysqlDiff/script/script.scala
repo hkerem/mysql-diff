@@ -142,7 +142,8 @@ object TableDdlStatement {
     
     abstract class AddSomething extends Operation
     case class AddExtra(e: Extra) extends AddSomething
-    case class AddColumn(c: Column, position: Option[ColumnPosition]) extends AddSomething
+    case class AddColumn(c: Column, position: Option[ColumnPosition])
+        extends AddSomething with ColumnOperation
     
     def AddPrimaryKey(pk: PrimaryKeyModel) = AddExtra(new PrimaryKey(pk))
     def AddForeignKey(fk: ForeignKeyModel) = AddExtra(new ForeignKey(fk))
