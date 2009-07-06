@@ -308,9 +308,14 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def addFk = "ADD" ~> fk ^^ { fk => TableDdlStatement.AddExtra(fk) }
     
-    def alterColumn = "ALTER" ~> opt("COLUMN") ~> name ~
-        (("SET DEFAULT" ~> sqlValue ^^ { x => Some(x) }) | ("DROP DEFAULT" ^^^ None)) ^^
-            { case n ~ v => TableDdlStatement.AlterColumnSetDefault(n, v) }
+    def alterColumnOperation: Parser[TableDdlStatement.AlterColumnOperation] =
+        ( "SET DEFAULT" ~> sqlValue ^^ { x => TableDdlStatement.SetDefault(Some(x)) }
+        | "DROP DEFAULT" ^^^ { TableDdlStatement.SetDefault(None) }
+        )
+    
+    def alterColumn: Parser[TableDdlStatement.AlterColumn] =
+        "ALTER" ~> opt("COLUMN") ~> name ~ alterColumnOperation ^^ {
+            case n ~ op => TableDdlStatement.AlterColumn(n, op) }
     
     // XXX: use column position
     def changeColumn = "CHANGE" ~> opt("COLUMN") ~> name ~ columnModel ~ opt(columnPosition) ^^
@@ -612,9 +617,12 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         a must beLike {
             case AlterTableStatement("users",
                     Seq(
-                        AlterColumnSetDefault("password", None),
-                        AlterColumnSetDefault("film_count", Some(NumberValue(0)))))
-                => true }
+                        AlterColumn("password", SetDefault(None)),
+                        AlterColumn("film_count", SetDefault(Some(NumberValue(0)))))
+                    )
+                => true
+            case _ => false
+        }
     }
     
     "parseValue -1" in {

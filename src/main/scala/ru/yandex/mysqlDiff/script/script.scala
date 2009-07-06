@@ -155,8 +155,13 @@ object TableDdlStatement {
     case class ModifyColumn(model: ColumnModel, position: Option[ColumnPosition])
         extends ModifyOperation with ColumnOperation
     
+    // column operation
+    trait AlterColumnOperation
+    
     /** @param value None means DROP DEFAULT */
-    case class AlterColumnSetDefault(name: String, value: Option[SqlValue])
+    case class SetDefault(value: Option[SqlValue]) extends AlterColumnOperation
+    
+    case class AlterColumn(name: String, op: AlterColumnOperation)
         extends ModifyOperation with ColumnOperation
     
     case class DropColumn(name: String) extends DropOperation with ColumnOperation
