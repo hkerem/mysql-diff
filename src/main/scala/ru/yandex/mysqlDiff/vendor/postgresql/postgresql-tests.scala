@@ -31,6 +31,14 @@ object PostgresqlOnlineTests extends OnlineTestsSupport(PostgresqlTestDataSource
     import connectedContext._
     import context._
     include(new PostgresqlJdbcModelExtractorTests(connectedContext))
+    
+    "simple" in {
+        checkTable("CREATE TABLE hosts (id BIGINT)")
+    }
+    
+    "change nullability" in {
+        checkTwoTables("CREATE TABLE mags (id BIGINT)", "CREATE TABLE mags (id BIGINT NOT NULL)")
+    }
 }
 
 // vim: set ts=4 sw=4 et:

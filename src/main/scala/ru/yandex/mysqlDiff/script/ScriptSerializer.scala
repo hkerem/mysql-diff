@@ -249,6 +249,11 @@ class ScriptSerializer(context: Context) {
         words.mkString(" ")
     }
     
+    def serializeAlterColumnOperation(op: AlterColumnOperation) = op match {
+        case SetNotNull(true) => "SET NOT NULL"
+        case SetNotNull(false) => "DROP NOT NULL"
+    }
+    
     def serializeAlterTableOperation(op: Operation) = op match {
         case ac: AddColumn => serializeAddColumn(ac)
         case AddExtra(e) => "ADD " + serializeTableElement(e)
@@ -256,6 +261,7 @@ class ScriptSerializer(context: Context) {
         case cc: ChangeColumn => serializeChangeColumn(cc)
         case mc: ModifyColumn => serializeModifyColumn(mc)
         case DropColumn(name) => "DROP COLUMN " + name
+        case AlterColumn(name, op) => "ALTER COLUMN " + name + " " + serializeAlterColumnOperation(op)
         
         case DropPrimaryKey => "DROP PRIMARY KEY"
         case DropIndex(name) => "DROP INDEX " + name

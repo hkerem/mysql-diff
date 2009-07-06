@@ -531,6 +531,7 @@ abstract class ColumnPropertyType extends PropertyType {
     def isModelProperty = true
 }
 
+// XXX: change to nonNullable
 case class Nullability(nullable: Boolean) extends ColumnProperty {
     override def propertyType = NullabilityPropertyType
 }

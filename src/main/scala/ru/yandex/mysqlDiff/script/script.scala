@@ -150,17 +150,24 @@ object TableDdlStatement {
     def AddUniqueKey(un: UniqueKeyModel) = AddExtra(new UniqueKey(un))
     def AddIndex(index: IndexModel) = AddExtra(new Index(index))
     
+    // XXX: MySQL-specific
     case class ChangeColumn(oldName: String, model: ColumnModel, position: Option[ColumnPosition])
         extends ModifyOperation with ColumnOperation
     
+    // XXX: MySQL-specific
     case class ModifyColumn(model: ColumnModel, position: Option[ColumnPosition])
         extends ModifyOperation with ColumnOperation
+    
+    case class RenameColumn(name: String, newName: String)
+        extends ColumnOperation
     
     // column operation
     trait AlterColumnOperation
     
     /** @param value None means DROP DEFAULT */
     case class SetDefault(value: Option[SqlValue]) extends AlterColumnOperation
+    
+    case class SetNotNull(notNull: Boolean) extends AlterColumnOperation
     
     case class AlterColumn(name: String, op: AlterColumnOperation)
         extends ModifyOperation with ColumnOperation
