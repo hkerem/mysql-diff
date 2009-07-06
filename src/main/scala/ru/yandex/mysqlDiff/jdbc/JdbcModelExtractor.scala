@@ -115,11 +115,15 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
         }
         
         def extractTableColumns(tableName: String): Seq[ColumnModel] = metaData { data =>
+            require(tableName.length > 0)
+
             val columns = data.getColumns(currentCatalog, currentSchema, tableName, "%")
             columns.read(parseTableColumn _)
         }
         
         def extractTable(tableName: String): TableModel = {
+            require(tableName.length > 0)
+
             val columnsList = extractTableColumns(tableName)
             
             val pk = getPrimaryKey(tableName)
