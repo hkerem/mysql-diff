@@ -21,4 +21,10 @@ class PostgresqlJdbcModelExtractor(connectedContext: ConnectedContext)
 
 }
 
+class PostgresqlJdbcModelExtractorTests(connectedContext: ConnectedContext)
+    extends JdbcModelExtractorTests(connectedContext)
+{
+    // nothing yet
+}
+
 // vim: set ts=4 sw=4 et:

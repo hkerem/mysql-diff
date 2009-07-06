@@ -30,6 +30,7 @@ object PostgresqlTestDataSourceParameters extends TestDataSourceParameters {
 object PostgresqlOnlineTests extends OnlineTestsSupport(PostgresqlTestDataSourceParameters.connectedContext) {
     import connectedContext._
     import context._
+    include(new PostgresqlJdbcModelExtractorTests(connectedContext))
 }
 
 // vim: set ts=4 sw=4 et:
