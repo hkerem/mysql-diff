@@ -29,6 +29,7 @@ class SomeTests(testsSelector: TestsSelector) extends org.specs.Specification {
     include(new jdbc.JdbcTests(testsSelector))
     include(util.CollectionTests)
     include(util.StringTests)
+    include(util.getopt.GetoptTests)
 }
 
 object Tests extends SomeTests(AllTestsSelector)

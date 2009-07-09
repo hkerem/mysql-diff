@@ -9,6 +9,7 @@ import model._
 import script._
 import jdbc._
 import util._
+import util.getopt._
 
 import Implicits._
 
@@ -38,6 +39,10 @@ class Utils(context: Context) {
 
 abstract class MainSupport {
     val helpBanner: String
+    
+    val verboseOpt = getopt.Opt("verbose", false)
+    val dbenvOpt = getopt.Opt("dbenv", true)
+    val versionOpt = getopt.Opt("version", false)
     
     import Console.err
     
@@ -111,16 +116,22 @@ object Diff extends MainSupport {
     override def main(args: Array[String]): Unit = {
         super.main(args)
         
-        val verbose = args.contains("--verbose")
+        var verbose = false
+        var dbenv = "mysql"
         
-        val dbenv = args.find(_ startsWith "--dbenv=").map(_.replaceFirst("^--dbenv=", "")).getOrElse("mysql")
+        val getopt.Result(options, restArgs) = getopt.Options(Seq(verboseOpt, dbenvOpt)).parse(args)
+        for ((opt, value) <- options) {
+            opt.name match {
+                case "verbose" => verbose = true
+                case "dbenv" => dbenv = value
+            }
+        }
         
         val context = Environment.context(dbenv)
         import context._
         val utils = new Utils(context)
         import utils._
         
-        val restArgs = args.filter(a => a != "--verbose" && !(a startsWith "--dbenv="))
         val (fromdb, todb, descr) = restArgs match {
             case Seq(from, to) =>
                 (getModelFromArgsLine(from), getModelFromArgsLine(to),
