@@ -212,6 +212,7 @@ object MysqlJdbcModelExtractorTests
         assert("color" == table.columns(1).name)
         table.columns(1).dataType must beLike {
             case MysqlCharacterDataType("VARCHAR", Some(100), _, _) => true
+            case _ => false
         }
         
         table.primaryKey.get.columnNames.toList must_== List("id")
@@ -340,7 +341,9 @@ object MysqlJdbcModelExtractorTests
         val b = table.column("b")
         
         b.dataType must beLike {
-            case MysqlCharacterDataType("VARCHAR", Some(2), Some("utf8"), Some("utf8_bin")) => true }
+            case MysqlCharacterDataType("VARCHAR", Some(2), Some("utf8"), Some("utf8_bin")) => true
+            case _ => false
+        }
     }
     
     "ENUM" in {
@@ -357,7 +360,10 @@ object MysqlJdbcModelExtractorTests
         ddlTemplate.recreateTable(
             "CREATE TABLE t_b (a BOOLEAN)")
         val t = extractTable("t_b")
-        t.column("a").dataType must beLike { case MysqlNumericDataType("TINYINT", Some(1), _, _, _) => true }
+        t.column("a").dataType must beLike {
+            case MysqlNumericDataType("TINYINT", Some(1), _, _, _) => true
+            case _ => false
+        }
     }
 }
 

@@ -565,7 +565,9 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
     "DELETE" in {
         val d = parse(delete)("DELETE FROM users WHERE 1 = 0")
         d must beLike {
-            case DeleteStatement("users", Some(_)) => true }
+            case DeleteStatement("users", Some(_)) => true
+            case _ => false
+        }
     }
     
     "case insensitive" in {

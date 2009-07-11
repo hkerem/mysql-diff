@@ -192,6 +192,7 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         parse(createTable)("CREATE TABLE oranges LIKE lemons") must beLike {
             case CreateTableStatement("oranges", false,
                     TableElementList(Seq(LikeClause("lemons"))), Seq()) => true
+            case _ => false
         }
     }
     
@@ -206,6 +207,7 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
                     ForeignKeyModel(Some("dc_fk"), Seq(IndexColumn("dc_id", true, None)), "datacenters", Seq("id"), _, _),
                     Some("dc_idx"))
                 => true
+            case _ => false
         }
     }
     
@@ -229,13 +231,13 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
     "PRIMARY KEY name undocumented grammar" in {
         val t = parseCreateTable(
             "CREATE TABLE df (id INT, PRIMARY KEY pk (id))")
-        t.primaryKeys must beLike { case Seq(_) => true }
+        t.primaryKeys must beLike { case Seq(_) => true; case _ => false }
     }
     
     "quotes in identifiers" in {
         val t = parseCreateTable("""CREATE TABLE `a` (`id` INT, login VARCHAR(100))""")
         t.name must_== "a"
-        t.columns must beLike { case Seq(Column("id", _, _), Column("login", _, _)) => true }
+        t.columns must beLike { case Seq(Column("id", _, _), Column("login", _, _)) => true; case _ => false }
     }
     
     "parse ALTER TABLE ADD named UNIQUE INDEX" in {
@@ -261,9 +263,13 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         
         t.uniqueKeys must haveSize(2)
         t.uniqueKeys(0).uk must beLike {
-            case UniqueKeyModel(None, Seq(IndexColumn("a", _, _))) => true }
+            case UniqueKeyModel(None, Seq(IndexColumn("a", _, _))) => true
+            case _ => false
+        }
         t.uniqueKeys(1).uk must beLike {
-            case UniqueKeyModel(None, Seq(IndexColumn("d", _, _), IndexColumn("e", _, _))) => true }
+            case UniqueKeyModel(None, Seq(IndexColumn("d", _, _), IndexColumn("e", _, _))) => true
+            case _ => false
+        }
     }
     
     "SET option unquoted" in {
@@ -284,7 +290,9 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
     
     "enum" in {
         parse(enum)("ENUM('week', 'month')") must beLike {
-            case MysqlEnumDataType(Seq("week", "month")) => true }
+            case MysqlEnumDataType(Seq("week", "month")) => true
+            case _ => false
+        }
         parse(createTable)("CREATE TABLE we (a ENUM('aa', 'bb'))")
     }
     
