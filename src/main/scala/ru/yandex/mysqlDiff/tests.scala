@@ -3,7 +3,9 @@ package ru.yandex.mysqlDiff
 /** All online tests are turned off by default */
 trait TestsSelector {
     def includeOnline = false
+    /** Include online MySQL tests */
     def includeMysql = includeOnline
+    /** Include online PostgreSQL tests */
     def includePostgresql = includeOnline
 }
 
