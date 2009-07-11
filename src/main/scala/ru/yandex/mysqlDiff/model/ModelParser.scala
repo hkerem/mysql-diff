@@ -114,10 +114,10 @@ case class ModelParser(val context: Context) {
         
         // don't know which is better
         properties = properties.overrideProperty(Nullability(false))
-        //properties = properties.removeProperty(NullabilityPropertyType)
+        //properties = properties.removePropertyByType(NullabilityPropertyType)
         
         if (properties.defaultValue == Some(NullValue))
-            properties = properties.removeProperty(DefaultValuePropertyType)
+            properties = properties.removePropertyByType(DefaultValuePropertyType)
         ColumnModel(column.name, column.dataType, properties)
     }
     

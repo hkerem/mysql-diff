@@ -39,11 +39,14 @@ case class PropertyMap[T <: PropertyType, V <: Property](val properties: Seq[V])
         r
     }
     
-    def removeProperty(pt: T): this.type =
+    def removePropertyByType(pt: T): this.type =
         copy(properties.filter(_.propertyType != pt))
     
+    def removeProperty(p: V): this.type =
+        copy(properties.filter(_ != p))
+    
     def overrideProperty(o: V): this.type =
-        copy(removeProperty(o.propertyType.asInstanceOf[T]).properties ++ List(o))
+        copy(removePropertyByType(o.propertyType.asInstanceOf[T]).properties ++ List(o))
     
     def overrideProperties(ps: Seq[V]): this.type = {
         var r: this.type = this
@@ -214,10 +217,10 @@ object ColumnPropertiesTests extends org.specs.Specification {
         
         val cp = new ColumnProperties(List(Nullability(false), DefaultValue(NumberValue(3))))
         
-        cp.removeProperty(NullabilityPropertyType).properties mustNot contain(Nullability(false))
-        cp.removeProperty(NullabilityPropertyType).properties must contain(DefaultValue(NumberValue(3)))
+        cp.removePropertyByType(NullabilityPropertyType).properties mustNot contain(Nullability(false))
+        cp.removePropertyByType(NullabilityPropertyType).properties must contain(DefaultValue(NumberValue(3)))
         
-        cp.removeProperty(MysqlAutoIncrementPropertyType).properties must contain(Nullability(false))
+        cp.removePropertyByType(MysqlAutoIncrementPropertyType).properties must contain(Nullability(false))
     }
     
     "overrideProperty" in {
