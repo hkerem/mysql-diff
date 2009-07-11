@@ -29,12 +29,18 @@ class ConnectedContext(val context: Context, val ds: LiteDataSource) {
 
 // XXX: create basic context
 
+// XXX: rename to Context
 object Environment {
     val defaultContext = vendor.mysql.MysqlContext
     
-    def context(kind: String) = kind match {
-        case "mysql" => vendor.mysql.MysqlContext
+    def context(kind: String) = kind.toLowerCase match {
         case "postgresql" => vendor.postgresql.PostgresqlContext
+        case "mysql" | "default" => defaultContext
+    }
+    
+    def contextByUrl(url: String) = {
+        require(url startsWith "jdbc:")
+        context(url.replaceFirst("^jdbc:", "").replaceFirst(":.*", ""))
     }
 }
 

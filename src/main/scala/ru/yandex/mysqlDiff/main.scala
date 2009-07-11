@@ -171,30 +171,47 @@ object Dump extends MainSupport {
     override def main(args: Array[String]): Unit = {
         super.main(args)
         
-        val verboseOpt = args.contains("--verbose")
+        var verboseValue = false
+        var dbenv: Option[String] = None
         
-        val dbenv = args.find(_ startsWith "--dbenv=").map(_.replaceFirst("^--dbenv=", "")).getOrElse("mysql")
+        val getopt.Result(options, restArgs) = getopt.Options(Seq(verboseOpt, dbenvOpt)).parse(args)
+        for ((opt, value) <- options) {
+            opt.name match {
+                case "verbose" => verboseValue = true
+                case "dbenv" => dbenv = Some(value)
+            }
+        }
         
-        val context = Environment.context(dbenv)
-        import context._
-        val utils = new Utils(context)
-        import utils._
-        
-        val restArgs = args.filter(a => a != "--verbose" && !(a startsWith "--dbenv="))
-        val db = restArgs match {
-            case Seq(db) => getModelFromArgsLine(db)
-            case Seq(db, table) => getModelFromArgsLine(db, table)
+        val (dbRef, afterDb) = restArgs match {
+            case Seq(db, afterDb @_*) => (db, afterDb)
             case _ =>
                 usage()
                 exit(1)
         }
         
-        object options extends ScriptSerializer.Options.Multiline {
-            override def verbose = verboseOpt
+        val context =
+            if (dbenv.isDefined) Environment.context(dbenv.get)
+            else if (dbRef startsWith "jdbc:") Environment.contextByUrl(dbRef)
+            else Environment.defaultContext
+        
+        import context._
+        val utils = new Utils(context)
+        import utils._
+        
+        val db = afterDb match {
+            case Seq() => getModelFromArgsLine(dbRef)
+            case Seq(table) => getModelFromArgsLine(dbRef, table)
+            case _ =>
+                usage()
+                exit(1)
+        }
+        
+        object serializeOptions extends ScriptSerializer.Options.Multiline {
+            override def verbose = verboseValue
         }
         
         //print(ModelSerializer.serializeDatabaseToText(db))
-        print(scriptSerializer.serialize(modelSerializer.serializeDatabase(db), options))
+        print(scriptSerializer.serialize(modelSerializer.serializeDatabase(db), serializeOptions))
     }
 }
 
