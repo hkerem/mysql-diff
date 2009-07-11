@@ -14,6 +14,10 @@ class PostgresqlDiffSerializer(override val context: Context) extends DiffSerial
         pd.newProperty match {
             case Nullability(n) => SetNotNull(!n)
             case DataTypeProperty(dt) => ChangeType(dt)
+            
+            // // SET DEFAULT NULL causes default to be 'NULL::character varying' somewhy
+            case DefaultValue(NullValue) => SetDefault(None)
+            
             case DefaultValue(value) => SetDefault(Some(value))
         }
     

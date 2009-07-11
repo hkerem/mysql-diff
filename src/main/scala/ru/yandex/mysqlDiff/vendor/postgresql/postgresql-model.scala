@@ -24,4 +24,13 @@ object PostgresqlDataTypes extends DataTypes {
     
 }
 
+class PostgresqlModelSerializer(context: Context) extends ModelSerializer(context) {
+    import context._
+    
+    override def serializeColumn(column: ColumnModel) =
+        // because PostgreSQL DEFAULT NULL could interpret as DEFAULT 'NULL::character varying'
+        super.serializeColumn(
+            column.withProperties(column.properties.removeProperty(DefaultValue(NullValue))))
+}
+
 // vim: set ts=4 sw=4 et:

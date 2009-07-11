@@ -9,6 +9,7 @@ object PostgresqlContext extends Context(PostgresqlDataTypes) {
     override val dataTypes = PostgresqlDataTypes
     override val diffSerializer = new PostgresqlDiffSerializer(this)
     override val scriptSerializer = new PostgresqlScriptSerializer(this)
+    override val modelSerializer = new PostgresqlModelSerializer(this)
     
     override def connectedContext(ds: LiteDataSource) = new PostgresqlConnectedContext(ds)
 }

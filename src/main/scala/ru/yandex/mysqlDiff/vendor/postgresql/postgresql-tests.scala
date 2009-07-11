@@ -43,6 +43,10 @@ object PostgresqlOnlineTests extends OnlineTestsSupport(PostgresqlTestDataSource
     "change type" in {
         checkTwoTables("CREATE TABLE cards (id INT)", "CREATE TABLE cards (id BIGINT)")
     }
+    
+    "bug 1" in {
+        checkTable("CREATE TABLE ports (name VARCHAR(100))")
+    }
 }
 
 // vim: set ts=4 sw=4 et:
