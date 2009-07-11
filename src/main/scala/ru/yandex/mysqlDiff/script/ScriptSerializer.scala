@@ -252,6 +252,8 @@ class ScriptSerializer(context: Context) {
     def serializeAlterColumnOperation(op: AlterColumnOperation) = op match {
         case SetNotNull(true) => "SET NOT NULL"
         case SetNotNull(false) => "DROP NOT NULL"
+        case SetDefault(Some(value)) => "SET DEFAULT " + serializeValue(value)
+        case SetDefault(None) => "DROP DEFAULT"
     }
     
     def serializeAlterTableOperation(op: Operation) = op match {
