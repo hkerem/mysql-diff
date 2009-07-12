@@ -4,6 +4,8 @@ package ru.yandex.mysqlDiff
 import java.io.File
 import scalax.io._
 
+import misc.jdbc._
+
 import diff._
 import model._
 import script._

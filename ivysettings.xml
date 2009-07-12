@@ -8,6 +8,10 @@
             <ibiblio name="ibiblio" m2compatible="true"/>
             <ibiblio name="scala-tools" root="http://scala-tools.org/repo-releases/" m2compatible="true"/>
             <ibiblio name="scala-tools-ss" root="http://scala-tools.org/repo-snapshots/" m2compatible="true"/>
+            <url name="scala-misc">
+                <ivy pattern="http://scala-misc.s3.amazonaws.com/ivy-repo/[organisation]/[module]/[revision]/ivy.xml"/>
+                <artifact pattern="http://scala-misc.s3.amazonaws.com/ivy-repo/[organisation]/[module]/[revision]/[artifact].[ext]"/>
+            </url>
         </chain>
     </resolvers>
 </ivysettings>

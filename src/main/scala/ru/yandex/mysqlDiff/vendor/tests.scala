@@ -1,5 +1,7 @@
 package ru.yandex.mysqlDiff.vendor
 
+import misc.jdbc._
+
 import util._
 import jdbc._
 import model._
@@ -24,7 +26,7 @@ trait TestDataSourceParameters {
     
     val ds = LiteDataSource.driverManager(testDsUrl, testDsUser, testDsPassword)
     
-    val jdbcTemplate = new util.JdbcTemplate(ds)
+    val jdbcTemplate = new JdbcTemplate(ds)
     
     val connectedContext: ConnectedContext
 }

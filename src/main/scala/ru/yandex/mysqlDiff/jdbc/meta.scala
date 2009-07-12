@@ -3,6 +3,8 @@ package ru.yandex.mysqlDiff.jdbc
 import java.sql._
 import util._
 
+import misc.jdbc._
+
 import model._
 
 import scala.util.Sorting._
@@ -197,7 +199,7 @@ object MetaDao {
 abstract class DbMetaDaoTests(ds: LiteDataSource) extends org.specs.Specification {
     // XXX: write some tests
     
-    val jt = new util.JdbcTemplate(ds)
+    val jt = new JdbcTemplate(ds)
     
     // dummy
     "SELECT 1" in {

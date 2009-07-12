@@ -1,5 +1,7 @@
 package ru.yandex.mysqlDiff.vendor.mysql
 
+import misc.jdbc._
+
 import util._
 
 object MysqlContext extends Context(MysqlDataTypes) {

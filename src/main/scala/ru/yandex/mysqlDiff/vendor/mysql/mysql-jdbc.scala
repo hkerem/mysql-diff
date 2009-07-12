@@ -2,6 +2,8 @@ package ru.yandex.mysqlDiff.vendor.mysql
 
 import java.sql._
 
+import misc.jdbc._
+
 import jdbc._
 import util._
 import model._

@@ -1,5 +1,7 @@
 package ru.yandex.mysqlDiff.vendor.postgresql
 
+import misc.jdbc._
+
 import util._
 
 // PostgreSQL support is far from complete

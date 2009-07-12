@@ -1,5 +1,8 @@
 package ru.yandex.mysqlDiff
 
+import misc.jdbc.LiteDataSource
+import misc.jdbc.JdbcTemplate
+
 import util._
 
 import Implicits._
