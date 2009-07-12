@@ -137,7 +137,12 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
             val indexes = getIndexes(tableName)
                     .filter(pk.isEmpty || _.columns.toList != pk.get.columns.toList)
             
-            new TableModel(tableName, columnsList.toList, indexes ++ pk ++ fks, getTableOptions(tableName))
+            modelParser.fixTable(
+                new TableModel(tableName, columnsList.toList, indexes ++ pk ++ fks, getTableOptions(tableName)))
+        }
+        
+        def extractSequence(sequenceName: String): SequenceModel = {
+            new SequenceModel(sequenceName) // XXX: too lame
         }
         
         def getPrimaryKey(tableName: String): Option[PrimaryKeyModel] =
@@ -169,10 +174,13 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
     protected class AllTablesSchemaExtractor extends SchemaExtractor {
     
         def extract(): DatabaseModel =
-            new DatabaseModel(extractTables())
+            new DatabaseModel(extractTables() ++ extractSequences())
         
         private val cachedTableNames = new Lazy(metaDao.findTableNames(currentCatalog, currentSchema))
         def tableNames = cachedTableNames.get
+        
+        private val cachedSequenceNames = new Lazy(metaDao.findSequenceNames(currentCatalog, currentSchema))
+        def sequenceNames = cachedSequenceNames.get
         
         private val cachedTablesOptions = new Lazy(metaDao.findTablesOptions(currentCatalog, currentSchema))
         
@@ -181,6 +189,10 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
         
         def extractTables(): Seq[TableModel] = {
             tableNames.map(extractTable _)
+        }
+        
+        def extractSequences(): Seq[SequenceModel] = {
+            sequenceNames.map(extractSequence _)
         }
     
     }
@@ -211,7 +223,7 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
     protected def newSingleTableSchemaExtractor() =
         new SingleTableSchemaExtractor
     
-    def extractTables(): Seq[TableModel] =
+    protected def extractTables(): Seq[TableModel] =
         newAllTablesSchemaExtractor().extractTables()
     
     def extractTable(tableName: String): TableModel =

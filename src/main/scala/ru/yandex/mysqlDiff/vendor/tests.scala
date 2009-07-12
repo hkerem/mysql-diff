@@ -48,10 +48,10 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
     }
     
     private def checkTwoSimilarDatabaseModels(a: DatabaseModel, b: DatabaseModel) = {
-        diffMaker.compareDatabases(a, a).tableDiff must beEmpty
-        diffMaker.compareDatabases(b, b).tableDiff must beEmpty
-        diffMaker.compareDatabases(a, b).tableDiff must beEmpty
-        diffMaker.compareDatabases(b, a).tableDiff must beEmpty
+        diffMaker.compareDatabases(a, a).declDiff must beEmpty
+        diffMaker.compareDatabases(b, b).declDiff must beEmpty
+        diffMaker.compareDatabases(a, b).declDiff must beEmpty
+        diffMaker.compareDatabases(b, a).declDiff must beEmpty
     }
     
     
@@ -173,8 +173,8 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
             val t1 = modelParser.parseModel(script1)
             val t2 = modelParser.parseModel(script2)
             
-            diffMaker.compareDatabases(t1, t2).tableDiff must notBeEmpty
-            diffMaker.compareDatabases(t2, t1).tableDiff must notBeEmpty
+            diffMaker.compareDatabases(t1, t2).declDiff must notBeEmpty
+            diffMaker.compareDatabases(t2, t1).declDiff must notBeEmpty
             
             dropTables(t1)
             dropTables(t2)
@@ -184,7 +184,7 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
             val d1 = new DatabaseModel(t1.tables.map(_.name).map(jdbcModelExtractor.extractTable(_)))
             // compare and then apply difference
             val diff = diffMaker.compareDatabases(d1, t2)
-            diff.tableDiff must notBeEmpty
+            diff.declDiff must notBeEmpty
             for (st <- diffSerializer.serializeToScript(diff, d1, t2).ddlStatements) {
                 execute(scriptSerializer.serialize(st))
             }

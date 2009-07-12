@@ -158,20 +158,25 @@ class DiffSerializer(val context: Context) {
         serializeChangeTableDiffs(Seq((d, newTable)))
     }
     
-    def serializeChangeTableDiffs(diff: Seq[(TableDiff, TableModel)]) = {
+    /**
+     * @param diff sequence of pairs (diff, new model)
+     */
+    def serializeChangeTableDiffs(diff: Seq[(DatabaseDeclDiff, DatabaseDecl)]) = {
         val rename = new ArrayBuffer[ScriptElement]
         
         val dropFks = new ArrayBuffer[ScriptElement]
         val dropTables = new ArrayBuffer[ScriptElement]
         val drop = new ArrayBuffer[ScriptElement]
+        val dropSequences = new ArrayBuffer[ScriptElement]
         val change = new ArrayBuffer[ScriptElement]
         val create = new ArrayBuffer[ScriptElement]
         val createTables = new ArrayBuffer[ScriptElement]
+        val createSequences = new ArrayBuffer[ScriptElement]
         val addFks = new ArrayBuffer[ScriptElement]
         
-        for ((d, newTable) <- diff) {
-            d match {
-                case d @ ChangeTableDiff(name, renameTo, columnDiff, indexDiff, optionDiff) =>
+        for ((d, newDecl) <- diff) {
+            (d, newDecl) match {
+                case (d @ ChangeTableDiff(name, renameTo, columnDiff, indexDiff, optionDiff), newTable: TableModel) =>
                     require(renameTo.isEmpty || renameTo.get == newTable.name)
                     if (renameTo.isDefined)
                         rename += RenameTableStatement(name, renameTo.get)
@@ -182,18 +187,24 @@ class DiffSerializer(val context: Context) {
                     change ++= alterScript(ch, newTable)
                     create ++= alterScript(cr, newTable)
                     addFks ++= alterScript(crFk, newTable)
-                case DropTableDiff(table) =>
+                case (DropTableDiff(table), _) =>
                     dropTables += DropTableStatement(table.name, false)
                     if (!table.foreignKeys.isEmpty)
                         dropFks += AlterTableStatement(table.name, table.foreignKeys.map(fk =>
                                 TableDdlStatement.DropForeignKey(fk.name.getOrThrow("cannot get unnamed key"))))
-                case CreateTableDiff(table) =>
+                case (CreateTableDiff(table), _) =>
                     createTables += modelSerializer.serializeTable(table.dropForeignKeys)
                     if (!table.foreignKeys.isEmpty)
                         addFks += AlterTableStatement(table.name, table.foreignKeys.map(fk => TableDdlStatement.AddForeignKey(fk)))
+                case (CreateSequenceDiff(sequence), _) =>
+                    createSequences += CreateSequenceStatement(sequence.name)
+                case (DropSequenceDiff(sequence), _) =>
+                    dropSequences += DropSequenceStatement(sequence.name)
+                    
             }
         }
-        Seq[ScriptElement]() ++ rename ++ dropFks ++ dropTables ++ drop ++ change ++ create ++ createTables ++ addFks
+        // XXX: drop default must be before drop sequence
+        Seq[ScriptElement]() ++ rename ++ dropFks ++ dropTables ++ drop ++ dropSequences ++ createSequences ++ change ++ create ++ createTables ++ addFks
     }
     
     def serializeCreateTableDiff(c: CreateTableDiff) =
@@ -212,16 +223,18 @@ class DiffSerializer(val context: Context) {
     def serializeToScript(diff: DatabaseDiff, oldModel: DatabaseModel, newModel: DatabaseModel)
             : Seq[ScriptElement] =
     {
-        val newTablesMap: Map[String, TableModel] = Map(newModel.tables.map(o => (o.name, o)): _*)
-        val oldTablesMap: Map[String, TableModel] = Map(oldModel.tables.map(o => (o.name, o)): _*)
+        val newDeclsMap: Map[String, DatabaseDecl] = Map(newModel.decls.map(o => (o.name, o)): _*)
+        val oldDeclsMap: Map[String, DatabaseDecl] = Map(oldModel.decls.map(o => (o.name, o)): _*)
         
-        def table(d: TableDiff) = d match {
-            case d: ChangeTableDiff => newTablesMap(d.newName)
+        def newDecl(d: DatabaseDeclDiff) = d match {
+            case d: ChangeTableDiff => newDeclsMap(d.newName)
             case DropTableDiff(t) => t
             case CreateTableDiff(t) => t
+            case CreateSequenceDiff(s) => s
+            case DropSequenceDiff(s) => s
         }
         
-        serializeChangeTableDiffs(diff.tableDiff.map(d => (d, table(d))))
+        serializeChangeTableDiffs(diff.declDiff.map(d => (d, newDecl(d))))
         
         // XXX: sequences are lost
     }

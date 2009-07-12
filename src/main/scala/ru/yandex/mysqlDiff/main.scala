@@ -146,13 +146,13 @@ object Diff extends MainSupport {
         
         val dbDiff = diffMaker.compareDatabases(fromdb, todb)
         
-        if (dbDiff.tableDiff.isEmpty) {
+        if (dbDiff.declDiff.isEmpty) {
             if (verbose)
                 println("-- "+ descr +" is empty")
         } else {
             if (verbose) {
                 println("-- " + descr +":")
-                for (d <- dbDiff.tableDiff)
+                for (d <- dbDiff.declDiff)
                     println("-- "+ d)
             }
             

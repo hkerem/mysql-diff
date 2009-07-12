@@ -3,6 +3,7 @@ package ru.yandex.mysqlDiff.diff
 import scala.collection.mutable.ArrayBuffer
 
 import model._
+import script._
 
 import util.CollectionUtils._
 
@@ -24,8 +25,8 @@ case class DiffMaker(val context: Context) {
     /**
      * Are the values equivalent from DB point of view. For example, 1 and '1' are equivalent.
      */
-    def defaultValuesEquivalent(a: SqlValue, b: SqlValue) = {
-        def e1(a: SqlValue, b: SqlValue) = (a, b) match {
+    def defaultValuesEquivalent(a: SqlExpr, b: SqlExpr) = {
+        def e1(a: SqlExpr, b: SqlExpr) = (a, b) match {
             case (NumberValue(x), StringValue(y)) if x.toString == y => true
             // XXX: should only for date and time types
             case (StringValue("0000-00-00 00:00:00"), StringValue("0000-00-00")) => true
@@ -201,15 +202,28 @@ case class DiffMaker(val context: Context) {
         val toModel = modelParser.parseCreateTableScript(to)
         compareTables(fromModel, toModel)
     }
-
-    /** Compare two database models */
-    def compareDatabases(from: DatabaseModel, to: DatabaseModel): DatabaseDiff = {
-        val (toIsEmpty, fromIsEmpty, tablesForCompare) = compareSeqs(from.tables, to.tables, (x: TableModel, y: TableModel) => x.name == y.name)
+    
+    def compareTables(from: Seq[TableModel], to: Seq[TableModel]): DatabaseDiff = {
+        val (toIsEmpty, fromIsEmpty, tablesForCompare) =
+            compareSeqs(from, to, (x: TableModel, y: TableModel) => x.name == y.name)
         val dropTables = toIsEmpty.map(tbl => new DropTableDiff(tbl))
         val createTables = fromIsEmpty.map(tbl => new CreateTableDiff(tbl))
         val alterTable = tablesForCompare.map(tbl => compareTables(tbl._1, tbl._2))
         new DatabaseDiff(dropTables ++ createTables ++ alterTable.flatMap(tbl => tbl.toList))
-        // XXX: compare sequences too
+    }
+    
+    def compareSequences(from: Seq[SequenceModel], to: Seq[SequenceModel]): DatabaseDiff = {
+        val (toIsEmpty, fromIsEmpty, sequencesToCompare) =
+            compareSeqs(from, to, (x: SequenceModel, y: SequenceModel) => x.name == y.name)
+        val dropSequences = toIsEmpty.map(s => new DropSequenceDiff(s))
+        val createSequences = fromIsEmpty.map(s => new CreateSequenceDiff(s))
+        val alterSequences = List(): Seq[SequenceDiff]
+        new DatabaseDiff(dropSequences ++ createSequences ++ alterSequences)
+    }
+
+    /** Compare two database models */
+    def compareDatabases(from: DatabaseModel, to: DatabaseModel): DatabaseDiff = {
+        compareTables(from.tables, to.tables) ++ compareSequences(from.sequences, to.sequences)
     }
 }
 

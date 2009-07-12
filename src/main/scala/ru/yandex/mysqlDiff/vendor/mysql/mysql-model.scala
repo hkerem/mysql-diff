@@ -435,7 +435,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
     }
     
     // XXX: pull to common
-    private def fixDefaultValue(v: SqlValue, dt: DataType) = v match {
+    private def fixDefaultValue(v: SqlExpr, dt: DataType) = v match {
         // MySQL boolean is actually int:
         // http://dev.mysql.com/doc/refman/5.0/en/boolean-values.html
         case BooleanValue(true) => NumberValue(1)
@@ -444,7 +444,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         case x => x
     }
     
-    protected override def fixColumn(column: ColumnModel, table: TableModel) = {
+    override def fixColumn(column: ColumnModel, table: TableModel) = {
         if (column.dataType.name == "TIMESTAMP" && column.defaultValue.isEmpty)
             // because of MySQL-specifc features that are hard to deal with
             throw new Exception(

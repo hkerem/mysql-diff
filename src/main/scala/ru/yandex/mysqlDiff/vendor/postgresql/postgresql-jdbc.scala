@@ -6,6 +6,12 @@ import model._
 
 import Implicits._
 
+class PostgresqlMetaDao(jt: JdbcTemplate) extends MetaDao(jt) {
+    override def findSequenceNames(catalog: String, schema: String) =
+        // XXX: where catalog, schema
+        jt.query("SELECT * FROM information_schema.sequences").seq(_.getString("sequence_name"))
+}
+
 class PostgresqlJdbcModelExtractor(connectedContext: ConnectedContext)
     extends JdbcModelExtractor(connectedContext)
 {

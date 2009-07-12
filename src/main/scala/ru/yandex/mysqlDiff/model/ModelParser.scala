@@ -26,6 +26,8 @@ case class ModelParser(val context: Context) {
         case ct: CreateTableStatement => parseCreateTable(ct, db)
         case DropTableStatement(name, _) => db.dropTable(name)
         case st @ AlterTableStatement(name, _) => db.alterTable(name, alterTable(st, _))
+        case CreateSequenceStatement(name) => db.createSequence(SequenceModel(name))
+        case DropSequenceStatement(name) => db.dropSequence(name)
     }
     
     private def parseColumn(c: Column) = {
@@ -98,12 +100,12 @@ case class ModelParser(val context: Context) {
         db.createTable(fixTable(TableModel(name, columns2.toList, extras, ct.options)))
     }
     
-    protected def fixTable(table: TableModel) = {
+    def fixTable(table: TableModel) = {
         val TableModel(name, columns, extras, options) = table
         TableModel(name, columns.map(fixColumn(_, table)), extras, options)
     }
     
-    protected def fixColumn(column: ColumnModel, table: TableModel) =
+    def fixColumn(column: ColumnModel, table: TableModel) =
         column.withDataType(fixDataType(column.dataType, column, table)) match {
             case c if table.isPk(c.name) => fixPkColumn(c)
             case c => fixRegularColumn(c)

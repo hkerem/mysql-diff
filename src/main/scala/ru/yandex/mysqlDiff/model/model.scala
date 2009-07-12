@@ -195,7 +195,7 @@ case class ColumnProperties(ps: Seq[ColumnProperty])
     /** True iff NOT NULL or unknown */
     def isNotNull = find(NullabilityPropertyType).map(!_.nullable).getOrElse(false)
     
-    def defaultValue: Option[SqlValue] = find(DefaultValuePropertyType).map(_.value)
+    def defaultValue: Option[script.SqlExpr] = find(DefaultValuePropertyType).map(_.value)
     
     /** True iff all properties are model properties */
     def isModelProperties = properties.forall(_.isModelProperty)
@@ -487,6 +487,9 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
         withOptions(this.options.withDefaultProperties(os))
 }
 
+// XXX: add type
+case class SequenceModel(override val name: String) extends DatabaseDecl(name)
+
 abstract class DatabaseDecl(val name: String) {
 }
 
@@ -495,26 +498,56 @@ case class DatabaseModel(decls: Seq[DatabaseDecl])
     // no objects with same name
     require(decls.map(_.name).unique.size == decls.length)
     
+    def ++(that: DatabaseModel) =
+        DatabaseModel(this.decls ++ that.decls)
+    
     def tables: Seq[TableModel] =
         decls.flatMap {
             case t: TableModel => Some(t)
             case _ => None
         }
     
+    def sequences: Seq[SequenceModel] =
+        decls.flatMap {
+            case s: SequenceModel => Some(s)
+            case _ => None
+        }
+    
+    
     def table(name: String) = findTable(name).get
     
+    def sequence(name: String) = findSequence(name).get
+    
     def findTable(name: String) = tables.find(_.name == name)
+    
+    def findSequence(name: String) = sequences.find(_.name == name)
     
     def dropTable(name: String) = {
         table(name) // check exists
         dropTableIfExists(name)
     }
     
+    def dropSequence(name: String) = {
+        sequence(name) // check exists
+        dropSequenceIfExists(name)
+    }
+    
     def dropTableIfExists(name: String) =
+        // XXX: check it is a table
         new DatabaseModel(decls.filter(_.name != name))
     
+    def dropSequenceIfExists(name: String) =
+        // XXX: check it is sequence
+        new DatabaseModel(decls.filter(_.name != name))
+    
+    def createDecl(decl: DatabaseDecl) =
+        new DatabaseModel(decls ++ Seq(decl))
+    
     def createTable(table: TableModel) =
-        new DatabaseModel(decls ++ Seq(table))
+        createDecl(table)
+    
+    def createSequence(sequence: SequenceModel) =
+        createDecl(sequence)
     
     def alterTable(name: String, alter: TableModel => TableModel) = {
         table(name) // check exists
@@ -548,7 +581,7 @@ case object NullabilityPropertyType extends ColumnPropertyType {
     override type Value = Nullability
 }
 
-case class DefaultValue(value: SqlValue) extends ColumnProperty {
+case class DefaultValue(value: script.SqlExpr) extends ColumnProperty {
     override def propertyType = DefaultValuePropertyType
 }
 

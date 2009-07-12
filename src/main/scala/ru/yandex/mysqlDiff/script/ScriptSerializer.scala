@@ -78,14 +78,24 @@ class ScriptSerializer(context: Context) {
     def serializeString(string: String) =
         "'" + string + "'" // XXX: escape
     
-    def serializeTableStatement(stmt: TableDdlStatement, options: Options): String = stmt match {
+    def serializeTableDdlStatement(stmt: TableDdlStatement, options: Options): String = stmt match {
         case st: CreateTableStatement => serializeCreateTable(st, options)
         case dt: DropTableStatement => serializeDropTable(dt)
         case st: AlterTableStatement => serializeChangeTable(st)
     }
     
+    def serializeSequenceDdlStatement(stmt: SequenceDdlStatement, options: Options): String = stmt match {
+        case CreateSequenceStatement(name: String) => "CREATE SEQUENCE " + serializeName(name)
+        case DropSequenceStatement(name: String) => "DROP SEQUENCE " + serializeName(name)
+    }
+    
+    def serializeDdlStatement(stmt: DdlStatement, options: Options): String = stmt match {
+        case stmt: TableDdlStatement => serializeTableDdlStatement(stmt, options)
+        case stmt: SequenceDdlStatement => serializeSequenceDdlStatement(stmt, options)
+    }
+    
     def serializeStatement(stmt: ScriptStatement, options: Options): String = stmt match {
-        case ts: TableDdlStatement => serializeTableStatement(ts, options)
+        case ts: DdlStatement => serializeDdlStatement(ts, options)
         case is: InsertStatement => serializeInsert(is)
     }
     
@@ -112,9 +122,13 @@ class ScriptSerializer(context: Context) {
         "CAST(" + serializeExpr(e) + " AS " + serializeDataType(as) + ")"
     }
     
+    def serializeFunctionCall(fc: FunctionCallExpr) =
+        fc.name + "(" + fc.params.map(serializeExpr _).mkString(", ") + ")"
+    
     def serializeExpr(expr: SqlExpr): String = expr match {
         case v: SqlValue => serializeValue(v)
         case s: CastExpr => serializeCast(s)
+        case f: FunctionCallExpr => serializeFunctionCall(f)
     }
     
     // XXX: drop mysql
@@ -123,7 +137,7 @@ class ScriptSerializer(context: Context) {
         case vendor.mysql.MysqlAutoIncrement(false) => None
         case Nullability(true) => Some("NULL")
         case Nullability(false) => Some("NOT NULL")
-        case DefaultValue(value) => Some("DEFAULT " + serializeValue(value))
+        case DefaultValue(value) => Some("DEFAULT " + serializeExpr(value))
     }
     
     def serializeImportedKeyRule(p: ImportedKeyRule) = p match {
@@ -252,7 +266,7 @@ class ScriptSerializer(context: Context) {
     def serializeAlterColumnOperation(op: AlterColumnOperation) = op match {
         case SetNotNull(true) => "SET NOT NULL"
         case SetNotNull(false) => "DROP NOT NULL"
-        case SetDefault(Some(value)) => "SET DEFAULT " + serializeValue(value)
+        case SetDefault(Some(value)) => "SET DEFAULT " + serializeExpr(value)
         case SetDefault(None) => "DROP DEFAULT"
     }
     

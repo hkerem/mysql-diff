@@ -50,7 +50,7 @@ case class DropTableOptionDiff(option: TableOption) extends TableOptionDiff
 case class ChangeTableOptionDiff(oldOption: TableOption, newOption: TableOption)
     extends TableOptionDiff
 
-abstract class TableDiff
+abstract class TableDiff extends DatabaseDeclDiff
 
 case class CreateTableDiff(table: TableModel) extends TableDiff {
     def cutForeignKeys: (CreateTableDiff, Seq[ForeignKeyModel]) =
@@ -103,10 +103,20 @@ case class ChangeTableDiff(override val name: String, override val renameTo: Opt
     }
 }
 
+abstract class SequenceDiff extends DatabaseDeclDiff
+
+case class CreateSequenceDiff(sequence: SequenceModel) extends SequenceDiff
+case class DropSequenceDiff(sequence: SequenceModel) extends SequenceDiff
+// XXX: alter sequence diff
+
+abstract class DatabaseDeclDiff
 
 /**
  * Model of a difference between two databases.
  */
-case class DatabaseDiff(tableDiff: Seq[TableDiff])
+case class DatabaseDiff(declDiff: Seq[DatabaseDeclDiff]) {
+    def ++(that: DatabaseDiff) =
+        new DatabaseDiff(this.declDiff ++ that.declDiff)
+}
 
 // vim: set ts=4 sw=4 et:

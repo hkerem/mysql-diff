@@ -122,7 +122,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
    
     def nullability: Parser[Nullability] = opt("NOT") <~ "NULL" ^^ { x => Nullability(x.isEmpty) }
     
-    def defaultValue: Parser[DefaultValue] = "DEFAULT" ~> sqlValue ^^ { value => DefaultValue(value) }
+    def defaultValue: Parser[DefaultValue] = "DEFAULT" ~> sqlExpr ^^ { value => DefaultValue(value) }
     
     def uniqueAttr = "UNIQUE" ^^^ TableDdlStatement.InlineUnique
     def pkAttr = "PRIMARY" ~ "KEY" ^^^ TableDdlStatement.InlinePrimaryKey
@@ -161,6 +161,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def columnModel: Parser[ColumnModel] = name ~ dataType ~ rep(columnProperty) ^^
             { case name ~ dataType ~ ps => ColumnModel(name, dataType, ps) }
     
+    // <column definition>
     def column: Parser[TableDdlStatement.Column] = name ~ dataType ~ rep(columnAttr) ^^
             { case name ~ dataType ~ attrs => TableDdlStatement.Column(name, dataType, attrs) }
     
@@ -185,7 +186,10 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         | sqlValue
         | cast
         | ("*" ^^^ SelectStar)
-        | (name ^^ { case name => new NameExpr(name) })
+        | (name ~ opt("(" ~> rep1sep(sqlExpr, ",") <~ ")") ^^ {
+            case name ~ None => new NameExpr(name)
+            case name ~ Some(params) => FunctionCallExpr(name, params)
+          })
         )
     
     /** value op value to boolean */
@@ -284,11 +288,16 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def createView = "CREATE VIEW" ~> opt(ifNotExists) ~> name ~ ("AS" ~> select) ^^
         { case name ~ select => CreateViewStatement(name, select) }
     
+    // <sequence generator definition>
+    def createSequence = "CREATE SEQUENCE" ~> name ^^ { n => CreateSequenceStatement(n) }
+    
     def dropTable =
         "DROP TABLE" ~> opt(ifExists) ~ name ^^
                 { case ifExists ~ name => DropTableStatement(name, ifExists.isDefined) }
     
     def dropView = "DROP VIEW" ~> name ^^ { name => DropViewStatement(name) }
+    
+    def dropSequence = "DROP SEQUENCE" ~> name ^^ { name => DropSequenceStatement(name) }
     
     def columnPosition: Parser[TableDdlStatement.ColumnPosition] =
         ( "FIRST" ^^^ TableDdlStatement.ColumnFirst
@@ -351,7 +360,8 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def alterTable: Parser[AlterTableStatement] = "ALTER TABLE" ~> name ~ rep1sep(alterSpecification, ",") ^^
         { case name ~ ops => AlterTableStatement(name, ops) }
     
-    def ddlStmt: Parser[DdlStatement] = createTable | createView | dropTable | dropView | alterTable
+    def ddlStmt: Parser[DdlStatement] =
+        createTable | createView | createSequence | dropTable | dropView | dropSequence | alterTable
     
     /// DML
     

@@ -65,6 +65,13 @@ class MetaDao(jt: JdbcTemplate) {
         }
     }
     
+    /**
+     * Find all sequences in specified catalog and schema.
+     */
+    def findSequenceNames(catalog: String, schema: String): Seq[String] =
+        // not all databases support sequences
+        Seq()
+    
     // regular indexes
     def findIndexes(catalog: String, schema: String, tableName: String): Seq[UniqueOrIndexModel] = execute { conn =>
         val rs = conn.getMetaData.getIndexInfo(catalog, schema, tableName, false, false)

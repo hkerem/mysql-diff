@@ -165,7 +165,7 @@ object TableDdlStatement {
     trait AlterColumnOperation
     
     /** @param value None means DROP DEFAULT */
-    case class SetDefault(value: Option[SqlValue]) extends AlterColumnOperation
+    case class SetDefault(value: Option[SqlExpr]) extends AlterColumnOperation
     
     case class SetNotNull(notNull: Boolean) extends AlterColumnOperation
     
@@ -213,6 +213,11 @@ case class CreateViewStatement(name: String, select: SelectStatement) extends Vi
 
 case class DropViewStatement(name: String) extends ViewDdlStatement(name)
 
+abstract class SequenceDdlStatement(name: String) extends DdlStatement
+
+case class CreateSequenceStatement(name: String) extends SequenceDdlStatement(name)
+
+case class DropSequenceStatement(name: String) extends SequenceDdlStatement(name)
 
 abstract class DmlStatement extends ScriptStatement
 
@@ -253,6 +258,8 @@ case class NameExpr(name: String) extends SqlExpr
 case class BinaryOpExpr(left: SqlExpr, op: String, right: SqlExpr) extends SqlExpr
 
 case class VariableExpr(name: String) extends SqlExpr
+
+case class FunctionCallExpr(name: String, params: Seq[SqlExpr]) extends SqlExpr
 
 object ScriptTests extends org.specs.Specification {
 }

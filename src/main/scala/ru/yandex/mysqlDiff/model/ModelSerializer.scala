@@ -40,12 +40,16 @@ class ModelSerializer(context: Context) {
         CreateTableStatement(table.name, false,
             TableDdlStatement.TableElementList(table.entries.map(serializeTableEntry _)),
             table.options.properties)
+    
+    def serializeSequence(sequence: SequenceModel) =
+        CreateSequenceStatement(sequence.name)
 
     def serializeTableToText(table: TableModel) =
         scriptSerializer.serialize(serializeTable(table))
     
     def serializeDatabaseDecl(dd: DatabaseDecl) = dd match {
         case table: TableModel => serializeTable(table)
+        case sequence: SequenceModel => serializeSequence(sequence)
     }
     
     def serializeDatabase(db: DatabaseModel) = db.decls.map(serializeDatabaseDecl _)
