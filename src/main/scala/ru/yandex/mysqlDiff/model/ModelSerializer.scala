@@ -44,11 +44,11 @@ class ModelSerializer(context: Context) {
     def serializeTableToText(table: TableModel) =
         scriptSerializer.serialize(serializeTable(table))
     
-    def serializeDatabaseDeclaration(dd: DatabaseDeclaration) = dd match {
+    def serializeDatabaseDecl(dd: DatabaseDecl) = dd match {
         case table: TableModel => serializeTable(table)
     }
     
-    def serializeDatabase(db: DatabaseModel) = db.declarations.map(serializeDatabaseDeclaration _)
+    def serializeDatabase(db: DatabaseModel) = db.decls.map(serializeDatabaseDecl _)
     
     def serializeDatabaseToText(db: DatabaseModel) =
         scriptSerializer.serialize(serializeDatabase(db), ScriptSerializer.Options.multiline)

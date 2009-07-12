@@ -212,8 +212,8 @@ class DiffSerializer(val context: Context) {
     def serializeToScript(diff: DatabaseDiff, oldModel: DatabaseModel, newModel: DatabaseModel)
             : Seq[ScriptElement] =
     {
-        val newTablesMap: Map[String, TableModel] = Map(newModel.declarations.map(o => (o.name, o)): _*)
-        val oldTablesMap: Map[String, TableModel] = Map(oldModel.declarations.map(o => (o.name, o)): _*)
+        val newTablesMap: Map[String, TableModel] = Map(newModel.tables.map(o => (o.name, o)): _*)
+        val oldTablesMap: Map[String, TableModel] = Map(oldModel.tables.map(o => (o.name, o)): _*)
         
         def table(d: TableDiff) = d match {
             case d: ChangeTableDiff => newTablesMap(d.newName)
@@ -222,6 +222,8 @@ class DiffSerializer(val context: Context) {
         }
         
         serializeChangeTableDiffs(diff.tableDiff.map(d => (d, table(d))))
+        
+        // XXX: sequences are lost
     }
     
     def serializeToScriptStrings(diff: DatabaseDiff, oldModel: DatabaseModel, newModel: DatabaseModel)

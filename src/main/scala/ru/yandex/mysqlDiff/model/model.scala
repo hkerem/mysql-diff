@@ -356,7 +356,7 @@ case class TableOptions(ps: Seq[TableOption])
 }
 
 case class TableModel(override val name: String, columns: Seq[ColumnModel], extras: Seq[TableExtra], options: TableOptions)
-    extends DatabaseDeclaration(name: String)
+    extends DatabaseDecl(name: String)
 {
 
     require(name.length > 0, "table name must not be empty")
@@ -487,15 +487,20 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
         withOptions(this.options.withDefaultProperties(os))
 }
 
-abstract class DatabaseDeclaration(val name: String) {
+abstract class DatabaseDecl(val name: String) {
 }
 
-case class DatabaseModel(declarations: Seq[TableModel])
+case class DatabaseModel(decls: Seq[DatabaseDecl])
 {
     // no objects with same name
-    require(declarations.map(_.name).unique.size == declarations.length)
+    require(decls.map(_.name).unique.size == decls.length)
     
-    def tables: Seq[TableModel] = declarations
+    def tables: Seq[TableModel] =
+        decls.flatMap {
+            case t: TableModel => Some(t)
+            case _ => None
+        }
+    
     def table(name: String) = findTable(name).get
     
     def findTable(name: String) = tables.find(_.name == name)
@@ -506,15 +511,15 @@ case class DatabaseModel(declarations: Seq[TableModel])
     }
     
     def dropTableIfExists(name: String) =
-        new DatabaseModel(declarations.filter(_.name != name))
+        new DatabaseModel(decls.filter(_.name != name))
     
     def createTable(table: TableModel) =
-        new DatabaseModel(declarations ++ Seq(table))
+        new DatabaseModel(decls ++ Seq(table))
     
     def alterTable(name: String, alter: TableModel => TableModel) = {
         table(name) // check exists
-        new DatabaseModel(declarations.map {
-            case t if t.name == name => alter(t)
+        new DatabaseModel(decls.map {
+            case t: TableModel if t.name == name => alter(t)
             case t => t
         })
     }
