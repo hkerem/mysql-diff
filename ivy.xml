@@ -36,9 +36,7 @@
         <dependency org="mysql" name="mysql-connector-java" rev="5.1.6" conf="drivers->*"/>
         <dependency org="postgresql" name="postgresql" rev="8.3-603.jdbc4" conf="drivers->*"/>
         
-        <!--
         <dependency org="joda-time" name="joda-time" rev="1.6" conf="compile->*"/>
-        -->
         
         <dependency org="org.scalaforge" name="scalax" rev="0.1" conf="api->*">
             <!--

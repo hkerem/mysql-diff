@@ -1,8 +1,11 @@
 package ru.yandex.mysqlDiff.util
+// XXX: rename to .jdbc
 
 import java.sql._
 import javax.sql.DataSource
 import scala.collection.mutable.ArrayBuffer
+
+import org.joda.time._
 
 trait JdbcImplicits {
     implicit def jdbcTemplate(ds: LiteDataSource) = new JdbcTemplate(ds)
@@ -281,6 +284,9 @@ class ResultSetExtras(rs: ResultSet) {
     
     def getIntOption(column: Int) = mapWasNull(rs.getInt(column))
     def getIntOption(column: String) = mapWasNull(rs.getInt(column))
+    
+    def getInstant(column: Int) = new Instant(rs.getTimestamp(column).getTime)
+    def getInstant(column: String) = new Instant(rs.getTimestamp(column).getTime)
     
     def read[T](rm: ResultSet => T): Seq[T] = {
         val r = new ArrayBuffer[T]
