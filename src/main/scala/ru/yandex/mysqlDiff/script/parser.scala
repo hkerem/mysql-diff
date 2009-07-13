@@ -54,7 +54,7 @@ class SqlLexical extends StdLexical {
     )
     
     // All operators must be listed here
-    delimiters += ("(", ")", "=", ",", ";", "=", "!=", "-", "*")
+    delimiters += ("(", ")", "=", ",", ";", "=", "!=", "-", "*", ":", "::")
     
 }
 
@@ -413,6 +413,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def parseColumn(text: String) =
         parse(column)(text)
     
+    // XXX: rename to parseSqlValue
     def parseValue(text: String) = {
         require(text != null && text.trim.length > 0, "value not be a blank string")
         try {
@@ -420,6 +421,16 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         } catch {
             case e: CombinatorParserException =>
                 throw new CombinatorParserException("cannot parse '" + text + "' as SQL value", e)
+        }
+    }
+    
+    def parseSqlExpr(text: String) = {
+        require(text != null && text.trim.length > 0, "value not be a blank string")
+        try {
+            parse(sqlExpr)(text)
+        } catch {
+            case e: CombinatorParserException =>
+                throw new CombinatorParserException("cannot parse '" + text + "' as SQL expr", e)
         }
     }
    
@@ -668,6 +679,9 @@ class Parser(context: Context) {
     def parse(text: String): Script = {
         new Script(sqlParserCombinator.parse(text).map(_.asInstanceOf[ScriptElement]))
     }
+    
+    def parseSqlExpr(expr: String): SqlExpr =
+        sqlParserCombinator.parseSqlExpr(expr)
     
     def main(args: Array[String]) {
         val text =

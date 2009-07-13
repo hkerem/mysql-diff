@@ -113,6 +113,8 @@ class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
     import connectedContext._
     import context._
     
+    override def useParserToParseDefaultValue = false
+    
     protected class MysqlAllTablesSchemaExtractor extends AllTablesSchemaExtractor
     
     protected class MysqlSingleTableSchemaExtractor extends SingleTableSchemaExtractor

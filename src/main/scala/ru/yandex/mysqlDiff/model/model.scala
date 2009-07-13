@@ -29,6 +29,9 @@ case class PropertyMap[T <: PropertyType, V <: Property](val properties: Seq[V])
     def find[U <: T](pt: U): Option[U#Value] =
         properties.find(_.propertyType == pt).map(_.asInstanceOf[U#Value])
     
+    def map(f: V => V): this.type =
+        copy(properties.map(f))
+    
     def withDefaultProperty(property: V): this.type =
         if (find(property.propertyType.asInstanceOf[T]).isDefined) this
         else copy(properties ++ Seq(property))

@@ -105,11 +105,18 @@ case class ModelParser(val context: Context) {
         TableModel(name, columns.map(fixColumn(_, table)), extras, options)
     }
     
-    def fixColumn(column: ColumnModel, table: TableModel) =
-        column.withDataType(fixDataType(column.dataType, column, table)) match {
+    def fixColumn(column: ColumnModel, table: TableModel) = {
+        val c1 = column.withDataType(fixDataType(column.dataType, column, table)) match {
             case c if table.isPk(c.name) => fixPkColumn(c)
             case c => fixRegularColumn(c)
         }
+        val c2 = c1.withProperties(
+            c1.properties.map {
+                case DefaultValue(expr) => DefaultValue(fixDefaultValue(expr, c1.dataType))
+                case p => p
+             })
+        c2
+    }
     
     protected def fixPkColumn(column: ColumnModel) = {
         var properties = column.properties
@@ -131,7 +138,14 @@ case class ModelParser(val context: Context) {
     }
     
     protected def fixDataType(dataType: DataType, column: ColumnModel, table: TableModel): DataType =
-        dataType
+        dataTypes.normalize(dataType)
+    
+    protected def fixDefaultValue(v: SqlExpr, dt: DataType) = fixSqlExpr(v)
+    
+    protected def fixSqlExpr(v: SqlExpr): SqlExpr = v match {
+        case FunctionCallExpr(name, params) => FunctionCallExpr(name.toUpperCase, params.map(fixSqlExpr _))
+        case v => v
+    }
     
     def parseCreateTableScript(text: String) =
         parseCreateTable(sqlParserCombinator.parseCreateTable(text))

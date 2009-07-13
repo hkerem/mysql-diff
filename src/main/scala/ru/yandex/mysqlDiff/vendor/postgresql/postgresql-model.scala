@@ -12,7 +12,7 @@ object PostgresqlDataTypes extends DataTypes {
         
         case "INT8" => "BIGINT"
         //case "SERIAL8" => "BIGSERIAL"
-        case "SERIAL8" => "BIGINT"
+        case "SERIAL8" | "BIGSERIAL" => "BIGINT"
         
         case "VARBIT" => "BIT VARYING"
         case "BOOL" => "BOOLEAN"
@@ -22,7 +22,7 @@ object PostgresqlDataTypes extends DataTypes {
         
         case "INT" | "INT4" => "INTEGER"
         //case "SERIAL4" => "SERIAL"
-        case "SERIAL4" => "INTEGER"
+        case "SERIAL" | "SERIAL4" => "INTEGER"
         
         case "DECIMAL" => "NUMERIC"
         case "FLOAT4" => "REAL"

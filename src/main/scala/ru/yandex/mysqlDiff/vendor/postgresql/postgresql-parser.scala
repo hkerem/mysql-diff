@@ -5,6 +5,8 @@ import script._
 
 class PostgresqlParserCombinator(context: Context) extends SqlParserCombinator(context) {
     override def dataTypeName = (("DOUBLE" ~ "PRECISION") ^^ { case x ~ y => x + " " + y }) | super.dataTypeName
+    
+    override def sqlExpr: Parser[SqlExpr] = super.sqlExpr <~ opt("::" ~ name)
 }
 
 object PostgresqlParserCombinatorTests extends SqlParserCombinatorTests(PostgresqlContext) {
@@ -35,6 +37,12 @@ object PostgresqlParserCombinatorTests extends SqlParserCombinatorTests(Postgres
             case ForeignKeyModel(Some("fk1"), Seq(IndexColumn("z", _, _)), "c", Seq("z1"), _, _) => true
             case _ => false
         }
+    }
+    
+    "parse nextval regclass" in {
+        val e = parse(sqlExpr)("nextval('id_seq'::regclass)").asInstanceOf[FunctionCallExpr]
+        e.name must_== "nextval"
+        e.params must beLike { case Seq(StringValue("id_seq")) => true }
     }
     
 }

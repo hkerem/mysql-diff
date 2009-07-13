@@ -47,6 +47,15 @@ object PostgresqlOnlineTests extends OnlineTestsSupport(PostgresqlTestDataSource
     "bug 1" in {
         checkTable("CREATE TABLE ports (name VARCHAR(100))")
     }
+    
+    "change column default value to seq" in {
+        execute("DROP SEQUENCE IF EXISTS dinos_id_seq CASCADE")
+        execute("CREATE SEQUENCE dinos_id_seq")
+        checkTwoTables(
+            "CREATE TABLE dinos (id BIGINT)",
+            "CREATE TABLE dinos (id BIGINT DEFAULT NEXTVAL('dinos_id_seq'))"
+        )
+    }
 }
 
 // vim: set ts=4 sw=4 et:

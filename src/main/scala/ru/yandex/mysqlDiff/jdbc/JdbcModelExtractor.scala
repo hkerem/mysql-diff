@@ -197,23 +197,41 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
     
     }
     
+    protected def useParserToParseDefaultValue = true
+    
     /** Convert value from DB to specified database type */
-    protected def parseDefaultValueFromDb(s: String, dataType: DataType): Option[SqlValue] = {
+    protected def parseDefaultValueFromDb(s: String, dataType: DataType): Option[script.SqlExpr] = {
+        def parse0() = {
+            // XXX: move all this stuff to parser combinator
+            if (dataTypes.isAnyChar(dataType.name)) {
+                if (s matches "'.*'") Some(StringValue(s.replaceFirst("^'", "").replaceFirst("'$", "")))
+                else Some(StringValue(s))
+            }
+            else if (s == "NULL") None
+            else if (dataTypes.isAnyDateTime(dataType.name)) {
+                if (s == "CURRENT_TIMESTAMP") Some(NowValue)
+                else Some(StringValue(s))
+            }
+            else if (dataTypes.isAnyNumber(dataType.name)) {
+                if (s == "") Some(NumberValue(0))
+                else Some(sqlParserCombinator.parseValue(s))
+            }
+            else Some(StringValue(s))
+        }
+        
         if (s == null) Some(NullValue) // None
-        else if (dataTypes.isAnyChar(dataType.name)) {
-            if (s matches "'.*'") Some(StringValue(s.replaceFirst("^'", "").replaceFirst("'$", "")))
-            else Some(StringValue(s))
+        else {
+            if (useParserToParseDefaultValue) {
+                try {
+                    Some(parser.parseSqlExpr(s))
+                } catch {
+                    // XXX: catch specific exceptions
+                    case _: Exception => parse0()
+                }
+            } else {
+                parse0()
+            }
         }
-        else if (s == "NULL") None
-        else if (dataTypes.isAnyDateTime(dataType.name)) {
-            if (s == "CURRENT_TIMESTAMP") Some(NowValue)
-            else Some(StringValue(s))
-        }
-        else if (dataTypes.isAnyNumber(dataType.name)) {
-            if (s == "") Some(NumberValue(0))
-            else Some(sqlParserCombinator.parseValue(s))
-        }
-        else Some(StringValue(s))
     }
     
     

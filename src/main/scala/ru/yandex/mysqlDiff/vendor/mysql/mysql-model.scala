@@ -434,8 +434,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         }
     }
     
-    // XXX: pull to common
-    private def fixDefaultValue(v: SqlExpr, dt: DataType) = v match {
+    protected override def fixDefaultValue(v: SqlExpr, dt: DataType) = super.fixDefaultValue(v, dt) match {
         // MySQL boolean is actually int:
         // http://dev.mysql.com/doc/refman/5.0/en/boolean-values.html
         case BooleanValue(true) => NumberValue(1)
@@ -449,10 +448,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
             // because of MySQL-specifc features that are hard to deal with
             throw new Exception(
                     "TIMESTAMP without DEFAULT value is prohibited, column " + column.name) // XXX: report table
-        val superFixed = super.fixColumn(column, table)
-        superFixed.overrideProperties(
-                superFixed.properties.find(DefaultValuePropertyType).map(
-                        x => DefaultValue(fixDefaultValue(x.value, column.dataType))).toList)
+        super.fixColumn(column, table)
     }
 }
 
