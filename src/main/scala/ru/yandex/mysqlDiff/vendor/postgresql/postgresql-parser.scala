@@ -22,6 +22,23 @@ object PostgresqlParserCombinatorTests extends SqlParserCombinatorTests(Postgres
         }
     }
     
+    "NUMERIC(20, 6)" in {
+        parse(dataType)("NUMERIC(20, 6)") must beLike {
+            case NumericDataType(Some(20), Some(6)) => true
+            case _ => false
+        }
+        
+        parse(dataType)("NUMERIC(17)") must beLike {
+            case NumericDataType(Some(17), None) => true
+            case _ => false
+        }
+        
+        parse(dataType)("NUMERIC") must beLike {
+            case NumericDataType(None, None) => true
+            case _ => false
+        }
+    }
+    
     // this test does not work for MySQL
     "parse FK" in {
         val t = parseCreateTable(

@@ -109,6 +109,8 @@ case object NowValue extends SqlValue
 
 object DataTypeNameKey
 object DataTypeLengthKey
+object DataTypePrecisionKey
+object DataTypeScaleKey
 
 abstract case class DataType(name: String) {
     require(name.toUpperCase == name, "data type name must be upper-case")
@@ -141,6 +143,12 @@ case class DefaultDataType(override val name: String, length: Option[Int])
     
     override def toString =
         name + length.map("(" + _ + ")").getOrElse("")
+}
+
+case class NumericDataType(precision: Option[Int], scale: Option[Int]) extends DataType("NUMERIC") {
+    override val name = "NUMERIC"
+    override def customProperties =
+        (precision.map(DataTypePrecisionKey -> _) ++ scale.map(DataTypeScaleKey -> _)).toList
 }
 
 abstract class DataTypes {

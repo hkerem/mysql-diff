@@ -117,8 +117,15 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def dataTypeName = name
     
-    def dataType: Parser[DataType] = dataTypeName ~ opt("(" ~> naturalNumber <~ ")") ^^
-            { case name ~ length => dataTypes.make(name.toUpperCase, length) }
+    def dataType: Parser[DataType] =
+        ( ("DECIMAL" | "NUMERIC") ~> opt(("(" ~> naturalNumber) ~ (opt("," ~> naturalNumber) <~ ")"))
+            ^^ {
+                case None => new NumericDataType(None, None)
+                case Some(precision ~ scaleOption) => new NumericDataType(Some(precision), scaleOption)
+            }
+        | ( dataTypeName ~ opt("(" ~> naturalNumber <~ ")") ^^
+            { case name ~ length => dataTypes.make(name.toUpperCase, length) } )
+        )
    
     def nullability: Parser[Nullability] = opt("NOT") <~ "NULL" ^^ { x => Nullability(x.isEmpty) }
     

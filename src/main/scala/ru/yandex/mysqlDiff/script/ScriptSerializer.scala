@@ -292,6 +292,9 @@ class ScriptSerializer(context: Context) {
    
     def serializeDataType(dataType: DataType) = dataType match {
         case dataType: DefaultDataType => serializeDefaultDataType(dataType)
+        case NumericDataType(None, None) => "NUMERIC"
+        case NumericDataType(Some(precision), None) => "NUMERIC(" + precision + ")"
+        case NumericDataType(Some(precision), Some(scale)) => "NUMERIC(" + precision + ", " + scale + ")"
     }
     
     def serializeColumn(model: ColumnModel) =
