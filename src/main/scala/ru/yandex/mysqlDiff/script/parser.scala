@@ -298,6 +298,9 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     // <sequence generator definition>
     def createSequence = "CREATE SEQUENCE" ~> name ^^ { n => CreateSequenceStatement(n) }
     
+    def createIndex = ("CREATE INDEX" ~> name) ~ ("ON" ~> name) ~ indexColumnList ^^
+        { case i ~ t ~ c => CreateIndexStatement(i, t, c) }
+    
     def dropTable =
         "DROP TABLE" ~> opt(ifExists) ~ name ^^
                 { case ifExists ~ name => DropTableStatement(name, ifExists.isDefined) }
@@ -305,6 +308,8 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def dropView = "DROP VIEW" ~> name ^^ { name => DropViewStatement(name) }
     
     def dropSequence = "DROP SEQUENCE" ~> name ^^ { name => DropSequenceStatement(name) }
+    
+    def dropIndex = "DROP INDEX" ~> name ^^ { name => DropIndexStatement(name) }
     
     def columnPosition: Parser[TableDdlStatement.ColumnPosition] =
         ( "FIRST" ^^^ TableDdlStatement.ColumnFirst
@@ -368,7 +373,10 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         { case name ~ ops => AlterTableStatement(name, ops) }
     
     def ddlStmt: Parser[DdlStatement] =
-        createTable | createView | createSequence | dropTable | dropView | dropSequence | alterTable
+        ( createTable | createView | createSequence | createIndex
+        | dropTable | dropView | dropSequence | dropIndex
+        | alterTable
+        )
     
     /// DML
     

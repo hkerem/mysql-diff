@@ -525,7 +525,7 @@ case class DatabaseModel(decls: Seq[DatabaseDecl])
         }
     
     
-    def table(name: String) = findTable(name).get
+    def table(name: String) = findTable(name).getOrElse(throw new MysqlDiffException("DB has no table " + name))
     
     def sequence(name: String) = findSequence(name).get
     

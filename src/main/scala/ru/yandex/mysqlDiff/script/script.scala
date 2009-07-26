@@ -206,6 +206,13 @@ case class AlterTableStatement(name: String, ops: Seq[TableDdlStatement.Operatio
     def flatten = ops.map(new AlterTableStatement(name, _))
 }
 
+abstract class IndexDdlStatement(name: String) extends DdlStatement
+
+case class CreateIndexStatement(name: String, tableName: String, columns: Seq[model.IndexColumn])
+    extends IndexDdlStatement(name)
+
+case class DropIndexStatement(name: String)
+    extends IndexDdlStatement(name)
 
 abstract class ViewDdlStatement(name: String) extends DdlStatement
 

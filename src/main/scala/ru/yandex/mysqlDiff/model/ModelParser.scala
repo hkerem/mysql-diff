@@ -28,6 +28,7 @@ case class ModelParser(val context: Context) {
         case st @ AlterTableStatement(name, _) => db.alterTable(name, alterTable(st, _))
         case CreateSequenceStatement(name) => db.createSequence(SequenceModel(name))
         case DropSequenceStatement(name) => db.dropSequence(name)
+        case st @ CreateIndexStatement(_, table, _) => db.alterTable(table, createIndex(st, _))
     }
     
     private def parseColumn(c: Column) = {
@@ -99,6 +100,9 @@ case class ModelParser(val context: Context) {
         
         db.createTable(fixTable(TableModel(name, columns2.toList, extras, ct.options)))
     }
+    
+    def createIndex(st: CreateIndexStatement, t: TableModel) =
+        t.addExtra(IndexModel(Some(st.name), st.columns))
     
     def fixTable(table: TableModel) = {
         val TableModel(name, columns, extras, options) = table
