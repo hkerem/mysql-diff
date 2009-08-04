@@ -152,7 +152,8 @@ case class ModelParser(val context: Context) {
     }
     
     def parseCreateTableScript(text: String) =
-        parseCreateTable(sqlParserCombinator.parseCreateTable(text))
+        //parseCreateTable(sqlParserCombinator.parseCreateTable(text))
+        parseModel(text).singleTable
     
     protected def alterTableOperation(op: Operation, table: TableModel): TableModel = {
         import AlterTableStatement._

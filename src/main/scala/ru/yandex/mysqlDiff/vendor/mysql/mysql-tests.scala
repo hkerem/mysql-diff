@@ -229,6 +229,18 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             """)
     }
     
+    "CREATE INDEX" in {
+        checkTwoTables(
+            """
+            CREATE TABLE movies (id INT, name VARCHAR(100)) ENGINE=InnoDB
+            """,
+            """
+            CREATE TABLE movies (id INT, name VARCHAR(100)) ENGINE=InnoDB;
+            CREATE INDEX movies_name_idx ON movies (name)
+            """
+        )
+    }
+    
 }
 
 object MysqlDdlTemplateTests extends DdlTemplateTests(MysqlTestDataSourceParameters.connectedContext) {

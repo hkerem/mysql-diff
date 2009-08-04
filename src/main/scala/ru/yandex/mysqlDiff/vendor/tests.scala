@@ -62,7 +62,7 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
     
     protected def execute(q: String) = {
         if (printExecutedStmts) println(q)
-        jt.execute(q)
+        ddlTemplate.executeScript(q)
     }
     
     

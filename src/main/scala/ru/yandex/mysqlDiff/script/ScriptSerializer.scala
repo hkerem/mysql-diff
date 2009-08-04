@@ -89,9 +89,20 @@ class ScriptSerializer(context: Context) {
         case DropSequenceStatement(name: String) => "DROP SEQUENCE " + serializeName(name)
     }
     
+    def serializeCreateIndexStatement(stmt: CreateIndexStatement) = {
+        val CreateIndexStatement(name, tableName, columns) = stmt
+        "CREATE INDEX " + serializeName(name) +
+            " ON " + serializeName(tableName) + " (" + columns.map(serializeIndexColumn _).mkString(", ") + ")"
+    }
+    
+    def serializeIndexDdlStatement(stmt: IndexDdlStatement, options: Options): String = stmt match {
+        case stmt: CreateIndexStatement => serializeCreateIndexStatement(stmt)
+    }
+    
     def serializeDdlStatement(stmt: DdlStatement, options: Options): String = stmt match {
         case stmt: TableDdlStatement => serializeTableDdlStatement(stmt, options)
         case stmt: SequenceDdlStatement => serializeSequenceDdlStatement(stmt, options)
+        case stmt: IndexDdlStatement => serializeIndexDdlStatement(stmt, options)
     }
     
     def serializeStatement(stmt: ScriptStatement, options: Options): String = stmt match {
