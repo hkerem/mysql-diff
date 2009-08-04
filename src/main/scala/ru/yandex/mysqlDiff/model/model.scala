@@ -518,6 +518,11 @@ case class DatabaseModel(decls: Seq[DatabaseDecl])
             case _ => None
         }
     
+    def singleTable: TableModel = decls match {
+        case Seq(t: TableModel) => t
+        case _ => throw new MysqlDiffException("expecting single table")
+    }
+    
     def sequences: Seq[SequenceModel] =
         decls.flatMap {
             case s: SequenceModel => Some(s)
