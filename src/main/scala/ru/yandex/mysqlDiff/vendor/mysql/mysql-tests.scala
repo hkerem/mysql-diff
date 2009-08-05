@@ -239,6 +239,11 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
                 " CONSTRAINT coin_fk FOREIGN KEY (coll_id) REFERENCES collectors(id)) ENGINE=InnoDB")
     }
     
+    "UNIQUE unchanged" in {
+        checkTable(
+            "CREATE TABLE bears (id INT, name VARCHAR(10), CONSTRAINT name_uniq UNIQUE(name)) ENGINE=InnoDB")
+    }
+    
     "CREATE INDEX" in {
         checkTwoTables(
             """
