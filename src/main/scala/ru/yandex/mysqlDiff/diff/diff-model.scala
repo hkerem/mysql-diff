@@ -26,33 +26,40 @@ trait ChangeSomethingDiff {
 
 abstract class TableEntryDiff
 
+trait TableEntryDropDiff extends TableEntryDiff
+trait TableEntryCreateDiff extends TableEntryDiff
+trait TableEntryChangeDiff extends TableEntryDiff
+
 abstract class ColumnDiff extends TableEntryDiff
-case class CreateColumnDiff(column: ColumnModel) extends ColumnDiff
-case class DropColumnDiff(name: String) extends ColumnDiff
+case class CreateColumnDiff(column: ColumnModel) extends ColumnDiff with TableEntryCreateDiff
+case class DropColumnDiff(name: String) extends ColumnDiff with TableEntryDropDiff
 case class ChangeColumnDiff(override val name: String, override val renameTo: Option[String],
         diff: Seq[ColumnPropertyDiff])
-    extends ColumnDiff with ChangeSomethingDiff
+    extends ColumnDiff with TableEntryChangeDiff with ChangeSomethingDiff
 {
     def changeDiff = diff.flatMap { case c: ChangeColumnPropertyDiff => Some(c); case _ => None }
+    
+    def flatten =
+        diff.map(x => ChangeColumnDiff(name, renameTo, List(x)))
 }
 
 /// special entry used while serializing
 case class CreateColumnWithInlinePrimaryKeyCommand(column: ColumnModel, pk: PrimaryKeyModel)
-    extends ColumnDiff
+    extends ColumnDiff with TableEntryCreateDiff
 
 /** Diff of TableExtra */
 abstract class ExtraDiff extends TableEntryDiff
 
-case class CreateExtraDiff(extra: TableExtra) extends ExtraDiff
-case class DropExtraDiff(extra: TableExtra) extends ExtraDiff
+case class CreateExtraDiff(extra: TableExtra) extends ExtraDiff with TableEntryCreateDiff
+case class DropExtraDiff(extra: TableExtra) extends ExtraDiff with TableEntryDropDiff
 case class ChangeExtraDiff(oldExtra: TableExtra, newExtra: TableExtra)
-    extends ExtraDiff
+    extends ExtraDiff with TableEntryChangeDiff
 
 abstract class TableOptionDiff extends TableEntryDiff
-case class CreateTableOptionDiff(option: TableOption) extends TableOptionDiff
-case class DropTableOptionDiff(option: TableOption) extends TableOptionDiff
+case class CreateTableOptionDiff(option: TableOption) extends TableOptionDiff with TableEntryCreateDiff
+case class DropTableOptionDiff(option: TableOption) extends TableOptionDiff with TableEntryDropDiff
 case class ChangeTableOptionDiff(oldOption: TableOption, newOption: TableOption)
-    extends TableOptionDiff
+    extends TableOptionDiff with TableEntryChangeDiff
 
 abstract class TableDiff extends DatabaseDeclDiff
 

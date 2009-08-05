@@ -4,7 +4,12 @@ import model._
 import script._
 
 class PostgresqlParserCombinator(context: Context) extends SqlParserCombinator(context) {
-    override def dataTypeName = (("DOUBLE" ~ "PRECISION") ^^ { case x ~ y => x + " " + y }) | super.dataTypeName
+    override def dataTypeName =
+        ("DOUBLE" ~ "PRECISION" ^^ { case x ~ y => x + " " + y }
+        |"CHARACTER" ~ "VARYING" ^^ { case x ~ y => x + " " + y }
+        | super.dataTypeName
+        )
+
     
     override def sqlExpr: Parser[SqlExpr] = super.sqlExpr <~ opt("::" ~ name)
 }

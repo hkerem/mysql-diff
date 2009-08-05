@@ -13,86 +13,103 @@ class DiffSerializer(val context: Context) {
     
     import TableDdlStatement._
     
-    def alterColumnScript(cd: ColumnDiff, table: TableModel) =
-        AlterTableStatement(table.name, alterColumnStmts(cd, table))
+    protected def alterColumnScript(cd: ColumnDiff, table: TableModel) =
+        alterColumnStmt(cd, table)
+        //AlterTableStatement(table.name, List(alterColumnStmt(cd, table)))
     
-    def changeColumnStmts(cd: ChangeColumnDiff, table: TableModel): Seq[ColumnOperation] = List(cd match {
-        case ChangeColumnDiff(name, Some(newName), diff) =>
-                TableDdlStatement.ChangeColumn(name, table.column(newName), None)
-        case ChangeColumnDiff(name, None, diff) =>
-                TableDdlStatement.ModifyColumn(table.column(name), None)
-    })
+    protected def changeColumnStmt(cd: ChangeColumnDiff, table: TableModel) =
+        AlterTableStatement(table.name, List(cd match {
+            case ChangeColumnDiff(name, Some(newName), diff) =>
+                    TableDdlStatement.ChangeColumn(name, table.column(newName), None)
+            case ChangeColumnDiff(name, None, diff) =>
+                    TableDdlStatement.ModifyColumn(table.column(name), None)
+        }))
     
-    def alterColumnStmts(cd: ColumnDiff, table: TableModel): Seq[ColumnOperation] = cd match {
-        // XXX: position
-        case CreateColumnDiff(ColumnModel(name, dataType, properties)) =>
-            List(TableDdlStatement.AddColumn(
-                new Column(name, dataType, properties.properties.map(p => new ModelColumnProperty(p))), None))
-        case DropColumnDiff(name) => List(TableDdlStatement.DropColumn(name))
-        case cd: ChangeColumnDiff => changeColumnStmts(cd, table)
-        
-        case CreateColumnWithInlinePrimaryKeyCommand(col, pk) =>
-            List(new TableDdlStatement.AddColumn(new TableDdlStatement.Column(col) addProperty TableDdlStatement.InlinePrimaryKey, None))
-    }
-    
-    def dropExtraStmt(k: TableExtra) = k match {
-        case i: IndexModel =>
-            TableDdlStatement.DropIndex(i.name.getOrThrow("cannot drop unnamed index"))
-        case _: PrimaryKeyModel =>
-            TableDdlStatement.DropPrimaryKey
-        case u: UniqueKeyModel =>
-            TableDdlStatement.DropUniqueKey(u.name.getOrThrow("cannot drop unnamed unique key"))
-        case f: ForeignKeyModel =>
-            TableDdlStatement.DropForeignKey(f.name.getOrThrow("cannot drop unnamed foreign key"))
-    }
-    
-    def createExtraStmt(k: TableExtra) = k match {
-        case i: IndexModel => TableDdlStatement.AddIndex(i)
-        case u: UniqueKeyModel => TableDdlStatement.AddUniqueKey(u)
-        case p: PrimaryKeyModel => TableDdlStatement.AddPrimaryKey(p)
-        case f: ForeignKeyModel => TableDdlStatement.AddForeignKey(f)
-    }
-    
-    def alterExtraStmts(d: ExtraDiff) = d match {
-        case DropExtraDiff(k) => List(dropExtraStmt(k))
-        case CreateExtraDiff(k) => List(createExtraStmt(k))
-        case ChangeExtraDiff(ok, nk) => List(dropExtraStmt(ok), createExtraStmt(nk))
-    }
-    
-    def alterTableOptionStmt(od: TableOptionDiff, table: TableModel) = {
-        val o = od match {
-            case CreateTableOptionDiff(o) => o
-            case ChangeTableOptionDiff(o, n) => n
+    protected def alterColumnStmt(cd: ColumnDiff, table: TableModel): AlterTableStatement =
+        cd match {
+            // XXX: position
+            case CreateColumnDiff(ColumnModel(name, dataType, properties)) =>
+                AlterTableStatement(table.name, List(TableDdlStatement.AddColumn(
+                    new Column(name, dataType, properties.properties.map(
+                        p => new ModelColumnProperty(p))), None)))
+            case DropColumnDiff(name) =>
+                AlterTableStatement(table.name, List(TableDdlStatement.DropColumn(name)))
+            case cd: ChangeColumnDiff => changeColumnStmt(cd, table)
+            
+            case CreateColumnWithInlinePrimaryKeyCommand(col, pk) =>
+                AlterTableStatement(table.name, List(
+                    new TableDdlStatement.AddColumn(
+                        new TableDdlStatement.Column(col) addProperty TableDdlStatement.InlinePrimaryKey, None)))
         }
-        TableDdlStatement.ChangeTableOption(o)
+    
+    protected def dropExtraStmt(k: TableExtra, table: TableModel) = k match {
+        case i: IndexModel =>
+            DropIndexStatement(i.name.getOrThrow("cannot drop unnamed index"))
+        case k =>
+            AlterTableStatement(table.name, List(k match {
+                    case _: PrimaryKeyModel =>
+                        TableDdlStatement.DropPrimaryKey
+                    case u: UniqueKeyModel =>
+                        TableDdlStatement.DropUniqueKey(u.name.getOrThrow("cannot drop unnamed unique key"))
+                    case f: ForeignKeyModel =>
+                        TableDdlStatement.DropForeignKey(f.name.getOrThrow("cannot drop unnamed foreign key"))
+                }))
     }
     
-    def alterExtraScript(d: ExtraDiff, table: TableModel) =
-        AlterTableStatement(table.name, alterExtraStmts(d))
-    
-    def alterTableEntryStmts(d: TableEntryDiff, table: TableModel) = d match {
-        case kd: ExtraDiff => alterExtraStmts(kd)
-        case cd: ColumnDiff => alterColumnStmts(cd, table)
-        case od: TableOptionDiff => List(alterTableOptionStmt(od, table))
+    protected def createExtraStmt(k: TableExtra, table: TableModel) = k match {
+        case i: IndexModel =>
+            CreateIndexStatement(i.name.getOrThrow("cannot create unnamed index"), table.name, i.columns)
+        case k =>
+            AlterTableStatement(table.name, List(k match {
+                case u: UniqueKeyModel => TableDdlStatement.AddUniqueKey(u)
+                case p: PrimaryKeyModel => TableDdlStatement.AddPrimaryKey(p)
+                case f: ForeignKeyModel => TableDdlStatement.AddForeignKey(f)
+            }))
     }
     
-    private def operationOrder(op: TableDdlStatement.Operation) = op match {
-        case _: TableDdlStatement.DropOperation => op match {
+    protected def alterExtraStmt(d: ExtraDiff, table: TableModel) = d match {
+        case DropExtraDiff(k) => dropExtraStmt(k, table)
+        case CreateExtraDiff(k) => createExtraStmt(k, table)
+        //case ChangeExtraDiff(ok, nk) => List(dropExtraStmt(ok), createExtraStmt(nk))
+        // XXX: split change -> drop, create
+    }
+    
+    protected def alterTableOptionStmt(od: TableOptionDiff, table: TableModel) =
+        AlterTableStatement(table.name, List({
+                val o = od match {
+                    case CreateTableOptionDiff(o) => o
+                    case ChangeTableOptionDiff(o, n) => n
+                }
+                TableDdlStatement.ChangeTableOption(o)
+            }))
+    
+    protected def alterExtraScript(d: ExtraDiff, table: TableModel) =
+        alterExtraStmt(d, table)
+        //AlterTableStatement(table.name, List(alterExtraStmt(d)))
+    
+    protected def alterTableEntryStmt(d: TableEntryDiff, table: TableModel) = d match {
+        case kd: ExtraDiff => alterExtraStmt(kd, table)
+        case cd: ColumnDiff => alterColumnStmt(cd, table)
+        case od: TableOptionDiff => alterTableOptionStmt(od, table)
+    }
+    
+    private def operationOrder(op: TableEntryDiff) = op match {
+        case _: TableEntryDropDiff => op match {
             // FOREIGN must be dropped first
-            case _: TableDdlStatement.DropForeignKey => 11
+            //case _: TableEntry TableDdlStatement.DropForeignKey => 11
             // COLUMN must be dropped last
-            case _: TableDdlStatement.ColumnOperation => 15
+            case _: ColumnDiff => 15
             case _ => 13
         }
         
-        case _: TableDdlStatement.ModifyOperation => 20
+        case _: TableEntryChangeDiff => 20
         
-        case _: TableDdlStatement.AddSomething => op match {
+        case _: TableEntryCreateDiff => op match {
             // COLUMN must be added first
-            case _: TableDdlStatement.AddColumn => 31
+            case _: ColumnDiff => 31
             // FOREIGN KEY must be added last
-            case TableDdlStatement.AddExtra(_: ForeignKeyModel) => 35
-            case _: TableDdlStatement.AddSomething => 33
+            //case TableDdlStatement.AddExtra(_: ForeignKeyModel) => 35
+            //case _: TableDdlStatement.AddSomething => 33
             case _ => 33
         }
         
@@ -122,6 +139,10 @@ class DiffSerializer(val context: Context) {
         }) ++ rest2
     }
     
+    // hook for overrides
+    protected def adjustDiffHook(entriesDiff: Seq[TableEntryDiff]) =
+        entriesDiff
+    
     /**
      * Does not include rename.
      * @param model new model
@@ -132,16 +153,30 @@ class DiffSerializer(val context: Context) {
             Seq()
         else {
             
-            val entriesDiff = mergeSingleColumnPks(diff.entriesDiff)
+            val entriesDiff = adjustDiffHook(mergeSingleColumnPks(diff.entriesDiff))
             
-            val ops = entriesDiff.flatMap(alterTableEntryStmts(_, table))
-            val sorted = scala.util.Sorting.stableSort(ops, operationOrder _)
+            val sorted = scala.util.Sorting.stableSort(entriesDiff, operationOrder _)
+            val ops = sorted.map(alterTableEntryStmt(_, table))
+            
             // XXX: make configurable
-            if (sorted.isEmpty) Seq()
+            if (ops.isEmpty) Seq()
             else {
-                if (false) sorted.map {
-                    op: TableDdlStatement.Operation => AlterTableStatement(table.name, List(op)) }
-                else Seq(AlterTableStatement(table.name, sorted))
+                //if (false) ops.map {
+                //    op: TableDdlStatement.Operation => AlterTableStatement(table.name, List(op)) }
+                //else Seq(AlterTableStatement(table.name, ops))
+                ops.foldLeft(List[DdlStatement]()) { (a, b) =>
+                    a match {
+                        case Seq() => a ++ List(b)
+                        case l =>
+                            def mergeIfPossible(a: DdlStatement, b: DdlStatement) = (a, b) match {
+                                case (AlterTableStatement(name1, ops1), AlterTableStatement(name2, ops2)) =>
+                                    require(name1 == name2)
+                                    List(AlterTableStatement(name1, ops1 ++ ops2))
+                                case (a, b) => List(a, b)
+                            }
+                            l.init ++ mergeIfPossible(l.last, b)
+                    }
+                }
             }
         }
         
@@ -188,7 +223,7 @@ class DiffSerializer(val context: Context) {
                         dropFks += AlterTableStatement(table.name, table.foreignKeys.map(fk =>
                                 TableDdlStatement.DropForeignKey(fk.name.getOrThrow("cannot get unnamed key"))))
                 case (CreateTableDiff(table), _) =>
-                    createTables += modelSerializer.serializeTable(table.dropForeignKeys)
+                    createTables ++= modelSerializer.serializeTable(table.dropForeignKeys)
                     if (!table.foreignKeys.isEmpty)
                         addFks += AlterTableStatement(table.name, table.foreignKeys.map(fk => TableDdlStatement.AddForeignKey(fk)))
                 case (CreateSequenceDiff(sequence), _) =>
@@ -203,7 +238,7 @@ class DiffSerializer(val context: Context) {
     }
     
     def serializeCreateTableDiff(c: CreateTableDiff) =
-        Seq(modelSerializer.serializeTable(c.table))
+        modelSerializer.serializeTable(c.table)
     
     def serializeDropTableDiff(d: DropTableDiff) =
         Seq(DropTableStatement(d.table.name, false))

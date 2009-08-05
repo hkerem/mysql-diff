@@ -283,6 +283,34 @@ object MysqlJdbcModelExtractorTests
         person.foreignKeys must haveSize(0)
     }
     
+    "FOREIGN KEY actions" in {
+        dropTable("ggg")
+        dropTable("rrr")
+        execute("CREATE TABLE rrr (id INT PRIMARY KEY) ENGINE=InnoDB")
+        for (updateDelete <- List(true, false)) {
+            for (action <- List(ImportedKeyNoAction, ImportedKeyCascade, ImportedKeySetNull)) {
+                dropTable("ggg")
+                val text =
+                    (if (updateDelete) "ON UPDATE"
+                    else "ON DELETE") +
+                    " " +
+                    (action match {
+                        case ImportedKeyNoAction => "NO ACTION"
+                        case ImportedKeyCascade => "CASCADE"
+                        case ImportedKeySetNull => "SET NULL"
+                    })
+                    
+                execute("CREATE TABLE ggg (r_id INT, FOREIGN KEY (r_id) REFERENCES rrr(id) " + text + ") ENGINE=InnoDB")
+                
+                val table = extractTable("ggg")
+                val Seq(fk) = table.foreignKeys
+                
+                val gotRule = if (updateDelete) fk.updateRule else fk.deleteRule
+                gotRule must_== Some(action)
+            }
+        }
+    }
+    
     "fetch table option ENGINE" in {
         dropTable("dogs")
         execute("CREATE TABLE dogs (id INT) ENGINE=InnoDB")

@@ -11,13 +11,15 @@ class DdlTemplate(connectedContext: ConnectedContext) {
     def execute(s: ScriptElement) =
         jt.execute(scriptSerializer.serialize(s))
     
-    def executeScript(s: String) =
-        if (s contains ";") {
-            for (e <- parser.parse(s).statements)
+    def executeScript(s: String) = {
+        val trimmed = s.replaceFirst(";\\s*$", "")
+        if (trimmed contains ";") {
+            for (e <- parser.parse(trimmed).statements)
                 execute(e)
         } else {
-            jt.execute(s)
+            jt.execute(trimmed)
         }
+    }
     
     def dropTable(name: String) =
         execute(new DropTableStatement(name, false))

@@ -26,13 +26,16 @@ class PostgresqlDiffSerializer(override val context: Context) extends DiffSerial
             case c: ChangeColumnPropertyDiff => changeColumnPropertyDiffStmt(c)
         }
     
-    override def changeColumnStmts(cd: ChangeColumnDiff, table: TableModel) = {
-        val ChangeColumnDiff(name, newName, diff) = cd
-        val stmts = diff.map(pd => AlterColumn(name, columnPropertyDiffStmt(pd)))
-        if (newName.isDefined)
-            stmts ++ List(RenameColumn(name, newName.get))
-        else
-            stmts
+    override def adjustDiffHook(entriesDiff: Seq[TableEntryDiff]) =
+        entriesDiff.flatMap {
+            case c: ChangeColumnDiff => c.flatten
+            case x => List(x)
+        }
+    
+    override def changeColumnStmt(cd: ChangeColumnDiff, table: TableModel) = {
+        require(cd.renameTo.isEmpty) // not yet
+        require(cd.diff.length == 1)
+        AlterTableStatement(table.name, List(AlterColumn(cd.name, columnPropertyDiffStmt(cd.diff.first))))
     }
 }
 

@@ -521,6 +521,9 @@ class MysqlModelSerializer(context: Context) extends ModelSerializer(context) {
     import script.TableDdlStatement._
     import MysqlTableDdlStatement._
     
+    protected override def splitTable(table: TableModel): (TableModel, Seq[TableExtra]) =
+        (table, Nil)
+    
 }
 
 // vim: set ts=4 sw=4 et:

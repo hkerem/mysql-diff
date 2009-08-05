@@ -76,7 +76,7 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
         val t = modelParser.parseCreateTableScript(script)
         
         {
-            // execute script, compare with parsed model
+            if (printExecutedStmts) println("execute script, compare with parsed model")
             ddlTemplate.dropTableIfExists(t.name)
             execute(script)
             val d = jdbcModelExtractor.extractTable(t.name)
@@ -84,7 +84,7 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
         }
         
         {
-            // execute serialized parsed model, compare with parsed model
+            if (printExecutedStmts) println("execute serialized parsed model, compare with parsed model")
             ddlTemplate.dropTableIfExists(t.name)
             val recreatedScript = modelSerializer.serializeTableToText(t)
             execute(recreatedScript)

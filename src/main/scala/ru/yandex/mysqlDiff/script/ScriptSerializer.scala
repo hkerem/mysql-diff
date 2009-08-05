@@ -95,8 +95,12 @@ class ScriptSerializer(context: Context) {
             " ON " + serializeName(tableName) + " (" + columns.map(serializeIndexColumn _).mkString(", ") + ")"
     }
     
+    def serializeDropIndexStatement(stmt: DropIndexStatement) =
+        "DROP INDEX " + stmt.name
+    
     def serializeIndexDdlStatement(stmt: IndexDdlStatement, options: Options): String = stmt match {
         case stmt: CreateIndexStatement => serializeCreateIndexStatement(stmt)
+        case stmt: DropIndexStatement => serializeDropIndexStatement(stmt)
     }
     
     def serializeDdlStatement(stmt: DdlStatement, options: Options): String = stmt match {

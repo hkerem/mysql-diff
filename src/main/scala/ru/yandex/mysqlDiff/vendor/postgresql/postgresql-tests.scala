@@ -56,6 +56,18 @@ object PostgresqlOnlineTests extends OnlineTestsSupport(PostgresqlTestDataSource
             "CREATE TABLE dinos (id BIGINT DEFAULT NEXTVAL('dinos_id_seq'))"
         )
     }
+    
+    "CREATE INDEX" in {
+        checkTwoTables(
+            """
+            CREATE TABLE movies (id INT, name VARCHAR(100))
+            """,
+            """
+            CREATE TABLE movies (id INT, name VARCHAR(100));
+            CREATE INDEX movies_name_idx ON movies (name)
+            """
+        )
+    }
 }
 
 // vim: set ts=4 sw=4 et:

@@ -36,23 +36,45 @@ class ModelSerializer(context: Context) {
         case fk: ForeignKeyModel => serializeForeignKey(fk)
     }
     
-    def serializeTable(table: TableModel) =
+    protected def splitTable(table: TableModel): (TableModel, Seq[TableExtra]) = {
+        val TableModel(name, columns, extras, options) = table
+        val (Seq(extrasInside @ _*), Seq(extrasOutside @ _*)) = extras.partition {
+            case _: IndexModel => false
+            case _ => true
+        }
+        (TableModel(name, columns, extrasInside, options), extrasOutside)
+    }
+    
+    protected def serializeTableOnly(table: TableModel) =
         CreateTableStatement(table.name, false,
             TableDdlStatement.TableElementList(table.entries.map(serializeTableEntry _)),
             table.options.properties)
+    
+    protected def serializeOuterExtra(extra: TableExtra, table: TableModel) = extra match {
+        case i: IndexModel => CreateIndexStatement(
+            i.name.getOrThrow("cannot create unnamed index"), table.name, i.columns)
+    }
+    
+    protected def serializeOuterExtras(extras: Seq[TableExtra], table: TableModel) =
+        extras.map(e => serializeOuterExtra(e, table))
+    
+    def serializeTable(table: TableModel): Seq[DdlStatement] = {
+        val (tableOnly, extras) = splitTable(table)
+        List(serializeTableOnly(tableOnly)) ++ serializeOuterExtras(extras, table)
+    }
     
     def serializeSequence(sequence: SequenceModel) =
         CreateSequenceStatement(sequence.name)
 
     def serializeTableToText(table: TableModel) =
-        scriptSerializer.serialize(serializeTable(table))
+        scriptSerializer.serialize(serializeTable(table), ScriptSerializer.Options.multiline)
     
-    def serializeDatabaseDecl(dd: DatabaseDecl) = dd match {
+    def serializeDatabaseDecl(dd: DatabaseDecl): Seq[DdlStatement] = dd match {
         case table: TableModel => serializeTable(table)
-        case sequence: SequenceModel => serializeSequence(sequence)
+        case sequence: SequenceModel => List(serializeSequence(sequence))
     }
     
-    def serializeDatabase(db: DatabaseModel) = db.decls.map(serializeDatabaseDecl _)
+    def serializeDatabase(db: DatabaseModel) = db.decls.flatMap(serializeDatabaseDecl _)
     
     def serializeDatabaseToText(db: DatabaseModel) =
         scriptSerializer.serialize(serializeDatabase(db), ScriptSerializer.Options.multiline)
