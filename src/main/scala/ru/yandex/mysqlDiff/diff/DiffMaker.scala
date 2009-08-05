@@ -30,6 +30,7 @@ case class DiffMaker(val context: Context) {
             case (NumberValue(x), StringValue(y)) if x.toString == y => true
             // XXX: should only for date and time types
             case (StringValue("0000-00-00 00:00:00"), StringValue("0000-00-00")) => true
+            case (StringValue("0000-00-00 00:00:00"), NumberValue(0)) => true
             case _ => false
         }
 
