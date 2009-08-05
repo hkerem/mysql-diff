@@ -229,6 +229,16 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             """)
     }
     
+    "with FOREIGN KEY unchanged" in {
+        dropTable("coins")
+        dropTable("collectors")
+        
+        execute("CREATE TABLE collectors (id INT PRIMARY KEY) ENGINE=InnoDB")
+        checkTable(
+            "CREATE TABLE coins (coll_id INT," +
+                " CONSTRAINT coin_fk FOREIGN KEY (coll_id) REFERENCES collectors(id)) ENGINE=InnoDB")
+    }
+    
     "CREATE INDEX" in {
         checkTwoTables(
             """

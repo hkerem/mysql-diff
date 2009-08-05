@@ -65,6 +65,10 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
         ddlTemplate.executeScript(q)
     }
     
+    protected def dropTable(tableName: String) {
+        execute("DROP TABLE IF EXISTS " + tableName)
+    }
+                   
     
     /**
      * Perform various tests on CREATE TABLE script.
