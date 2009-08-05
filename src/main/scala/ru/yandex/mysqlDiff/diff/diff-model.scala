@@ -36,6 +36,10 @@ case class ChangeColumnDiff(override val name: String, override val renameTo: Op
     def changeDiff = diff.flatMap { case c: ChangeColumnPropertyDiff => Some(c); case _ => None }
 }
 
+/// special entry used while serializing
+case class CreateColumnWithInlinePrimaryKeyCommand(column: ColumnModel, pk: PrimaryKeyModel)
+    extends ColumnDiff
+
 /** Diff of TableExtra */
 abstract class ExtraDiff extends TableEntryDiff
 
@@ -61,13 +65,24 @@ case class DropTableDiff(table: TableModel) extends TableDiff {
         (DropTableDiff(table.dropForeignKeys), table.foreignKeys)
 }
 case class ChangeTableDiff(override val name: String, override val renameTo: Option[String],
-        columnDiff: Seq[ColumnDiff], extraDiff: Seq[ExtraDiff], tableOptionDiff: Seq[TableOptionDiff])
+        val entriesDiff: Seq[TableEntryDiff])
     extends TableDiff with ChangeSomethingDiff
 {
     // must have something in the diff
     //require(renameTo.isDefined || !entriesDiff.isEmpty)
     
-    def entriesDiff: Seq[TableEntryDiff] = columnDiff ++ extraDiff ++ tableOptionDiff
+    def columnDiff: Seq[ColumnDiff] = entriesDiff.flatMap {
+        case d: ColumnDiff => Some(d)
+        case _ => None
+    }
+    def extraDiff: Seq[ExtraDiff] = entriesDiff.flatMap {
+        case d: ExtraDiff => Some(d)
+        case _ => None
+    }
+    def tableOptionDiff: Seq[TableOptionDiff] = entriesDiff.flatMap {
+        case d: TableOptionDiff => Some(d)
+        case _ => None
+    }
     
     def splitForOrder: (ChangeTableDiff, ChangeTableDiff, ChangeTableDiff, ChangeTableDiff, ChangeTableDiff) = {
         val column5 = columnDiff.partition5 {
@@ -94,11 +109,11 @@ case class ChangeTableDiff(override val name: String, override val renameTo: Opt
             case _: CreateTableOptionDiff => 4
         }
         (
-            new ChangeTableDiff(name, renameTo, column5._1, extra5._1, option5._1),
-            new ChangeTableDiff(name, renameTo, column5._2, extra5._2, option5._2),
-            new ChangeTableDiff(name, renameTo, column5._3, extra5._3, option5._3),
-            new ChangeTableDiff(name, renameTo, column5._4, extra5._4, option5._4),
-            new ChangeTableDiff(name, renameTo, column5._5, extra5._5, option5._5)
+            new ChangeTableDiff(name, renameTo, column5._1 ++ extra5._1 ++ option5._1),
+            new ChangeTableDiff(name, renameTo, column5._2 ++ extra5._2 ++ option5._2),
+            new ChangeTableDiff(name, renameTo, column5._3 ++ extra5._3 ++ option5._3),
+            new ChangeTableDiff(name, renameTo, column5._4 ++ extra5._4 ++ option5._4),
+            new ChangeTableDiff(name, renameTo, column5._5 ++ extra5._5 ++ option5._5)
         )
     }
 }

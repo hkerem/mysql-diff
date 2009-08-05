@@ -180,9 +180,9 @@ case class DiffMaker(val context: Context) {
         val alterTableOptionDiff = dropOptionDiff ++ createOptionDiff ++ alterOptionDiff
         
         if (from.name != to.name)
-            Some(new ChangeTableDiff(from.name, Some(to.name), alterColumnDiff, alterExtrasDiff, alterTableOptionDiff))
+            Some(new ChangeTableDiff(from.name, Some(to.name), alterColumnDiff ++ alterExtrasDiff ++ alterTableOptionDiff))
         else if (alterColumnDiff.size > 0 || alterExtrasDiff.size > 0 || alterTableOptionDiff.size > 0)
-            Some(new ChangeTableDiff(from.name, None, alterColumnDiff, alterExtrasDiff, alterTableOptionDiff))
+            Some(new ChangeTableDiff(from.name, None, alterColumnDiff ++ alterExtrasDiff ++ alterTableOptionDiff))
         else
             None
     }

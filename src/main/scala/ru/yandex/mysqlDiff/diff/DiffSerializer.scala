@@ -30,6 +30,9 @@ class DiffSerializer(val context: Context) {
                 new Column(name, dataType, properties.properties.map(p => new ModelColumnProperty(p))), None))
         case DropColumnDiff(name) => List(TableDdlStatement.DropColumn(name))
         case cd: ChangeColumnDiff => changeColumnStmts(cd, table)
+        
+        case CreateColumnWithInlinePrimaryKeyCommand(col, pk) =>
+            List(new TableDdlStatement.AddColumn(new TableDdlStatement.Column(col) addProperty TableDdlStatement.InlinePrimaryKey, None))
     }
     
     def dropExtraStmt(k: TableExtra) = k match {
@@ -96,6 +99,29 @@ class DiffSerializer(val context: Context) {
         case _ => 99
     }
     
+    protected def mergeSingleColumnPks(entriesDiff: Seq[TableEntryDiff]) = {
+        val (Seq(addPkSc @ _*), Seq(rest @ _*)) = entriesDiff.partition {
+            case CreateExtraDiff(PrimaryKeyModel(_, Seq(colName)))
+                if (entriesDiff.exists {
+                    case CreateColumnDiff(c) if c.name == colName => true
+                    case _ => false
+                }) => true
+            case _ => false
+        }
+        require(addPkSc.length <= 1)
+        val (Seq(thatSingleColumnForPk @ _*), Seq(rest2 @ _*)) = rest.partition {
+            case CreateColumnDiff(c)
+                if (addPkSc.length > 0) &&
+                    c.name == addPkSc.first.asInstanceOf[PrimaryKeyModel].columnNames.first => true
+            case _ => false
+        }
+        require(addPkSc.length == thatSingleColumnForPk.length)
+        (addPkSc.toList.zip(thatSingleColumnForPk.toList).map {
+            case (CreateExtraDiff(pk: PrimaryKeyModel), CreateColumnDiff(col)) =>
+                CreateColumnWithInlinePrimaryKeyCommand(col, pk)
+        }) ++ rest2
+    }
+    
     /**
      * Does not include rename.
      * @param model new model
@@ -105,41 +131,10 @@ class DiffSerializer(val context: Context) {
         if (diff.entriesDiff.isEmpty)
             Seq()
         else {
-            // XXX: simplify
             
-            val addPks = diff.entriesDiff.toList.filter {
-                // single column only
-                case CreateExtraDiff(PrimaryKeyModel(_, Seq(_))) => true
-                case _ => false
-            }
+            val entriesDiff = mergeSingleColumnPks(diff.entriesDiff)
             
-            require(addPks.length <= 1)
-            
-            val addPk: Option[PrimaryKeyModel] =
-                addPks.firstOption.map { case CreateExtraDiff(pk: PrimaryKeyModel) => pk }
-            val addPkSingleColumn = addPk.map(_.columns.first).filter(cn => diff.entriesDiff.exists {
-                    case CreateColumnDiff(c) if c.name == cn => true
-                    case _ => false
-                })
-            
-            val (addPkSingleColumnDiffs0, rest2) = diff.entriesDiff.toList.partition {
-                case CreateColumnDiff(c) if Some(c.name) == addPkSingleColumn => true
-                case CreateExtraDiff(PrimaryKeyModel(_, Seq(c))) if Some(c) == addPkSingleColumn => true
-                case _ => false
-            }
-            
-            val addPkSingleColumnDiffs = addPkSingleColumnDiffs0.filter {
-                case CreateColumnDiff(_) => true
-                case CreateExtraDiff(PrimaryKeyModel(_, Seq(_))) => false
-            }
-            
-            require(addPkSingleColumnDiffs.length <= 1)
-            
-            val addPkSingleColumnDiffProper = addPkSingleColumnDiffs.firstOption
-                    .map(x => new TableDdlStatement.AddColumn(new TableDdlStatement.Column(x.asInstanceOf[CreateColumnDiff].column) addProperty TableDdlStatement.InlinePrimaryKey, None))
-            
-            import TableDdlStatement._
-            val ops = rest2.flatMap(alterTableEntryStmts(_, table)) ++ addPkSingleColumnDiffProper
+            val ops = entriesDiff.flatMap(alterTableEntryStmts(_, table))
             val sorted = scala.util.Sorting.stableSort(ops, operationOrder _)
             // XXX: make configurable
             if (sorted.isEmpty) Seq()
@@ -176,7 +171,7 @@ class DiffSerializer(val context: Context) {
         
         for ((d, newDecl) <- diff) {
             (d, newDecl) match {
-                case (d @ ChangeTableDiff(name, renameTo, columnDiff, indexDiff, optionDiff), newTable: TableModel) =>
+                case (d @ ChangeTableDiff(name, renameTo, entriesDiff), newTable: TableModel) =>
                     require(renameTo.isEmpty || renameTo.get == newTable.name)
                     if (renameTo.isDefined)
                         rename += RenameTableStatement(name, renameTo.get)
