@@ -14,21 +14,29 @@ case class ModelParser(val context: Context) {
     
     import TableDdlStatement._
     
+    case class ScriptEvaluation(db: DatabaseModel) {
+        def withDb(db: DatabaseModel) = new ScriptEvaluation(db)
+    }
+    
+    object ScriptEvaluation {
+        def empty = new ScriptEvaluation(new DatabaseModel(Nil))
+    }
+    
     def parseModel(text: String): DatabaseModel =
         parseModel(parser.parse(text))
     
     def parseModel(script: Script): DatabaseModel = {
-        script.ddlStatements.foldLeft(new DatabaseModel(Nil))((db, stmt) => parseScriptElement(stmt, db))
+        script.ddlStatements.foldLeft(ScriptEvaluation.empty)((sc, stmt) => parseScriptElement(stmt, sc)).db
     }
     
-    def parseScriptElement(stmt: DdlStatement, db: DatabaseModel) = stmt match {
+    def parseScriptElement(stmt: DdlStatement, sc: ScriptEvaluation) = stmt match {
         // XXX: handle IF NOT EXISTS
-        case ct: CreateTableStatement => parseCreateTable(ct, db)
-        case DropTableStatement(name, _) => db.dropTable(name)
-        case st @ AlterTableStatement(name, _) => db.alterTable(name, alterTable(st, _))
-        case CreateSequenceStatement(name) => db.createSequence(SequenceModel(name))
-        case DropSequenceStatement(name) => db.dropSequence(name)
-        case st @ CreateIndexStatement(_, table, _) => db.alterTable(table, createIndex(st, _))
+        case ct: CreateTableStatement => parseCreateTable(ct, sc)
+        case DropTableStatement(name, _) => sc.withDb(sc.db.dropTable(name))
+        case st @ AlterTableStatement(name, _) => sc.withDb(sc.db.alterTable(name, alterTable(st, _)))
+        case CreateSequenceStatement(name) => sc.withDb(sc.db.createSequence(SequenceModel(name)))
+        case DropSequenceStatement(name) => sc.withDb(sc.db.dropSequence(name))
+        case st @ CreateIndexStatement(_, table, _) => sc.withDb(sc.db.alterTable(table, createIndex(st, _)))
     }
     
     private def parseColumn(c: Column) = {
@@ -45,12 +53,14 @@ case class ModelParser(val context: Context) {
     
     // lite version
     final def parseCreateTable(ct: CreateTableStatement): TableModel = {
-        parseCreateTable(ct, new DatabaseModel(Seq())).tables match {
+        parseCreateTable(ct, ScriptEvaluation.empty).db.tables match {
             case Seq(table) => table
         }
     }
     
-    def parseCreateTable(ct: CreateTableStatement, db: DatabaseModel): DatabaseModel = {
+    def parseCreateTable(ct: CreateTableStatement, sc: ScriptEvaluation): ScriptEvaluation = sc.withDb({
+        import sc.db
+        
         val CreateTableStatement(name, ifNotExists, TableElementList(elements), options) = ct
         
         val columns = new ArrayBuffer[ColumnModel]
@@ -99,7 +109,7 @@ case class ModelParser(val context: Context) {
         }
         
         db.createTable(fixTable(TableModel(name, columns2.toList, extras, ct.options)))
-    }
+    })
     
     def createIndex(st: CreateIndexStatement, t: TableModel) =
         t.addExtra(IndexModel(Some(st.name), st.columns, true))

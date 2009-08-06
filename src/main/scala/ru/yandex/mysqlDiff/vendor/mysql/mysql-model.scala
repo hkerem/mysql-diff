@@ -418,15 +418,15 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         case e => super.parseCreateTableExtra(e, ct)
     }
     
-    override def parseCreateTable(ct: script.CreateTableStatement, db: DatabaseModel): DatabaseModel = {
+    override def parseCreateTable(ct: script.CreateTableStatement, sc: ScriptEvaluation): ScriptEvaluation = {
         ct.columns.flatMap(_.properties).foreach {
             case f: script.TableDdlStatement.InlineReferences =>
                 // http://dev.mysql.com/doc/refman/5.1/en/create-table.html
                 throw new UnsupportedFeatureException("inline REFERENCES is not supported by MySQL")
             case _ =>
         }
-        val dbr = super.parseCreateTable(ct, db)
-        val t = dbr.table(ct.name)
+        val scr = super.parseCreateTable(ct, sc)
+        val t = scr.db.table(ct.name)
         t.options.find(MysqlEngineTableOptionType) match {
             // XXX: ignore case
             case Some(MysqlEngineTableOption("InnoDB")) =>
@@ -434,7 +434,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
                 if (!t.foreignKeys.isEmpty)
                     throw new UnsupportedFeatureException("FOREIGN KEY is supported only by InnoDB")
         }
-        dbr
+        scr
     }
     
     protected override def fixDataType(dataType: DataType, column: ColumnModel, table: TableModel) = {
