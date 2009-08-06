@@ -100,7 +100,7 @@ class MetaDao(jt: JdbcTemplate) {
             
             // XXX: asc, length for IndexColumn
             if (unique) new UniqueKeyModel(Some(indexName), columnNames.map(IndexColumn(_)))
-            else new IndexModel(Some(indexName), columnNames.map(IndexColumn(_)))
+            else new IndexModel(Some(indexName), columnNames.map(IndexColumn(_)), true)
         }
     }
     

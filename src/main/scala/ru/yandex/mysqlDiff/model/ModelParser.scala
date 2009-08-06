@@ -36,12 +36,12 @@ case class ModelParser(val context: Context) {
         new ColumnModel(name, dataType, c.modelProperties)
     }
     
-    protected def parseCreateTableExtra(e: TableElement, ct: CreateTableStatement) = Seq(e match {
-        case Index(index) => index
-        case PrimaryKey(pk) => pk
-        case ForeignKey(fk) => fk
-        case UniqueKey(uk) => uk
-    })
+    protected def parseCreateTableExtra(e: TableElement, ct: CreateTableStatement) = e match {
+        case Index(index) => Seq(index)
+        case PrimaryKey(pk) => Seq(pk, IndexModel(None, pk.columnNames.map(c => IndexColumn(c, true, None)), false))
+        case ForeignKey(fk) => Seq(fk, IndexModel(None, fk.localColumnNames.map(c => IndexColumn(c, true, None)), false))
+        case UniqueKey(uk) => Seq(uk, IndexModel(None, uk.columnNames.map(c => IndexColumn(c, true, None)), false))
+    }
     
     // lite version
     final def parseCreateTable(ct: CreateTableStatement): TableModel = {
@@ -71,7 +71,7 @@ case class ModelParser(val context: Context) {
                     case InlineReferences(References(table, Seq(tColumn), updateRule, deleteRule)) =>
                         extras += ForeignKeyModel(None, Seq(IndexColumn(column.name)), table, Seq(tColumn),
                                 updateRule, deleteRule)
-                        extras += IndexModel(None, Seq(IndexColumn(column.name)))
+                        extras += IndexModel(None, Seq(IndexColumn(column.name)), false)
                     
                     // XXX: other inline properties
                     
@@ -102,11 +102,12 @@ case class ModelParser(val context: Context) {
     }
     
     def createIndex(st: CreateIndexStatement, t: TableModel) =
-        t.addExtra(IndexModel(Some(st.name), st.columns))
+        t.addExtra(IndexModel(Some(st.name), st.columns, true))
     
     def fixTable(table: TableModel) = {
         val TableModel(name, columns, extras, options) = table
         TableModel(name, columns.map(fixColumn(_, table)), extras, options)
+            .addImplicitIndexes
     }
     
     def fixColumn(column: ColumnModel, table: TableModel) = {

@@ -301,9 +301,12 @@ object IndexColumn {
     def apply(name: String) = new IndexColumn(name, true, None)
 }
 
-case class IndexModel(name: Option[String], override val columns: Seq[IndexColumn]) extends UniqueOrIndexModel {
+case class IndexModel(name: Option[String], override val columns: Seq[IndexColumn], explicit: Boolean)
+    extends UniqueOrIndexModel
+{
     require(columns.length > 0)
     require(columnNames.unique.size == columnNames.length)
+    //require(name.isDefined || !explicit)
 }
 
 abstract case class ConstraintModel(name: Option[String]) extends TableExtra {
@@ -376,11 +379,25 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
         "repeating column names in table " + name + " model")
     require(constraintNames.unique.size == constraintNames.size,
         "repeating constraint names in table " + name + " model")
+    
     require(indexNames.unique.size == indexNames.size,
         "repeating index names in table " + name + " model")
+    require(indexes.map(_.columnNames.toList).unique.size == indexes.size,
+        "repeating indexes in table " + name + " model")
+    
     require(primaryKeys.length <= 1)
     
+    def explicitIndexes =
+        indexes.filter(_.explicit)
+    
+    def explicitExtras = extras.filter {
+        case i: IndexModel => i.explicit
+        case _ => true
+    }
+    
     def entries = columns ++ extras
+    
+    def explicitEntries = columns ++ explicitExtras
     
     private def primaryKeys = extras.flatMap { case p: PrimaryKeyModel => Some(p); case _ => None }
     def primaryKey = primaryKeys.firstOption
@@ -388,6 +405,7 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     def indexes = extras.flatMap { case i: IndexModel => Some(i); case _ => None }
     def indexNames = indexes.flatMap(_.name)
     def findIndex(name: String) = indexes.find(_.name == Some(name))
+    def findIndexWithColumns(cols: Seq[String]) = indexes.find(_.columnNames.toList == cols.toList)
     def index(name: String) =
         findIndex(name).getOrThrow("table " + this.name + " has no index " + name)
     
@@ -432,14 +450,43 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
         })
     }
     
+    def addIndex(i: IndexModel) = {
+        val cleared = dropImplicitIndexWithColumnsIfExists(i.columnNames)
+        if (i.explicit) {
+            cleared.addExtra(i)
+        } else {
+            if (cleared.findIndexWithColumns(i.columnNames).isDefined)
+                cleared
+            else
+                cleared.addExtra(i)
+        }
+    }
     
-    def addIndex(i: IndexModel) =
-        addExtra(i)
+    private def addImplicitIndexForColumns(columns: Seq[String]) =
+        if (indexes.exists(i => i.columnNames.take(columns.length).toList == columns.toList))
+            this
+        else
+            addIndex(new IndexModel(None, columns.map(c => new IndexColumn(c, true, None)), false))
+    
+    def addImplicitIndexes = {
+        val columnNamess: Seq[Seq[String]] =
+            foreignKeys.map(_.localColumnNames) ++
+                uniqueKeys.map(_.columnNames) ++ primaryKeys.map(_.columnNames)
+        columnNamess.foldLeft(this) { (table, columnNames) =>
+            table.addImplicitIndexForColumns(columnNames)
+        }
+    }
     
     def dropIndex(name: String) = {
         index(name)
-        withExtras(extras.filter { case IndexModel(Some(`name`), _) => false; case _ => true })
+        withExtras(extras.filter { case IndexModel(Some(`name`), _, _) => false; case _ => true })
     }
+    
+    private def dropImplicitIndexWithColumnsIfExists(columns: Seq[String]) =
+        withExtras(extras.filter {
+            case i @ IndexModel(_, _, false) if i.columnNames.toList == columns.toList => false
+            case _ => true
+        })
     
     def addUniqueKey(uk: UniqueKeyModel) =
         addExtra(uk)
@@ -630,7 +677,7 @@ object ModelTests extends org.specs.Specification {
     
     "keys with repeating column names must not be allowed" in {
         try {
-            new IndexModel(None, List(IndexColumn("a"), IndexColumn("b"), IndexColumn("a")))
+            new IndexModel(Some("ii"), List(IndexColumn("a"), IndexColumn("b"), IndexColumn("a")), true)
             fail("two columns with same name should not be allowed in key")
         } catch {
             case e: IllegalArgumentException =>

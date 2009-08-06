@@ -263,7 +263,7 @@ object MysqlJdbcModelExtractorTests
         val person = extractTable("person")
         
         citizen.foreignKeys must haveSize(2)
-        citizen.indexes must haveSize(2)
+        citizen.indexes must haveSize(3)
         
         val fkc = citizen.foreignKeys.find(_.localColumnNames.toList == List("city_id")).get
         fkc.localColumnNames.toList must_== List("city_id")

@@ -359,9 +359,19 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
     import script.TableDdlStatement._
     import MysqlTableDdlStatement._
     
+    // XXX: not sure
+    private val foreignKeyIndexExplicit = true
+    
     protected override def alterTableOperation(op: Operation, table: TableModel): TableModel = op match {
         case AddExtra(MysqlForeignKey(fk, indexNameOption)) =>
-            table.addForeignKey(fk).addIndex(IndexModel(indexNameOption, fk.localColumns))
+            if (true && indexNameOption.isDefined)
+                table
+                    .addForeignKey(fk)
+                    .addIndex(IndexModel(indexNameOption, fk.localColumns, foreignKeyIndexExplicit))
+            else
+                table
+                    .addForeignKey(fk)
+                    .addImplicitIndexes
         case _ => super.alterTableOperation(op, table)
     }
     
@@ -385,7 +395,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         case MysqlForeignKey(fk, indexName) =>
             // another MySQL magic
             val haveAnotherIndex = ct.elements.exists {
-                case Index(IndexModel(_, columns)) =>
+                case Index(IndexModel(_, columns, _)) =>
                     columns.toList.take(fk.localColumns.length) == fk.localColumns.toList
                 case UniqueKey(UniqueKeyModel(_, columns)) =>
                     columns.toList.take(fk.localColumns.length) == fk.localColumns.toList
@@ -398,7 +408,13 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
                 case _ => false
             }
             if (haveAnotherIndex) Seq(fk)
-            else Seq(fk, IndexModel(indexName, fk.localColumns))
+            else Seq(fk, IndexModel(indexName, fk.localColumns, foreignKeyIndexExplicit))
+            /*
+            if (true && indexName.isDefined) // XXX: index name is lost
+                Seq(fk, IndexModel(indexName, fk.localColumns, foreignKeyIndexExplicit))
+            else
+                Seq(fk)
+            */
         case e => super.parseCreateTableExtra(e, ct)
     }
     

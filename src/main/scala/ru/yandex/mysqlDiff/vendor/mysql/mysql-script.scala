@@ -66,12 +66,17 @@ class MysqlScriptSerializer(context: Context) extends ScriptSerializer(context) 
     
     override def serializeTableElement(e: TableDdlStatement.TableElement) = e match {
         case MysqlForeignKey(fk, indexName) =>
+            val ForeignKeyModel(name, localColumns, externalTable, externalColumns, updateRule, deleteRule) = fk
             val words = new ArrayBuffer[String]
-            words ++= fk.name.map("CONSTRAINT " + _)
+            words ++= name.map("CONSTRAINT " + _)
             words += "FOREIGN KEY"
             words ++= indexName
-            words += "(" + fk.localColumns.map(serializeIndexColumn _).mkString(", ") + ")"
-            words += "REFERENCES " + fk.externalTable + "(" + fk.externalColumns.mkString(", ") + ")"
+            words += "(" + localColumns.map(serializeIndexColumn _).mkString(", ") + ")"
+            words += "REFERENCES"
+            words += externalTable
+            words += ("(" + externalColumns.mkString(", ") + ")")
+            words ++= updateRule.map(p => "ON UPDATE " + serializeImportedKeyRule(p))
+            words ++= deleteRule.map(p => "ON DELETE " + serializeImportedKeyRule(p))
             words.mkString(" ")
         case _ => super.serializeTableElement(e)
     }

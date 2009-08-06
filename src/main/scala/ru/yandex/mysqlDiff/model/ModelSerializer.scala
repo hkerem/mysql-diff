@@ -19,8 +19,10 @@ class ModelSerializer(context: Context) {
     def serializePk(pk: PrimaryKeyModel) =
         new TableDdlStatement.PrimaryKey(pk)
     
-    def serializeRegularIndex(index: IndexModel) =
+    def serializeRegularIndex(index: IndexModel) = {
+        require(index.explicit)
         new TableDdlStatement.Index(index)
+    }
     
     def serializeForeignKey(fk: ForeignKeyModel) =
         new TableDdlStatement.ForeignKey(fk)
@@ -47,16 +49,20 @@ class ModelSerializer(context: Context) {
     
     protected def serializeTableOnly(table: TableModel) =
         CreateTableStatement(table.name, false,
-            TableDdlStatement.TableElementList(table.entries.map(serializeTableEntry _)),
+            TableDdlStatement.TableElementList(table.explicitEntries.map(serializeTableEntry _)),
             table.options.properties)
     
     protected def serializeOuterExtra(extra: TableExtra, table: TableModel) = extra match {
-        case i: IndexModel => CreateIndexStatement(
-            i.name.getOrThrow("cannot create unnamed index"), table.name, i.columns)
+        case i: IndexModel =>
+            require(i.explicit)
+            CreateIndexStatement(
+                i.name.getOrThrow("cannot create unnamed index"), table.name, i.columns)
     }
     
     protected def serializeOuterExtras(extras: Seq[TableExtra], table: TableModel) =
-        extras.map(e => serializeOuterExtra(e, table))
+        extras
+            .filter { case i: IndexModel => i.explicit; case _ => true }
+            .map(e => serializeOuterExtra(e, table))
     
     def serializeTable(table: TableModel): Seq[DdlStatement] = {
         val (tableOnly, extras) = splitTable(table)

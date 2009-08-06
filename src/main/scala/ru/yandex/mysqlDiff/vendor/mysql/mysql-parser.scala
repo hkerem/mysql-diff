@@ -123,7 +123,7 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     // XXX: index type is ignored
     override def indexModel: Parser[IndexModel] =
         ("KEY" | "INDEX") ~> opt(name) ~ opt("USING" ~> ("BTREE" | "HASH" | "RTREE")) ~ indexColumnList ^^
-            { case n ~ t ~ cs => model.IndexModel(n, cs) }
+            { case n ~ t ~ cs => model.IndexModel(n, cs, true) }
    
     def tableDefaultCharset: Parser[TableOption] =
         opt("DEFAULT") ~> ("CHARSET" | ("CHARACTER SET")) ~> opt("=") ~> ident ^^
@@ -251,14 +251,14 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         import AlterTableStatement._
         val a = parse(alterTable)("ALTER TABLE users ADD INDEX (login)")
         val AlterTableStatement("users", ops) = a
-        val Seq(AddExtra(Index(IndexModel(None, columns)))) = ops
+        val Seq(AddExtra(Index(IndexModel(None, columns, _)))) = ops
         columns.map(_.name).toList must_== List("login")
     }
     
     "parse indexes" in {
         val t = parseCreateTable("CREATE TABLE a(id INT, UNIQUE(a), INDEX i2(b, c), UNIQUE KEY(d, e))")
         t.indexes must haveSize(1)
-        val IndexModel(Some("i2"), indexColumns) = t.indexes(0).index
+        val IndexModel(Some("i2"), indexColumns, true) = t.indexes(0).index
         indexColumns.map(_.name).toList must_== List("b", "c")
         
         t.uniqueKeys must haveSize(2)
