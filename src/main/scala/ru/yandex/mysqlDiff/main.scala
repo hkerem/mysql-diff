@@ -2,9 +2,9 @@ package ru.yandex.mysqlDiff
 
 
 import java.io.File
-import scalax.io._
 
 import misc.jdbc._
+import misc.io._
 
 import diff._
 import model._
@@ -22,7 +22,7 @@ class Utils(context: Context) {
         if (arg.startsWith("jdbc:"))
             connectedContext(LiteDataSource.driverManager(arg)).jdbcModelExtractor.extract()
         else {
-            var str = ReaderResource.file(arg).slurp
+            var str = ReaderResource.file(arg).read()
             modelParser.parseModel(str)
         }
     }
@@ -32,7 +32,7 @@ class Utils(context: Context) {
             val jdbcModelExtractor = connectedContext(LiteDataSource.driverManager(arg)).jdbcModelExtractor
             new DatabaseModel(Seq(jdbcModelExtractor.extractTable(table)))
         } else {
-            var str = ReaderResource.file(arg).slurp
+            var str = ReaderResource.file(arg).read()
             val tableModel = modelParser.parseModel(str).decls.filter(_.name == table).first
             new DatabaseModel(Seq(tableModel))
         }

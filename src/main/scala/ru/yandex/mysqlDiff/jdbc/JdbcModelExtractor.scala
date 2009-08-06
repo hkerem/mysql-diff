@@ -2,8 +2,6 @@ package ru.yandex.mysqlDiff.jdbc
 
 import java.sql._
 
-import scalax.control.ManagedResource
-
 import scala.util.Sorting._
 import scala.collection.mutable.ArrayBuffer
 
@@ -25,7 +23,6 @@ object JdbcModelExtractor {
  */
 class JdbcModelExtractor(connectedContext: ConnectedContext) {
     import JdbcModelExtractor._
-    import JdbcUtils._
     
     import connectedContext._
     import context._

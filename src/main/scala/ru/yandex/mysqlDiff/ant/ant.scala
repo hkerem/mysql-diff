@@ -2,9 +2,10 @@ package ru.yandex.mysqlDiff.ant
 
 import org.apache.tools.ant._
 import java.io.File
-import scalax.io.Implicits._
 
 import diff._
+
+import Implicits._
 
 /**
  * Ant task to compare databases.

@@ -1,10 +1,10 @@
 package ru.yandex.mysqlDiff.model
 
+import ru.yandex.misc.io._
+
 import Implicits._
 
 import script._
-
-import scalax.io._
 
 /**
  * Parse script into model.
@@ -188,7 +188,7 @@ case class ModelParser(val context: Context) {
     }
     
     def main(args: Array[String]) {
-        val text = InputStreamResource.file(args(0)).reader.slurp()
+        val text = InputStreamResource.file(args(0)).reader.read()
         val model = parseModel(text)
         print(modelSerializer.serializeDatabaseToText(model))
     }

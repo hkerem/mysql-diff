@@ -9,11 +9,11 @@ import scala.util.parsing.combinator.syntactical._
 import scala.util.parsing.combinator.lexical._
 import java.util.regex.{Pattern, Matcher}
 
+import ru.yandex.misc.io._
+
 import model._
 
 import Implicits._
-
-import scalax.io._
 
 class CombinatorParserException(msg: String, cause: Throwable) extends Exception(msg, cause) {
     def this(msg: String) = this(msg, null)
@@ -457,7 +457,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
             if (args.length == 1) {
                 args(0)
             } else {
-                ReaderResource.apply(args(1)).slurp()
+                ReaderResource.apply(args(1)).read()
             }
         println(parse(text))
     }
@@ -703,7 +703,7 @@ class Parser(context: Context) {
             if (args.length == 1) {
                 args(0)
             } else {
-                ReaderResource.apply(args(1)).slurp()
+                ReaderResource.apply(args(1)).read()
             }
         val script = parse(text)
         print(scriptSerializer.serialize(script.stmts, ScriptSerializer.Options.multiline))

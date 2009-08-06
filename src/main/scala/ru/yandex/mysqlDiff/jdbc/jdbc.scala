@@ -1,15 +1,10 @@
 package ru.yandex.mysqlDiff.jdbc
 
-import scalax.control.ManagedResource
-
 import java.sql.DriverManager
 
-object JdbcUtils {
-    // XXX: drop it: we are using JDK 1.6
-    Class.forName("com.mysql.jdbc.Driver")
-    
-    def connection(jdbcUrl: String) = ManagedResource(DriverManager.getConnection(jdbcUrl))
-}
+import ru.yandex.misc.jdbc._
+
+import Implicits._
 
 /**
  * Commandline query tool.
@@ -22,7 +17,7 @@ object QueryTool {
         
         args match {
             case Seq(jdbcUrl, q) =>
-                for (c <- JdbcUtils.connection(jdbcUrl)) {
+                for (c <- LiteDataSource.driverManager(jdbcUrl)) {
                     val rs = c.createStatement().executeQuery(q)
                     val md = rs.getMetaData
                     val cc = md.getColumnCount
