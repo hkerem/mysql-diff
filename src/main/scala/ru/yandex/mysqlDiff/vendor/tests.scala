@@ -61,14 +61,51 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
     def printExecutedStmts = printExecutedStmtsVar.value
     
     protected def execute(q: String) = {
-        if (printExecutedStmts) println(q)
-        ddlTemplate.executeScript(q)
+        val cc = new CacheConnectionLiteDataSource(dsVar.value)
+        try {
+            dsVar.withValue(cc) {
+                if (scriptPreamble.length > 0) {
+                    if (printExecutedStmts) println(scriptPreamble)
+                    ddlTemplate.executeScript(scriptPreamble)
+                }
+                if (printExecutedStmts) println(q)
+                ddlTemplate.executeScript(q)
+            }
+        } finally {
+            cc.close()
+        }
     }
     
     protected def dropTable(tableName: String) {
         execute("DROP TABLE IF EXISTS " + tableName)
     }
-                   
+    
+    protected def recreateTable(script: String) {
+        val cc = new CacheConnectionLiteDataSource(dsVar.value)
+        try {
+            dsVar.withValue(cc) {
+                if (scriptPreamble.length > 0) {
+                    if (printExecutedStmts) println(scriptPreamble)
+                    ddlTemplate.executeScript(scriptPreamble)
+                }
+                if (printExecutedStmts) println("recreate " + script)
+                ddlTemplate.recreateTable(script)
+            }
+        } finally {
+            cc.close()
+        }
+    }
+
+    protected def scriptPreamble = ""
+    
+    protected def scriptPreambleEvaluation =
+        modelParser.eval(parser.parse(scriptPreamble), modelParser.emptyScriptEvaluation)
+    
+    def parseDb(script: String) =
+        modelParser.eval(parser.parse(script), scriptPreambleEvaluation).db
+    
+    def parseTable(script: String) =
+        parseDb(script).singleTable
     
     /**
      * Perform various tests on CREATE TABLE script.
@@ -77,7 +114,7 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
      */
     protected def checkTable(script: String) = {
         // parse model
-        val t = modelParser.parseCreateTableScript(script)
+        val t = parseTable(script)
         
         {
             if (printExecutedStmts) println("execute script, compare with parsed model")
@@ -103,12 +140,12 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
             ddlTemplate.dropTableWithExportedKeysIfExists(t.name)
     
     def checkDatabase(script: String) = {
-        val m = modelParser.parseModel(script)
+        val m = parseDb(script)
         
         {
             // execute script, compare with parsed model
             dropTables(m)
-            ddlTemplate.executeScript(script)
+            execute(script)
             val d = new DatabaseModel(m.tables.map(_.name).map(jdbcModelExtractor.extractTable(_)))
             checkTwoSimilarDatabaseModels(m, d)
         }
@@ -117,7 +154,7 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
             // execute serialized parsed model, compare with parsed model
             dropTables(m)
             val recreatedScript = modelSerializer.serializeDatabaseToText(m)
-            ddlTemplate.executeScript(recreatedScript)
+            execute(recreatedScript)
             val d = new DatabaseModel(m.tables.map(_.name).map(jdbcModelExtractor.extractTable(_)))
             checkTwoSimilarDatabaseModels(m, d)
         }
@@ -135,8 +172,8 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
         
         // perform asymmetric table comparison, treat script1 as source and script2 as target
         def checkTwoTables12(script1: String, script2: String) = {
-            val t1 = modelParser.parseCreateTableScript(script1)
-            val t2 = modelParser.parseCreateTableScript(script2)
+            val t1 = parseTable(script1)
+            val t2 = parseTable(script2)
             
             // tables are required to be different
             diffMaker.compareTables(t1, t2) must beLike { case Some(_) => true }
@@ -176,8 +213,8 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
         // XXX: check transitions
         
         def checkTwoDatabases12(script1: String, script2: String) = {
-            val t1 = modelParser.parseModel(script1)
-            val t2 = modelParser.parseModel(script2)
+            val t1 = parseDb(script1)
+            val t2 = parseDb(script2)
             
             diffMaker.compareDatabases(t1, t2).declDiff must notBeEmpty
             diffMaker.compareDatabases(t2, t1).declDiff must notBeEmpty
@@ -185,7 +222,7 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
             dropTables(t1)
             dropTables(t2)
             
-            ddlTemplate.executeScript(script1)
+            execute(script1)
             
             val d1 = new DatabaseModel(t1.tables.map(_.name).map(jdbcModelExtractor.extractTable(_)))
             // compare and then apply difference

@@ -23,7 +23,13 @@ class Context(val dataTypes: model.DataTypes) {
     val utils = new Utils(this)
 }
 
-class ConnectedContext(val context: Context, val ds: LiteDataSource) {
+class ConnectedContext(val context: Context, ds0: LiteDataSource) {
+    val dsVar = new scala.util.DynamicVariable(ds0)
+    val ds = new LiteDataSource {
+        override def openConnection() = dsVar.value.openConnection()
+        override def closeConnection(c: java.sql.Connection) = dsVar.value.closeConnection(c)
+        override def close() = dsVar.value.close()
+    }
     val jt = new JdbcTemplate(ds)
     val jdbcModelExtractor = new jdbc.JdbcModelExtractor(this)
     val metaDao = new jdbc.MetaDao(jt)

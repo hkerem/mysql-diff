@@ -17,7 +17,7 @@ object PostgresqlContext extends Context(PostgresqlDataTypes) {
     override def connectedContext(ds: LiteDataSource) = new PostgresqlConnectedContext(ds)
 }
 
-class PostgresqlConnectedContext(ds: LiteDataSource) extends ConnectedContext(PostgresqlContext, ds) {
+class PostgresqlConnectedContext(ds0: LiteDataSource) extends ConnectedContext(PostgresqlContext, ds0) {
     override val jdbcModelExtractor = new PostgresqlJdbcModelExtractor(this)
     override val metaDao = new PostgresqlMetaDao(jt)
 }

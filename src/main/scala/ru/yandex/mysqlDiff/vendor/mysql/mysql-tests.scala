@@ -21,6 +21,8 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
     import connectedContext._
     import context._
     
+    override val scriptPreamble = "SET storage_engine = InnoDB"
+    
     "CAP-101" in {
         val t2 = checkTwoTables(
             "CREATE TABLE a (kk INT)",
@@ -40,59 +42,59 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
     "foreign keys with full params specification" in {
         ddlTemplate.dropTableWithExportedKeysIfExists("servers")
         ddlTemplate.dropTableWithExportedKeysIfExists("datacenters")
-        execute("CREATE TABLE datacenters (id INT PRIMARY KEY) ENGINE=InnoDB")
+        execute("CREATE TABLE datacenters (id INT PRIMARY KEY)")
         val t2 = checkTwoTables(
-            "CREATE TABLE servers (id INT, dc_id INT) ENGINE=InnoDB",
+            "CREATE TABLE servers (id INT, dc_id INT)",
             "CREATE TABLE servers (id INT, dc_id INT, " +
-                    "CONSTRAINT dc_fk FOREIGN KEY dc_idx (dc_id) REFERENCES datacenters(id)) ENGINE=InnoDB")
+                    "CONSTRAINT dc_fk FOREIGN KEY dc_idx (dc_id) REFERENCES datacenters(id))")
         t2.foreignKeys must haveSize(1)
     }
     
     "FOREIGN KEY with overlapping INDEX" in {
         ddlTemplate.dropTableWithExportedKeysIfExists("yyyy")
         ddlTemplate.dropTableWithExportedKeysIfExists("zzzz")
-        ddlTemplate.recreateTable("CREATE TABLE zzzz (id INT PRIMARY KEY) ENGINE=InnoDB")
+        recreateTable("CREATE TABLE zzzz (id INT PRIMARY KEY)")
         checkTwoTables(
-            "CREATE TABLE yyyy (id INT, zzzz_id INT, CONSTRAINT zzzz_c FOREIGN KEY zzzz_i (zzzz_id) REFERENCES zzzz(id), INDEX(zzzz_id, id)) ENGINE=InnoDB",
-            "CREATE TABLE yyyy (id INT, zzzz_id INT, CONSTRAINT zzzz_c FOREIGN KEY zzzz_i (zzzz_id) REFERENCES zzzz(id)) ENGINE=InnoDB"
+            "CREATE TABLE yyyy (id INT, zzzz_id INT, CONSTRAINT zzzz_c FOREIGN KEY zzzz_i (zzzz_id) REFERENCES zzzz(id), INDEX(zzzz_id, id))",
+            "CREATE TABLE yyyy (id INT, zzzz_id INT, CONSTRAINT zzzz_c FOREIGN KEY zzzz_i (zzzz_id) REFERENCES zzzz(id))"
             )
     }
     
     "FOREIGN KEY with overlapping UNIQUE" in {
         ddlTemplate.dropTableWithExportedKeysIfExists("uuuu")
         ddlTemplate.dropTableWithExportedKeysIfExists("qqqq")
-        ddlTemplate.recreateTable("CREATE TABLE qqqq (id INT PRIMARY KEY) ENGINE=InnoDB")
+        recreateTable("CREATE TABLE qqqq (id INT PRIMARY KEY)")
         checkTwoTables(
-            "CREATE TABLE uuuu (id INT, qqqq_id INT, CONSTRAINT qqqq_c FOREIGN KEY qqqq_i (qqqq_id) REFERENCES qqqq(id), UNIQUE(qqqq_id, id)) ENGINE=InnoDB",
-            "CREATE TABLE uuuu (id INT, qqqq_id INT, CONSTRAINT qqqq_c FOREIGN KEY qqqq_i (qqqq_id) REFERENCES qqqq(id)) ENGINE=InnoDB"
+            "CREATE TABLE uuuu (id INT, qqqq_id INT, CONSTRAINT qqqq_c FOREIGN KEY qqqq_i (qqqq_id) REFERENCES qqqq(id), UNIQUE(qqqq_id, id))",
+            "CREATE TABLE uuuu (id INT, qqqq_id INT, CONSTRAINT qqqq_c FOREIGN KEY qqqq_i (qqqq_id) REFERENCES qqqq(id))"
             )
     }
     
     "FOREIGN KEY with overlapping PRIMARY KEY" in {
         ddlTemplate.dropTableWithExportedKeysIfExists("mmmm")
         ddlTemplate.dropTableWithExportedKeysIfExists("nnnn")
-        ddlTemplate.recreateTable("CREATE TABLE mmmm (id INT PRIMARY KEY) ENGINE=InnoDB")
+        recreateTable("CREATE TABLE mmmm (id INT PRIMARY KEY)")
         checkTwoTables(
-            "CREATE TABLE nnnn (id INT, mmmm_id INT, CONSTRAINT mmmm_c FOREIGN KEY mmmm_i (mmmm_id) REFERENCES mmmm(id), PRIMARY KEY(mmmm_id, id)) ENGINE=InnoDB",
-            "CREATE TABLE nnnn (id INT, mmmm_id INT, CONSTRAINT mmmm_c FOREIGN KEY mmmm_i (mmmm_id) REFERENCES mmmm(id)) ENGINE=InnoDB"
+            "CREATE TABLE nnnn (id INT, mmmm_id INT, CONSTRAINT mmmm_c FOREIGN KEY mmmm_i (mmmm_id) REFERENCES mmmm(id), PRIMARY KEY(mmmm_id, id))",
+            "CREATE TABLE nnnn (id INT, mmmm_id INT, CONSTRAINT mmmm_c FOREIGN KEY mmmm_i (mmmm_id) REFERENCES mmmm(id))"
             )
     }
     
     "FOREIGN KEY ... ON UPDATE ... ON DELETE" in {
         ddlTemplate.dropTableWithExportedKeysIfExists("o_u_o_d")
         ddlTemplate.dropTableWithExportedKeysIfExists("o_u_o_d_pri")
-        jt.execute("CREATE TABLE o_u_o_d_pri (id INT PRIMARY KEY) ENGINE=InnoDB")
+        execute("CREATE TABLE o_u_o_d_pri (id INT PRIMARY KEY)")
         checkTwoTables(
             "CREATE TABLE o_u_o_d (a_id INT, id INT, " +
-                "FOREIGN KEY (a_id) REFERENCES o_u_o_d_pri(id) ON UPDATE SET NULL) ENGINE=InnoDB",
+                "FOREIGN KEY (a_id) REFERENCES o_u_o_d_pri(id) ON UPDATE SET NULL)",
             "CREATE TABLE o_u_o_d (a_id INT, id INT, " +
-                "FOREIGN KEY (a_id) REFERENCES o_u_o_d_pri(id) ON UPDATE CASCADE ON DELETE SET NULL) ENGINE=InnoDB"
+                "FOREIGN KEY (a_id) REFERENCES o_u_o_d_pri(id) ON UPDATE CASCADE ON DELETE SET NULL)"
             )
     }
     
     "diff, apply collate" in {
         jt.execute("DROP TABLE IF EXISTS collate_test")
-        jt.execute("CREATE TABLE collate_test (id VARCHAR(10)) COLLATE=cp1251_bin")
+        execute("CREATE TABLE collate_test (id VARCHAR(10)) COLLATE=cp1251_bin")
         val oldModel = jdbcModelExtractor.extractTable("collate_test")
         
         // checking properly extracted
@@ -146,8 +148,8 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
     
     "bug with character set implies collation" in {
         jt.execute("DROP TABLE IF EXISTS moderated_tags")
-        jt.execute("CREATE TABLE moderated_tags (tag VARCHAR(255) CHARACTER SET utf8 NOT NULL, type INT(11) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
-        val s2 = "CREATE TABLE moderated_tags (tag VARCHAR(255) NOT NULL, type INT(11) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
+        execute("CREATE TABLE moderated_tags (tag VARCHAR(255) CHARACTER SET utf8 NOT NULL, type INT(11) NOT NULL) DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
+        val s2 = "CREATE TABLE moderated_tags (tag VARCHAR(255) NOT NULL, type INT(11) NOT NULL) DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
         
         val dbModel = jdbcModelExtractor.extractTable("moderated_tags")
         val localModel = modelParser.parseCreateTableScript(s2)
@@ -159,7 +161,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
     
     "bug with data type options equivalence" in {
         checkTable(
-            "CREATE TABLE alive_apps (hostname VARCHAR(100) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8")
+            "CREATE TABLE alive_apps (hostname VARCHAR(100) NOT NULL) DEFAULT CHARSET=utf8")
     }
     
     "bug with COLLATE before CHARACTER SET" in {
@@ -206,26 +208,25 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
     "bug with non-unique CONSTRAINT names" in {
         checkTwoDatabases(
             """
-            CREATE TABLE nu_a (id INT PRIMARY KEY) ENGINE=InnoDB;
-            CREATE TABLE nu_b (a_id INT) ENGINE=InnoDB;
-            CREATE TABLE nu_c (a_id INT, CONSTRAINT c866 FOREIGN KEY zc (a_id) REFERENCES nu_a(id)) ENGINE=InnoDB
+            CREATE TABLE nu_a (id INT PRIMARY KEY);
+            CREATE TABLE nu_b (a_id INT);
+            CREATE TABLE nu_c (a_id INT, CONSTRAINT c866 FOREIGN KEY zc (a_id) REFERENCES nu_a(id))
             """,
             """
-            CREATE TABLE nu_a (id INT PRIMARY KEY) ENGINE=InnoDB;
-            CREATE TABLE nu_b (a_id INT, CONSTRAINT c866 FOREIGN KEY zb (a_id) REFERENCES nu_a(id)) ENGINE=InnoDB;
-            CREATE TABLE nu_c (a_id INT) ENGINE=InnoDB
+            CREATE TABLE nu_a (id INT PRIMARY KEY);
+            CREATE TABLE nu_b (a_id INT, CONSTRAINT c866 FOREIGN KEY zb (a_id) REFERENCES nu_a(id));
+            CREATE TABLE nu_c (a_id INT)
             """)
     }
     
     "bug with ADD FOREIGN KEY referenced to newly created table" in {
         checkTwoDatabases(
             """
-            CREATE TABLE cities (id INT PRIMARY KEY) ENGINE=InnoDB
+            CREATE TABLE cities (id INT PRIMARY KEY)
             """,
             """
-            CREATE TABLE countries (id INT PRIMARY KEY) ENGINE=InnoDB;
+            CREATE TABLE countries (id INT PRIMARY KEY);
             CREATE TABLE cities (id INT PRIMARY KEY, cid INT, CONSTRAINT ccid FOREIGN KEY icid (cid) REFERENCES countries(id))
-                    ENGINE=InnoDB
             """)
     }
     
@@ -233,24 +234,24 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
         dropTable("coins")
         dropTable("collectors")
         
-        execute("CREATE TABLE collectors (id INT PRIMARY KEY) ENGINE=InnoDB")
+        execute("CREATE TABLE collectors (id INT PRIMARY KEY)")
         checkTable(
             "CREATE TABLE coins (coll_id INT," +
-                " CONSTRAINT coin_fk FOREIGN KEY (coll_id) REFERENCES collectors(id)) ENGINE=InnoDB")
+                " CONSTRAINT coin_fk FOREIGN KEY (coll_id) REFERENCES collectors(id))")
     }
     
     "UNIQUE unchanged" in {
         checkTable(
-            "CREATE TABLE bears (id INT, name VARCHAR(10), CONSTRAINT name_uniq UNIQUE(name)) ENGINE=InnoDB")
+            "CREATE TABLE bears (id INT, name VARCHAR(10), CONSTRAINT name_uniq UNIQUE(name))")
     }
     
     "CREATE INDEX" in {
         checkTwoTables(
             """
-            CREATE TABLE movies (id INT, name VARCHAR(100)) ENGINE=InnoDB
+            CREATE TABLE movies (id INT, name VARCHAR(100))
             """,
             """
-            CREATE TABLE movies (id INT, name VARCHAR(100)) ENGINE=InnoDB;
+            CREATE TABLE movies (id INT, name VARCHAR(100));
             CREATE INDEX movies_name_idx ON movies (name)
             """
         )

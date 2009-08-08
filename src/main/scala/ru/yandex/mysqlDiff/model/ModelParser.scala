@@ -14,22 +14,35 @@ case class ModelParser(val context: Context) {
     
     import TableDdlStatement._
     
-    case class ScriptEvaluation(db: DatabaseModel) {
-        def withDb(db: DatabaseModel) = new ScriptEvaluation(db)
+    case class ScriptEvaluation(db: DatabaseModel, specific: ScriptEvaluation.VendorSpecific) {
+        def withDb(db: DatabaseModel) =
+            new ScriptEvaluation(db, specific)
+        def alterTable(name: String, f: TableModel => TableModel) =
+            withDb(db.alterTable(name, f))
+        def withSpecific(specific: ScriptEvaluation.VendorSpecific) =
+            new ScriptEvaluation(db, specific)
+        def mapSpecific(f: ScriptEvaluation.VendorSpecific => ScriptEvaluation.VendorSpecific) =
+            withSpecific(f(specific))
     }
     
     object ScriptEvaluation {
-        def empty = new ScriptEvaluation(new DatabaseModel(Nil))
+        class VendorSpecific
     }
+    
+    protected val emptyVendorSpecific = new ScriptEvaluation.VendorSpecific
+    
+    def emptyScriptEvaluation = new ScriptEvaluation(new DatabaseModel(Nil), emptyVendorSpecific)
     
     def parseModel(text: String): DatabaseModel =
         parseModel(parser.parse(text))
     
-    def parseModel(script: Script): DatabaseModel = {
-        script.ddlStatements.foldLeft(ScriptEvaluation.empty)((sc, stmt) => parseScriptElement(stmt, sc)).db
-    }
+    def parseModel(script: Script): DatabaseModel =
+        eval(script, emptyScriptEvaluation).db
     
-    def parseScriptElement(stmt: DdlStatement, sc: ScriptEvaluation) = stmt match {
+    def eval(script: Script, sc: ScriptEvaluation): ScriptEvaluation =
+        script.statements.foldLeft(sc)((sc, stmt) => evalStmt(stmt, sc))
+    
+    def evalStmt(stmt: ScriptStatement, sc: ScriptEvaluation) = stmt match {
         // XXX: handle IF NOT EXISTS
         case ct: CreateTableStatement => parseCreateTable(ct, sc)
         case DropTableStatement(name, _) => sc.withDb(sc.db.dropTable(name))
@@ -53,7 +66,7 @@ case class ModelParser(val context: Context) {
     
     // lite version
     final def parseCreateTable(ct: CreateTableStatement): TableModel = {
-        parseCreateTable(ct, ScriptEvaluation.empty).db.tables match {
+        parseCreateTable(ct, emptyScriptEvaluation).db.tables match {
             case Seq(table) => table
         }
     }

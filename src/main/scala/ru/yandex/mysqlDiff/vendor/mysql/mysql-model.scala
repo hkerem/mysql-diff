@@ -359,6 +359,21 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
     import script.TableDdlStatement._
     import MysqlTableDdlStatement._
     
+    import ScriptEvaluation.VendorSpecific
+    
+    case class MysqlVendorSpecific(storageEngine: Option[String]) extends VendorSpecific {
+        def withStorageEngine(storageEngine: Option[String]) =
+            new MysqlVendorSpecific(storageEngine)
+    }
+    
+    protected override val emptyVendorSpecific = new MysqlVendorSpecific(None)
+    
+    override def evalStmt(stmt: ScriptStatement, sc: ScriptEvaluation) = stmt match {
+        case MysqlSetStatement(NameExpr("storage_engine"), NameExpr(engine)) =>
+            sc.mapSpecific(vs => vs.asInstanceOf[MysqlVendorSpecific].withStorageEngine(Some(engine)))
+        case _ => super.evalStmt(stmt, sc)
+    }
+    
     // XXX: not sure
     private val foreignKeyIndexExplicit = true
     
@@ -419,22 +434,31 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
     }
     
     override def parseCreateTable(ct: script.CreateTableStatement, sc: ScriptEvaluation): ScriptEvaluation = {
-        ct.columns.flatMap(_.properties).foreach {
-            case f: script.TableDdlStatement.InlineReferences =>
-                // http://dev.mysql.com/doc/refman/5.1/en/create-table.html
-                throw new UnsupportedFeatureException("inline REFERENCES is not supported by MySQL")
-            case _ =>
+        {
+            ct.columns.flatMap(_.properties).foreach {
+                case f: script.TableDdlStatement.InlineReferences =>
+                    // http://dev.mysql.com/doc/refman/5.1/en/create-table.html
+                    throw new UnsupportedFeatureException("inline REFERENCES is not supported by MySQL")
+                case _ =>
+            }
         }
         val scr = super.parseCreateTable(ct, sc)
-        val t = scr.db.table(ct.name)
-        t.options.find(MysqlEngineTableOptionType) match {
-            // XXX: ignore case
-            case Some(MysqlEngineTableOption("InnoDB")) =>
-            case _ =>
-                if (!t.foreignKeys.isEmpty)
-                    throw new UnsupportedFeatureException("FOREIGN KEY is supported only by InnoDB")
+        val scr2 = scr.specific.asInstanceOf[MysqlVendorSpecific].storageEngine match {
+            case Some(engine) =>
+                scr.alterTable(ct.name, t => t.withDefaultOptions(Seq(MysqlEngineTableOption(engine))))
+            case _ => scr
         }
-        scr
+        {
+            val t = scr2.db.table(ct.name)
+            t.options.find(MysqlEngineTableOptionType) match {
+                // XXX: ignore case
+                case Some(MysqlEngineTableOption("InnoDB")) =>
+                case _ =>
+                    if (!t.foreignKeys.isEmpty)
+                        throw new UnsupportedFeatureException("FOREIGN KEY is supported only by InnoDB")
+            }
+        }
+        scr2
     }
     
     protected override def fixDataType(dataType: DataType, column: ColumnModel, table: TableModel) = {

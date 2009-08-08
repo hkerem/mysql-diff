@@ -14,8 +14,8 @@ object MysqlContext extends Context(MysqlDataTypes) {
     override def connectedContext(ds: LiteDataSource) = new MysqlConnectedContext(ds)
 }
 
-class MysqlConnectedContext(override val ds: LiteDataSource)
-    extends ConnectedContext(MysqlContext, ds)
+class MysqlConnectedContext(ds0: LiteDataSource)
+    extends ConnectedContext(MysqlContext, ds0)
 {
     override val jdbcModelExtractor = new MysqlJdbcModelExtractor(this)
     override val metaDao = new MysqlMetaDao(jt)
