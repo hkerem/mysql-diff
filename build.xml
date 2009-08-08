@@ -36,7 +36,7 @@
         <ivy:resolve/>
         -->
         <!-- needed to execute shell scripts with mysql-diff -->
-        <ivy:retrieve pattern="lib/dep/[organisation]-[artifact]-[revision].[ext]" sync="true" conf="test" type="jar"/>
+        <ivy:retrieve pattern="lib/dep/[organisation]-[artifact]-[revision].[ext]" sync="true" conf="test,tools" type="jar"/>
     </target>
     
     <target name="dependencies-report" depends="resolve" description="generate dependencies report">
