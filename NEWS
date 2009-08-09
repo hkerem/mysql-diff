@@ -2,6 +2,7 @@
 
 - 0.3 -
   * MySQL collation comparison support
+  * MySQL COLUMN COMMENT too
   * Handle NULL DEFAULT NULL PRIMARY KEY properly
   * fix standalone jar generation
   * download scala compiler and library from Ivy (no need in scala.home any more)
