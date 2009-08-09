@@ -13,6 +13,7 @@
   * model parser now understands ALTER and DROP
   * Basic PostgreSQL support
   * * ARRAY
+  * * SEQUENCE
   * FOREIGN KEY support
   * parse more DML statements
   * parse floating point constants
