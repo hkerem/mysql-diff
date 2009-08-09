@@ -12,6 +12,13 @@ class PostgresqlParserCombinator(context: Context) extends SqlParserCombinator(c
 
     
     override def sqlExpr: Parser[SqlExpr] = super.sqlExpr <~ opt("::" ~ name)
+    
+    override def dataType: Parser[DataType] =
+        // XXX: multidim arrays
+        super.dataType ~ opt("[" ~ "]") ^^ (_ match {
+            case dt ~ Some(_) => ArrayDataType(dt)
+            case dt ~ None => dt
+        })
 }
 
 object PostgresqlParserCombinatorTests extends SqlParserCombinatorTests(PostgresqlContext) {

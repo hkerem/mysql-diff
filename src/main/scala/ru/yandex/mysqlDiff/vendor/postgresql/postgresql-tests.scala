@@ -68,6 +68,13 @@ object PostgresqlOnlineTests extends OnlineTestsSupport(PostgresqlTestDataSource
             """
         )
     }
+    
+    "ARRAY" in {
+        checkTwoTables(
+            "CREATE TABLE lamps (id INT)",
+            "CREATE TABLE lamps (id INT, zz INT8[])"
+        )
+    }
 }
 
 // vim: set ts=4 sw=4 et:

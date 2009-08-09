@@ -31,6 +31,12 @@ object PostgresqlDataTypes extends DataTypes {
         case x => x
     }
     
+    override def make(name: String, length: Option[Int]): DataType =
+        if (name startsWith "_")
+            ArrayDataType(super.make(name.replaceFirst("^_", "")))
+        else
+            super.make(name, length)
+    
 }
 
 class PostgresqlModelSerializer(context: Context) extends ModelSerializer(context) {

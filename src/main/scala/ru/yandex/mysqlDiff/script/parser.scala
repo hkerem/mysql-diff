@@ -60,7 +60,7 @@ class SqlLexical extends StdLexical {
     )
     
     // All operators must be listed here
-    delimiters += ("(", ")", "=", ",", ";", "=", "!=", "-", "*", ":", "::")
+    delimiters += ("(", ")", "=", ",", ";", "=", "!=", "-", "*", ":", "::", "[", "]")
     
 }
 

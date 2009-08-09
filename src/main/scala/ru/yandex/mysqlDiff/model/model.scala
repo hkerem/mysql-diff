@@ -111,6 +111,7 @@ object DataTypeNameKey
 object DataTypeLengthKey
 object DataTypePrecisionKey
 object DataTypeScaleKey
+object ElementTypeKey
 
 abstract case class DataType(name: String) {
     require(name.toUpperCase == name, "data type name must be upper-case")
@@ -151,12 +152,17 @@ case class NumericDataType(precision: Option[Int], scale: Option[Int]) extends D
         (precision.map(DataTypePrecisionKey -> _) ++ scale.map(DataTypeScaleKey -> _)).toList
 }
 
+case class ArrayDataType(elementType: DataType) extends DataType("ARRAY") {
+    // XXX: does not work for multidim arrays
+    override def customProperties = List(ElementTypeKey -> elementType)
+}
+
 abstract class DataTypes {
     def varchar(length: Int): DataType = make("VARCHAR", Some(length))
     
     def int: DataType
     
-    def make(name: String): DataType = 
+    final def make(name: String): DataType = 
         make(name, None)
     
     def make(name: String, length: Option[Int]): DataType =

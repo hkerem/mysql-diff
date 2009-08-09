@@ -22,6 +22,11 @@ class PostgresqlScriptSerializer(context: Context) extends ScriptSerializer(cont
         case ChangeType(dt) => "TYPE " + serializeDataType(dt)
         case _ => super.serializeAlterColumnOperation(op)
     }
+    
+    override def serializeDataType(dt: DataType) = dt match {
+        case ArrayDataType(et) => serializeDataType(et) + "[]"
+        case _ => super.serializeDataType(dt)
+    }
 }
 
 // vim: set ts=4 sw=4 et:
