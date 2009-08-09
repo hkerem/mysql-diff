@@ -44,6 +44,13 @@ object PostgresqlParserCombinatorTests extends SqlParserCombinatorTests(Postgres
         }
     }
     
+    "numeric constants" in {
+        // from http://www.postgresql.org/docs/current/static/sql-syntax-lexical.html
+        val cs = Seq("42", "3.5", "4.", ".001", "5e2", "5e-2", "1.23e3", "1.925e-3")
+        for (c <- cs)
+            parse(numberValue)(c) // just parse for a while
+    }
+    
     // this test does not work for MySQL
     "parse FK" in {
         val t = parseCreateTable(

@@ -34,10 +34,16 @@ class SqlLexical extends StdLexical {
         case c: Char => c.toString
     }
     
+    private def nl: Parser[Token] =
+        ( opt('-') ~
+            ((rep1(digit) ~ opt('.' ~ rep(digit))) | ('.' ~ rep1(digit))) ~
+            opt('e' ~ opt('-') ~ rep1(digit))
+        ) ^^ { case x => NumericLit(join(x)) }
+    
     /** SQL-specific hacks */
     override def token: Parser[Token] =
         ( '"' ~ rep( chrExcept('"', '\n', EofCh) ) ~ '"' ^^ { case '"' ~ chars ~ '"' => Identifier(chars mkString "") }
-        | opt('-') ~ digit ~ rep(digit) ~ opt('.' ~ digit ~ rep(digit)) ^^ { case x => NumericLit(join(x)) }
+        | nl
         | super.token )
     
     //override def token: Parser[Token] =
@@ -96,6 +102,10 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def nullValue: Parser[SqlValue] = "NULL" ^^^ NullValue
     
     def naturalNumber: Parser[Int] = numericLit ^^ { x => x.toInt }
+    
+    protected def parseBigDecimal(input: String) =
+        if (input endsWith ".") BigDecimal(input + "0")
+        else BigDecimal(input)
     
     def bigDecimal: Parser[BigDecimal] = numericLit ^^ { x => BigDecimal(x) }
     
