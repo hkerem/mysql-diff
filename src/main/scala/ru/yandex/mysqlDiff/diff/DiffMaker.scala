@@ -55,7 +55,6 @@ case class DiffMaker(val context: Context) {
         
         // XXX: just compare all properties
         val comparePropertyTypes = List[ColumnPropertyType](
-            MysqlCommentPropertyType,
             MysqlAutoIncrementPropertyType,
             MysqlCommentPropertyType,
             NullabilityPropertyType,

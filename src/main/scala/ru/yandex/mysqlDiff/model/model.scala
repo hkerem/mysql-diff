@@ -264,6 +264,9 @@ case class ColumnModel(val name: String, val dataType: DataType, properties: Col
     
     def withDefaultProperties(os: Seq[ColumnProperty]) =
         withProperties(this.properties.withDefaultProperties(os))
+    
+    def removeProperty(p: ColumnProperty) =
+        withProperties(this.properties.removeProperty(p))
 
     
     def withDataType(dt: DataType) =

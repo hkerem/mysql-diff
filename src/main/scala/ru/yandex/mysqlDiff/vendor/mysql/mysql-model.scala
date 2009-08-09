@@ -489,6 +489,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
             throw new Exception(
                     "TIMESTAMP without DEFAULT value is prohibited, column " + column.name) // XXX: report table
         super.fixColumn(column, table)
+            .withDefaultProperties(Seq(MysqlComment("")))
     }
 }
 
@@ -552,7 +553,12 @@ object MysqlModelParserTests extends ModelParserTests(MysqlContext) {
             case e: Exception if e.getMessage contains "prohibited" =>
         }
     }
-
+    
+    "COLUMN COMMENT" in {
+        val t = modelParser.parseCreateTableScript("CREATE TABLE bottles (size INT COMMENT 'in cm')")
+        val c = t.column("size")
+        c.properties.find(MysqlCommentPropertyType) must_== Some(MysqlComment("in cm"))
+    }
 }
 
 class MysqlModelSerializer(context: Context) extends ModelSerializer(context) {
@@ -563,6 +569,10 @@ class MysqlModelSerializer(context: Context) extends ModelSerializer(context) {
     
     protected override def splitTable(table: TableModel): (TableModel, Seq[TableExtra]) =
         (table, Nil)
+    
+    override def serializeColumn(column: ColumnModel) =
+        // no need to serialize empty comment
+        super.serializeColumn(column.removeProperty(MysqlComment("")))
     
 }
 

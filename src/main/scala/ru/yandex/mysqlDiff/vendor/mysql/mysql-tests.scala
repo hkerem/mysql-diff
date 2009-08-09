@@ -257,6 +257,12 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
         )
     }
     
+    "COLUMN COMMENT" in {
+        checkTwoTables(
+            "CREATE TABLE bottles (height INT COMMENT 'in cm')",
+            "CREATE TABLE bottles (height INT)"
+        )
+    }
 }
 
 object MysqlDdlTemplateTests extends DdlTemplateTests(MysqlTestDataSourceParameters.connectedContext) {

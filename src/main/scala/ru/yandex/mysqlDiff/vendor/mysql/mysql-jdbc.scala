@@ -169,7 +169,7 @@ class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
                         
                 val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
                 
-                val props = Seq[ColumnProperty]() ++ defaultValue
+                val props = Seq[ColumnProperty]() ++ defaultValue ++ Some(MysqlComment(mysqlColumn.columnComment))
                 base.overrideProperties(props).withDataType(dataType)
             }
         }
@@ -397,6 +397,15 @@ object MysqlJdbcModelExtractorTests
             case _ => false
         }
     }
+    
+    "COLUMN COMMENT" in {
+        dropTable("beers")
+        execute("CREATE TABLE beers (name VARCHAR(100) COMMENT 'short name')")
+        val t = extractTable("beers")
+        val c = t.column("name")
+        c.properties.find(MysqlCommentPropertyType) must_== Some(MysqlComment("short name"))
+    }
+
 }
 
 // vim: set ts=4 sw=4 et:
