@@ -80,7 +80,13 @@ class NumberValue(val value: BigDecimal) extends SqlValue {
 object NumberValue {
     def apply(value: BigDecimal): NumberValue = new NumberValue(value)
     def apply(value: Int): NumberValue = apply(BigDecimal(value))
-    def apply(value: String): NumberValue = apply(BigDecimal(value))
+    def apply(value: String): NumberValue =
+        try {
+            apply(BigDecimal(value))
+        } catch {
+            case e: java.lang.NumberFormatException =>
+                throw new MysqlDiffException("cannot parse '"+ value +"' as number: "+ e, e)
+        }
     // XXX: bad idea
     def unapply(nv: NumberValue): Option[Int] = Some(nv.value.intValue)
 }
