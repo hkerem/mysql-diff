@@ -74,7 +74,7 @@ class NumberValue(val value: BigDecimal) extends SqlValue {
             value.compare(that.asInstanceOf[NumberValue].value) == 0
         } else false
     
-    override def toString = value.toString
+    override def toString = "NumberValue("+ value.toString +")"
 }
 
 object NumberValue {

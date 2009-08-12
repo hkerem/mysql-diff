@@ -184,6 +184,11 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             "CREATE TABLE boolean_with_default_true (available BOOLEAN NOT NULL default 1)")
     }
     
+    "BIT" in {
+        checkTable(
+            """CREATE TABLE stud (aud BIT NOT NULL DEFAULT '\0')""")
+    }
+    
     "DECIMAL DEFAULT VALUE" in {
         checkTable("CREATE TABLE decimal_dv (id INT, deci DECIMAL(10, 6) DEFAULT '0.000000')")
     }

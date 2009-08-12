@@ -3,6 +3,8 @@ package ru.yandex.mysqlDiff.vendor.mysql
 import model._
 import script._
 
+import Implicits._
+
 class MysqlLexical extends script.SqlLexical {
     import scala.util.parsing.input.CharArrayReader.EofCh
     
@@ -26,6 +28,9 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
 
     import MysqlTableDdlStatement._
     import TableDdlStatement._
+    
+    override def parseStringLit(input: String) =
+        super.parseStringLit(input).unescapeJava
     
     def enum: Parser[MysqlEnumDataType] = "ENUM (" ~> rep1sep(stringValue, ",") <~ ")" ^^
         { case s => MysqlEnumDataType(s.map(_.value)) }
@@ -303,6 +308,10 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
     "hex number" in {
         parse(numberValue)("0x100") must_== NumberValue(0x100)
         parse(numberValue)("0xabCDE") must_== NumberValue(0xabcde)
+    }
+    
+    "string constant with escapes" in {
+        parse(stringConstant)("'a\\tb'") must_== "a\tb"
     }
 }
 

@@ -10,6 +10,7 @@ object MysqlContext extends Context(MysqlDataTypes) {
     override val modelParser = new MysqlModelParser(this)
     override val modelSerializer = new MysqlModelSerializer(this)
     override val scriptSerializer = new MysqlScriptSerializer(this)
+    override val diffMaker = new MysqlDiffMaker(this)
     override val diffSerializer = new MysqlDiffSerializer(this)
     override def connectedContext(ds: LiteDataSource) = new MysqlConnectedContext(ds)
 }

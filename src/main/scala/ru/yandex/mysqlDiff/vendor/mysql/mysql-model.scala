@@ -3,6 +3,8 @@ package ru.yandex.mysqlDiff.vendor.mysql
 import model._
 import script._
 
+case class MysqlBitSetValue(value: Long) extends SqlValue
+
 object DataTypeValuesKey
 
 // XXX: character set, collation
@@ -137,6 +139,22 @@ object MysqlDataTypes extends DataTypes {
         case dt => dt
     }
     
+    def castToBitSet(value: SqlValue) = value match {
+        case b: MysqlBitSetValue => b
+        case s: StringValue =>
+            var r = 0L
+            for (c <- s.value) {
+                for (i <- 0 until 8) {
+                    val bit = (c >> (7 - i)) & 1;
+                    r <<= 1
+                    r |= bit
+                }
+            }
+            MysqlBitSetValue(r)
+        case n: NumberValue => MysqlBitSetValue(n.value.longValue)
+        case BooleanValue(true) => MysqlBitSetValue(1)
+        case BooleanValue(false) => MysqlBitSetValue(0)
+    }
 }
 
 object MysqlDataTypesTests extends org.specs.Specification {
@@ -157,6 +175,10 @@ object MysqlDataTypesTests extends org.specs.Specification {
         val dt = new MysqlCharacterDataType("VARCHAR", Some(100),
                 Some("utf8"), Some("utf8_general_ci"))
         dataTypes.equivalent(dt, dt) must beTrue
+    }
+    
+    "castToBitSet" in {
+        MysqlDataTypes.castToBitSet(StringValue("\012")) must_== MysqlBitSetValue(012)
     }
 }
 
@@ -479,7 +501,18 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         // http://dev.mysql.com/doc/refman/5.0/en/boolean-values.html
         case BooleanValue(true) => NumberValue(1)
         case BooleanValue(false) => NumberValue(0)
-        case StringValue(s) if dataTypes.isAnyNumber(dt.name) => NumberValue(s)
+        case v: SqlValue if dt.name == "BIT" =>
+            MysqlDataTypes.castToBitSet(v)
+        case v @ StringValue(s) if dt.name == "BIT" || dt.name == "TINYINT" =>
+            MysqlDataTypes.castToBitSet(v)
+        case StringValue(s) if dataTypes.isAnyNumber(dt.name) =>
+            try {
+                NumberValue(s)
+            } catch {
+                case e: Exception =>
+                    throw new MysqlDiffException(
+                        "cannot parse string value '"+ s +"' as number for type " + dt, e)
+            }
         case x => x
     }
     

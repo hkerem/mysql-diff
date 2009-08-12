@@ -6,6 +6,13 @@ import diff._
 
 import Implicits._
 
+class MysqlDiffMaker(context: Context) extends DiffMaker(context) {
+    override def defaultValuesEquivalent12(a: SqlExpr, b: SqlExpr) = (a, b) match {
+        case (MysqlBitSetValue(v), NumberValue(w)) => v == w.longValue
+        case _ => super.defaultValuesEquivalent12(a, b)
+    }
+}
+
 class MysqlDiffSerializer(context: Context) extends DiffSerializer(context) {
     import MysqlTableDdlStatement._
     

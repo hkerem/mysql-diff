@@ -118,7 +118,7 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
             columns.read(parseTableColumn _)
         }
         
-        def extractTable(tableName: String): TableModel = {
+        def extractTable(tableName: String): TableModel = try {
             require(tableName.length > 0)
 
             val columnsList = extractTableColumns(tableName)
@@ -136,6 +136,9 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
             
             modelParser.fixTable(
                 new TableModel(tableName, columnsList.toList, indexes ++ pk ++ fks, getTableOptions(tableName)))
+        } catch {
+            case e: Exception =>
+                throw new MysqlDiffException("failed to extract table "+ tableName +" from DB: " + e, e)
         }
         
         def extractSequence(sequenceName: String): SequenceModel = {

@@ -95,8 +95,11 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         // trick: "CREATE TABLE" is treated almost as "CREATE" ~ "TABLE"
         keywordSeq(chars.split(" "))
     
+    protected def parseStringLit(input: String) =
+        input.replaceFirst("^[\"']", "").replaceFirst("[\"']$", "")
+    
     def stringConstant: Parser[String] =
-        stringLit ^^ { x => x.replaceFirst("^[\"']", "").replaceFirst("[\"']$", "") }
+        stringLit ^^ { x => parseStringLit(x) }
     
     // should be NullValue
     def nullValue: Parser[SqlValue] = "NULL" ^^^ NullValue

@@ -18,23 +18,22 @@ import Implicits._
 /**
  * Tool that compares two database models.
  */
-case class DiffMaker(val context: Context) {
+class DiffMaker(context: Context) {
     import context._
-
+    
+    protected def defaultValuesEquivalent12(a: SqlExpr, b: SqlExpr) = (a, b) match {
+        case (NumberValue(x), StringValue(y)) if x.toString == y => true
+        // XXX: should only for date and time types
+        case (StringValue("0000-00-00 00:00:00"), StringValue("0000-00-00")) => true
+        case (StringValue("0000-00-00 00:00:00"), NumberValue(0)) => true
+        case _ => false
+    }
     
     /**
      * Are the values equivalent from DB point of view. For example, 1 and '1' are equivalent.
      */
     def defaultValuesEquivalent(a: SqlExpr, b: SqlExpr) = {
-        def e1(a: SqlExpr, b: SqlExpr) = (a, b) match {
-            case (NumberValue(x), StringValue(y)) if x.toString == y => true
-            // XXX: should only for date and time types
-            case (StringValue("0000-00-00 00:00:00"), StringValue("0000-00-00")) => true
-            case (StringValue("0000-00-00 00:00:00"), NumberValue(0)) => true
-            case _ => false
-        }
-
-        a == b || e1(a, b) || e1(b, a)
+        a == b || defaultValuesEquivalent12(a, b) || defaultValuesEquivalent12(b, a)
     }
     
     def dataTypesEquivalent(a: DataType, b: DataType) =
