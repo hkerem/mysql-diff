@@ -175,6 +175,9 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
     
         def extract(): DatabaseModel =
             new DatabaseModel(extractTables() ++ extractSequences())
+
+        def extract(ignoreTableWithNameP: String => Boolean): DatabaseModel =
+            new DatabaseModel(extractTables(ignoreTableWithNameP) ++ extractSequences())
         
         private val cachedTableNames = new Lazy(metaDao.findTableNames(currentCatalog, currentSchema))
         def tableNames = cachedTableNames.get
@@ -187,14 +190,18 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
         def getTableOptions(tableName: String): Seq[TableOption] =
             cachedTablesOptions.get.find(_._1 == tableName).get._2
         
+        def extractTables(ignoreTableWithNameP: String => Boolean): Seq[TableModel] = {
+            tableNames.filter(!ignoreTableWithNameP(_)).map(extractTable _)
+        }
+
         def extractTables(): Seq[TableModel] = {
-            tableNames.map(extractTable _)
+            val ignoreNothingP = (name: String) => false
+            extractTables(ignoreNothingP)
         }
         
         def extractSequences(): Seq[SequenceModel] = {
             sequenceNames.map(extractSequence _)
         }
-    
     }
     
     protected def useParserToParseDefaultValue = true
@@ -250,7 +257,8 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
     def extract(): DatabaseModel =
         newAllTablesSchemaExtractor().extract()
     
-
+    def extract(ignoreTableWithNameP: String => Boolean): DatabaseModel =
+        newAllTablesSchemaExtractor().extract(ignoreTableWithNameP)
 }
 
 class JdbcModelExtractorTests(connectedContext: ConnectedContext)
@@ -273,6 +281,18 @@ class JdbcModelExtractorTests(connectedContext: ConnectedContext)
     "dbNameFromUrl" in {
         JdbcModelExtractor.dbNameFromUrl(
             "jdbc:mysql://localhost:3306/dev-supersaveit?user=web") must_== "dev-supersaveit"
+    }
+
+    import ddlTemplate._
+
+    "ignore tables when extracting" in {
+        recreateTable("CREATE TABLE a (aa INT)")
+        recreateTable("CREATE TABLE b (bb INT)")
+        recreateTable("CREATE TABLE c (cc INT)")
+        val tableNames = jdbcModelExtractor.extract((name: String) => { name == "c"}).tables.map(_.name)
+        tableNames.contains("c") must_== false
+        tableNames.contains("a") must_== true
+        tableNames.contains("b") must_== true
     }
 }
 
