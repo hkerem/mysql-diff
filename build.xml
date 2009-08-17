@@ -101,7 +101,7 @@
         </sequential>
     </macrodef>
     
-    <target name="do-run-test">
+    <target name="do-run-test" depends="init">
         <do-run-test test="${test.name}"/>
     </target>
     
