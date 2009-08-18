@@ -610,14 +610,13 @@ case class DatabaseModel(decls: Seq[DatabaseDecl])
         dropSequenceIfExists(name)
     }
 
-    def skipTablesByCondition(decls: Seq[DatabaseDecl], skipCondition: TableModel => Boolean) =
-        decls.filter {
-            case decl: TableModel => !skipCondition(decl)
+    def filterTables(tableP: TableModel => Boolean) =
+        new DatabaseModel(decls.filter {
+            case decl: TableModel => tableP(decl)
             case _ => true
-        }
+        })
 
-    def dropTableIfExists(name: String) =
-        new DatabaseModel(skipTablesByCondition(decls, (table: TableModel) => table.name == name))
+    def dropTableIfExists(name: String) = filterTables(_.name != name)
 
     def dropSequenceIfExists(name: String) =
         // XXX: check it is sequence
