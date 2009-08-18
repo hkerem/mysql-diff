@@ -176,8 +176,8 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
         def extract(): DatabaseModel =
             new DatabaseModel(extractTables() ++ extractSequences())
 
-        def extract(ignoreTableWithNameP: String => Boolean): DatabaseModel =
-            new DatabaseModel(extractTables(ignoreTableWithNameP) ++ extractSequences())
+        def extractWithTableNamesMatching(tableNameP: String => Boolean): DatabaseModel =
+            new DatabaseModel(extractTablesWithNamesMatching(tableNameP) ++ extractSequences())
         
         private val cachedTableNames = new Lazy(metaDao.findTableNames(currentCatalog, currentSchema))
         def tableNames = cachedTableNames.get
@@ -190,13 +190,13 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
         def getTableOptions(tableName: String): Seq[TableOption] =
             cachedTablesOptions.get.find(_._1 == tableName).get._2
         
-        def extractTables(ignoreTableWithNameP: String => Boolean): Seq[TableModel] = {
-            tableNames.filter(!ignoreTableWithNameP(_)).map(extractTable _)
+        def extractTablesWithNamesMatching(tableNameP: String => Boolean): Seq[TableModel] = {
+            tableNames.filter(tableNameP).map(extractTable _)
         }
 
         def extractTables(): Seq[TableModel] = {
-            val ignoreNothingP = (name: String) => false
-            extractTables(ignoreNothingP)
+            val trueP = (name: String) => true
+            extractTablesWithNamesMatching(trueP)
         }
         
         def extractSequences(): Seq[SequenceModel] = {
@@ -257,8 +257,8 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
     def extract(): DatabaseModel =
         newAllTablesSchemaExtractor().extract()
     
-    def extract(ignoreTableWithNameP: String => Boolean): DatabaseModel =
-        newAllTablesSchemaExtractor().extract(ignoreTableWithNameP)
+    def extractWithTableNamesMatching(tableNameP: String => Boolean): DatabaseModel =
+        newAllTablesSchemaExtractor().extractWithTableNamesMatching(tableNameP)
 }
 
 class JdbcModelExtractorTests(connectedContext: ConnectedContext)
@@ -289,7 +289,7 @@ class JdbcModelExtractorTests(connectedContext: ConnectedContext)
         recreateTable("CREATE TABLE a (aa INT)")
         recreateTable("CREATE TABLE b (bb INT)")
         recreateTable("CREATE TABLE c (cc INT)")
-        val tableNames = jdbcModelExtractor.extract((name: String) => { name == "c"}).tables.map(_.name)
+        val tableNames = jdbcModelExtractor.extractWithTableNamesMatching(_ != "c").tables.map(_.name)
         tableNames.contains("c") must_== false
         tableNames.contains("a") must_== true
         tableNames.contains("b") must_== true
