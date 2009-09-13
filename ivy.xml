@@ -27,8 +27,11 @@
         <!--
             Specs is a very nice testing library: http://code.google.com/p/specs/
             Unfortunately, author does not own specs.org domain. Hope, package name will be renamed soon.
+        <dependency org="org.scala-tools.testing.tmp" name="specs" rev="1.6.0" conf="compile->master">
         -->
-        <dependency org="org.scala-tools.testing" name="specs" rev="1.4.3" conf="compile->master"/>
+        <dependency org="org.scala-tools.testing.tmp" name="specs" rev="1.6.0" conf="compile->*">
+            <artifact name="specs" type="jar" url="http://specs.googlecode.com/files/specs-1.6.0.jar"/>
+        </dependency>
         
         <dependency org="org.slf4j" name="slf4j-api" rev="1.5.6" conf="compile->*"/>
         <dependency org="org.slf4j" name="slf4j-simple" rev="1.5.6" conf="runtime->*"/>
@@ -51,6 +54,8 @@
         
         <exclude org="xerces"/>
         <exclude org="xml-apis"/>
+        
+        <exclude org="org.scala-tools.testing"/>
     </dependencies>
         
 </ivy-module>

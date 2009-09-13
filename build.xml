@@ -11,7 +11,7 @@
     <echo>java.home=${java.home} (java version must be at least 1.6)</echo>
     <echo>user.home=${user.home}</echo>
     
-    <property name="ivy.version" value="2.0.0"/>
+    <property name="ivy.version" value="2.1.0-rc2"/>
     
     <available property="ivy.available" file="lib/ivy/ivy-${ivy.version}.jar"/>
     <target name="download-ivy" unless="ivy.available">
