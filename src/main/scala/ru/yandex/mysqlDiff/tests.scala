@@ -19,7 +19,7 @@ object OfflineTestsSelector extends TestsSelector {
     override def includeOnline = false
 }
 
-class SomeTests(testsSelector: TestsSelector) extends org.specs.Specification {
+class SomeTests(testsSelector: TestsSelector) extends org.specs.Specification with CheckJavaVersion {
     include(script.SqlParserCombinatorTests)
     include(model.ModelTests)
     include(model.ModelParserTests)
@@ -32,6 +32,7 @@ class SomeTests(testsSelector: TestsSelector) extends org.specs.Specification {
     include(util.CollectionTests)
     include(util.StringTests)
     include(util.getopt.GetoptTests)
+    include(util.SystemInfoTests)
 }
 
 object Tests extends SomeTests(AllTestsSelector)

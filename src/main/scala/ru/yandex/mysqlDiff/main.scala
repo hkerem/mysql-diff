@@ -15,6 +15,12 @@ import util.getopt._
 
 import Implicits._
 
+trait CheckJavaVersion {
+    if (util.SystemInfo.javaVersionMajor < 6)
+        throw new MysqlDiffException(
+            "JDK version must be at least 6 to run mysql-diff, have " + util.SystemInfo.javaVersion)
+}
+
 class Utils(context: Context) {
     import context._
     
@@ -39,7 +45,7 @@ class Utils(context: Context) {
     }
 }
 
-abstract class MainSupport {
+abstract class MainSupport extends CheckJavaVersion {
     val helpBanner: String
     
     val verboseOpt = getopt.Opt("verbose", false)
