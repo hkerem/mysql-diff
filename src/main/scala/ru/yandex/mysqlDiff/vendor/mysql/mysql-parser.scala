@@ -112,7 +112,7 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     
     // undocumented MySQL
     override def pkModel: Parser[PrimaryKeyModel] =
-        (constraint <~ "PRIMARY KEY") ~ opt(name) ~ indexColumnList ^^
+        (constraint <~ "PRIMARY KEY" <~ opt("USING BTREE")) ~ opt(name) ~ indexColumnList ^^
             { case n1 ~ n2 ~ nameList =>
                 if (n1.isDefined && n2.isDefined)
                     throw new MysqlDiffException("PRIMARY KEY name specified twice")
@@ -237,6 +237,12 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         val t = parseCreateTable(
             "CREATE TABLE df (id INT, PRIMARY KEY pk (id))")
         t.primaryKeys must beLike { case Seq(_) => true; case _ => false }
+    }
+    
+    "PRIMARY KEY USNIG BTREE" in {
+        // just check parsed
+        val t = parseCreateTable("CREATE TABLE fg (id INT, PRIMARY KEY using BTREE (id))")
+        ()
     }
     
     "quotes in identifiers" in {
