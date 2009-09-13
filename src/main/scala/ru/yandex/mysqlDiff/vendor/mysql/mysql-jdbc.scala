@@ -101,6 +101,16 @@ class MysqlMetaDao(jt: JdbcTemplate) extends MetaDao(jt) {
         val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? AND table_name = ?"
         query(q, schema, tableName).seq(mapColumnsRow _)
     }
+    
+    protected override def mapIndexInfoRowToIndexColumn(row: IndexInfoRow) =
+        IndexColumn(row.columnName, row.ascOrDesc.getOrElse(true), row.vendorSpecific.asInstanceOf[Option[Int]])
+
+    protected override def findIndexInfoRows(catalog: String, schema: String, tableName: String) =
+        jt.query("SHOW INDEX FROM " + tableName).seq { rs =>
+            IndexInfoRow(rs.getString("KEY_NAME"), rs.getBoolean("NON_UNIQUE"),
+                rs.getInt("SEQ_IN_INDEX"), rs.getString("COLUMN_NAME"),
+                mapAscOrDesc(rs.getString("COLLATION")), rs.getIntOption("SUB_PART"))
+        }
 
 }
 
@@ -234,6 +244,18 @@ object MysqlJdbcModelExtractorTests
         val firstLastK = table.uniqueKeyWithColumns("first_name", "last_name")
         
         val ageLastK = table.indexWithColumns("age", "last_name")
+        ()
+    }
+    
+    "INDEX column part" in {
+        ddlTemplate.recreateTable(
+            "CREATE TABLE index_c_p (c1 VARCHAR(100), c2 VARCHAR(50), INDEX ind (c1(10), c2)) ENGINE=InnoDB")
+        val table = extractTable("index_c_p")
+        table.indexes must haveSize(1)
+        val index = table.indexes.first
+        index.columns must haveSize(2)
+        index.columns(0).length must_== Some(10)
+        index.columns(1).length must_== None
         ()
     }
     

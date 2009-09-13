@@ -74,33 +74,36 @@ class MetaDao(jt: JdbcTemplate) {
         // not all databases support sequences
         Seq()
     
+    protected def findIndexInfoRows(catalog: String, schema: String, tableName: String): Seq[IndexInfoRow] =
+        execute { conn =>
+            val rs = conn.getMetaData.getIndexInfo(catalog, schema, tableName, false, false)
+            
+            rs.read { rs =>
+                IndexInfoRow(rs.getString("INDEX_NAME"), rs.getBoolean("NON_UNIQUE"),
+                    rs.getInt("ORDINAL_POSITION"), rs.getString("COLUMN_NAME"),
+                    mapAscOrDesc(rs.getString("ASC_OR_DESC")), null)
+            }
+        }
+    
+    protected def mapIndexInfoRowToIndexColumn(row: IndexInfoRow) =
+        IndexColumn(row.columnName)
+    
     // regular indexes
-    def findIndexes(catalog: String, schema: String, tableName: String): Seq[UniqueOrIndexModel] = execute { conn =>
-        val rs = conn.getMetaData.getIndexInfo(catalog, schema, tableName, false, false)
+    def findIndexes(catalog: String, schema: String, tableName: String): Seq[UniqueOrIndexModel] = {
         
-        case class R(indexName: String, nonUnique: Boolean, ordinalPosition: Int,
-                columnName: String, ascOrDesc: String)
-        {
-            def unique = !nonUnique
-        }
-        
-        val r = rs.read { rs =>
-            R(rs.getString("INDEX_NAME"), rs.getBoolean("NON_UNIQUE"), rs.getInt("ORDINAL_POSITION"),
-                    rs.getString("COLUMN_NAME"), rs.getString("ASC_OR_DESC"))
-        }
-        
+        val r = findIndexInfoRows(catalog, schema, tableName)
         val indexNames = r.map(_.indexName).unique.toSeq
         
         indexNames.map { indexName =>
             val rowsWithName = r.filter(_.indexName == indexName)
-            val rows = stableSort(rowsWithName, (r: R) => r.ordinalPosition)
+            val rows = stableSort(rowsWithName, (r: IndexInfoRow) => r.ordinalPosition)
             
             val unique = rows.first.unique
             val columnNames = rows.map(_.columnName)
             
             // XXX: asc, length for IndexColumn
-            if (unique) new UniqueKeyModel(Some(indexName), columnNames.map(IndexColumn(_)))
-            else new IndexModel(Some(indexName), columnNames.map(IndexColumn(_)), true)
+            if (unique) new UniqueKeyModel(Some(indexName), rows.map(mapIndexInfoRowToIndexColumn _))
+            else new IndexModel(Some(indexName), rows.map(mapIndexInfoRowToIndexColumn _), true)
         }
     }
     
@@ -192,6 +195,18 @@ object MetaDao {
             translatePolicy(rs.getInt("UPDATE_RULE")), translatePolicy(rs.getInt("DELETE_RULE")),
             rs.getStringOption("FK_NAME"), rs.getStringOption("PK_NAME"),
             translateDeferrability(rs.getInt("DEFERRABILITY")))
+    }
+    
+    def mapAscOrDesc(string: String) = string match {
+        case "A" => Some(true)
+        case "D" => Some(false)
+        case null => None
+    }
+    
+    case class IndexInfoRow(indexName: String, nonUnique: Boolean, ordinalPosition: Int,
+            columnName: String, ascOrDesc: Option[Boolean], vendorSpecific: Any)
+    {
+        def unique = !nonUnique
     }
     
 }
