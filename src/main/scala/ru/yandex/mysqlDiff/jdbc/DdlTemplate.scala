@@ -8,8 +8,16 @@ class DdlTemplate(connectedContext: ConnectedContext) {
     import connectedContext._
     import context._
     
+    private def executeRaw(s: String) =
+        try {
+            jt.execute(s)
+        } catch {
+            case e: Exception =>
+                throw new MysqlDiffException("failed to execute script: "+ e +": "+ s, e)
+        }
+    
     def execute(s: ScriptElement) =
-        jt.execute(scriptSerializer.serialize(s))
+        executeRaw(scriptSerializer.serialize(s))
     
     def executeScript(s: String) = {
         val trimmed = s.replaceFirst(";\\s*$", "")
@@ -17,7 +25,7 @@ class DdlTemplate(connectedContext: ConnectedContext) {
             for (e <- parser.parse(trimmed).statements)
                 execute(e)
         } else {
-            jt.execute(trimmed)
+            executeRaw(trimmed)
         }
     }
     
