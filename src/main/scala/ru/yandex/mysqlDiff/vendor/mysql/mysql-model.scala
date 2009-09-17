@@ -108,7 +108,8 @@ case class MysqlTextDataType(override val name: String, binary: Option[Boolean],
 
 object MysqlDataTypes extends DataTypes {
     val numericDataTypeNames = Seq(
-        "TINYINT", "SMALLINT", "MEDIUMINT", "INT", "INTEGER", "BIGINT",
+        // not sure about bit
+        "BIT", "TINYINT", "SMALLINT", "MEDIUMINT", "INT", "INTEGER", "BIGINT",
         "REAL", "DOUBLE", "FLOAT", "DECIMAL", "NUMERIC")
     
     val characterDataTypeNames = Seq("CHAR", "VARCHAR")

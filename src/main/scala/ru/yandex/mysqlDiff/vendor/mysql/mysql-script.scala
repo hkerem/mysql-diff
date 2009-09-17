@@ -23,6 +23,7 @@ class MysqlScriptSerializer(context: Context) extends ScriptSerializer(context) 
     override def quoteName(name: String) = "`" + name + "`"
     
     override def serializeValue(value: SqlValue) = value match {
+        case MysqlBitSetValue(0) => "b'0'"
         case MysqlBitSetValue(n) =>
             var r = n
             var s = "b'"

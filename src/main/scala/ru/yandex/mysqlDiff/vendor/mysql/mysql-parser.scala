@@ -20,6 +20,7 @@ class MysqlLexical extends script.SqlLexical {
         | '@' ~ identChar ~ rep( identChar | digit ) ^^ { x => MysqlVariable(join(x)) }
         | '`' ~ rep( chrExcept('`', '\n', EofCh) ) ~ '`' ^^ { case '`' ~ chars ~ '`' => Identifier(chars mkString "") }
         | '"' ~ rep( chrExcept('"', '\n', EofCh) ) ~ '"' ^^ { case '"' ~ chars ~ '"' => StringLit(chars mkString "") }
+        | 'b' ~ '\'' ~ rep(digit) ~ '\'' ^^ { case x => NumericLit(join(x)) }
         | super.token )
 }
 
@@ -79,12 +80,14 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     
     private def parseInt(x: String) =
         if (x startsWith "0x") Integer.parseInt(x.substring(2), 16)
+        else if (x startsWith "b") Integer.parseInt(x.substring(2, x.length - 1), 2)
         else x.toInt
     
     override def naturalNumber: Parser[Int] = numericLit ^^ { case x => parseInt(x) }
     
     override def bigDecimal: Parser[BigDecimal] = numericLit ^^ {
         case x if x startsWith "0x" => BigDecimal(parseInt(x))
+        case x if x startsWith "b" => BigDecimal(parseInt(x))
         case x => BigDecimal(x)
     }
     
@@ -314,6 +317,10 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
     "hex number" in {
         parse(numberValue)("0x100") must_== NumberValue(0x100)
         parse(numberValue)("0xabCDE") must_== NumberValue(0xabcde)
+    }
+    
+    "bitmask" in {
+        parse(numberValue)("b'1010'") must_== NumberValue(10)
     }
     
     "string constant with escapes" in {

@@ -420,6 +420,14 @@ object MysqlJdbcModelExtractorTests
         }
     }
     
+    "BIT DEFAULT b'0'" in {
+        ddlTemplate.recreateTable(
+            "CREATE TABLE bit_with_default_0 (aux BIT NOT NULL DEFAULT b'0') ENGINE=InnoDB CHARSET=latin1")
+        val t = extractTable("bit_with_default_0")
+        val c = t.column("aux")
+        c.defaultValue must_== Some(NumberValue(0))
+    }
+    
     "COLUMN COMMENT" in {
         dropTable("beers")
         execute("CREATE TABLE beers (name VARCHAR(100) COMMENT 'short name')")
