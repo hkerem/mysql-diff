@@ -394,6 +394,11 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
     override def evalStmt(stmt: ScriptStatement, sc: ScriptEvaluation) = stmt match {
         case MysqlSetStatement(NameExpr("storage_engine"), NameExpr(engine)) =>
             sc.mapSpecific(vs => vs.asInstanceOf[MysqlVendorSpecific].withStorageEngine(Some(engine)))
+        // ignore for now
+        case MysqlSetStatement(NameExpr(_), _) =>
+            sc
+        case MysqlSetStatement(VariableExpr(_), _) =>
+            sc
         case _ => super.evalStmt(stmt, sc)
     }
     

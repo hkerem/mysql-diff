@@ -17,7 +17,7 @@ class MysqlLexical extends script.SqlLexical {
     
     override def token: Parser[Token] =
         ( '0' ~ 'x' ~ rep1(hexDigit) ^^ { case o ~ x ~ b => NumericLit("0x" + b.mkString("")) }
-        | '@' ~ identChar ~ rep( identChar | digit ) ^^ { x => MysqlVariable(join(x)) }
+        | '@' ~ opt('@') ~ identChar ~ rep( identChar | digit ) ^^ { x => MysqlVariable(join(x)) }
         | '`' ~ rep( chrExcept('`', '\n', EofCh) ) ~ '`' ^^ { case '`' ~ chars ~ '`' => Identifier(chars mkString "") }
         | '"' ~ rep( chrExcept('"', '\n', EofCh) ) ~ '"' ^^ { case '"' ~ chars ~ '"' => StringLit(chars mkString "") }
         | 'b' ~ '\'' ~ rep(digit) ~ '\'' ^^ { case x => NumericLit(join(x)) }
