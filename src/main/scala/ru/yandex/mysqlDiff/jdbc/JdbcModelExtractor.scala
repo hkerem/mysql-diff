@@ -138,7 +138,7 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
                 new TableModel(tableName, columnsList.toList, indexes ++ pk ++ fks, getTableOptions(tableName)))
         } catch {
             case e: Exception =>
-                throw new MysqlDiffException("failed to extract table "+ tableName +" from DB: " + e, e)
+                throw new MysqlDiffException("failed to extract table "+ tableName +" from DB: "+ e, e)
         }
         
         def extractSequence(sequenceName: String): SequenceModel = {
