@@ -113,7 +113,24 @@ class MysqlMetaDao(jt: JdbcTemplate) extends MetaDao(jt) {
                 rs.getInt("SEQ_IN_INDEX"), rs.getString("COLUMN_NAME"),
                 mapAscOrDesc(rs.getString("COLLATION")), rs.getIntOption("SUB_PART"))
         }
-
+    
+    protected override def mapPrimaryKeyInfoRowToPrimaryKeyColumn(row: PrimaryKeyInfoRow) = {
+        // XXX: primary key should not store indexing info, implicit (or explicit) index should
+        val (ascOrDesc, subPart) =
+            row.vendorSpecific.asInstanceOf[(Option[Boolean], Option[Int])]
+        IndexColumn(row.columnName, ascOrDesc.getOrElse(true), subPart)
+    }
+    
+    protected override def findPrimaryKeyInfoRows(catalog: String, schema: String, tableName: String) =
+        (jt.query("SHOW INDEX FROM " + tableName).seq { rs =>
+            val keyName = rs.getString("KEY_NAME")
+            keyName match {
+                case "PRIMARY" =>
+                    Some(PrimaryKeyInfoRow(keyName, rs.getString("COLUMN_NAME"), rs.getInt("SEQ_IN_INDEX"),
+                        (mapAscOrDesc(rs.getString("COLLATION")), rs.getIntOption("SUB_PART"))))
+                case _ => None
+            }
+        }).flatMap((x: Option[PrimaryKeyInfoRow]) => x)
 }
 
 object MysqlMetaDaoTests extends DbMetaDaoTests(vendor.mysql.MysqlTestDataSourceParameters.ds) {
@@ -259,6 +276,13 @@ object MysqlJdbcModelExtractorTests
         index.columns(0).length must_== Some(10)
         index.columns(1).length must_== None
         ()
+    }
+    
+    "PRIMARY KEY INDEX column part" in {
+        ddlTemplate.recreateTable(
+            "CREATE TABLE pk_lp_extr (name VARCHAR(20), PRIMARY KEY (name(3)))")
+        val table = extractTable("pk_lp_extr")
+        table.primaryKey.get.columns.first must_== IndexColumn("name", true, Some(3))
     }
     
     "PK is not in indexes list" in {

@@ -132,7 +132,7 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
             
             // MySQL adds PK to indexes, so exclude
             val indexes = getIndexes(tableName)
-                    .filter(pk.isEmpty || _.columns.toList != pk.get.columns.toList)
+                    .filter(pk.isEmpty || _.columns.map(_.name).toList != pk.get.columns.map(_.name).toList)
             
             modelParser.fixTable(
                 new TableModel(tableName, columnsList.toList, indexes ++ pk ++ fks, getTableOptions(tableName)))

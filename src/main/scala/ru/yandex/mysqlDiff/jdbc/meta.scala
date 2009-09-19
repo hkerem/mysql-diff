@@ -25,34 +25,40 @@ class MetaDao(jt: JdbcTemplate) {
     
     import MetaDao._
     
-    def findPrimaryKey(catalog: String, schema: String, tableName: String): Option[PrimaryKeyModel] =
+    protected def findPrimaryKeyInfoRows(catalog: String, schema: String, tableName: String): Seq[PrimaryKeyInfoRow] =
         execute { conn =>
             val rs = conn.getMetaData.getPrimaryKeys(catalog, schema, tableName)
-
-            case class R(pkName: String, columnName: String, keySeq: Int)
-
-            val r0 = rs.read { rs =>
-                R(rs.getString("PK_NAME"), rs.getString("COLUMN_NAME"), rs.getInt("KEY_SEQ"))
-            }
-
-            val r = stableSort(r0, (r: R) => r.keySeq)
-
-            if (r.isEmpty) None
-            else {
-                val pkName = r.first.pkName
-
-                // check all rows have the same name
-                for (R(p, _, _) <- r)
-                    if (p != pkName)
-                        throw new IllegalStateException("got different names for pk: " + p + ", " + pkName)
-
-                // MySQL names primary key PRIMARY
-                val pkNameO = if (pkName != null && pkName != "PRIMARY") Some(pkName) else None
-
-                // XXX: IndexColumn: asc, length
-                Some(new PrimaryKeyModel(pkNameO, r.map(x => IndexColumn(x.columnName))))
+            rs.read { rs =>
+                PrimaryKeyInfoRow(
+                    rs.getString("PK_NAME"), rs.getString("COLUMN_NAME"), rs.getInt("KEY_SEQ"), null)
             }
         }
+    
+    protected def mapPrimaryKeyInfoRowToPrimaryKeyColumn(r: PrimaryKeyInfoRow) =
+        IndexColumn(r.columnName)
+    
+    def findPrimaryKey(catalog: String, schema: String, tableName: String): Option[PrimaryKeyModel] = {
+
+        val r0 = findPrimaryKeyInfoRows(catalog, schema, tableName)
+
+        val r = stableSort(r0, (r: PrimaryKeyInfoRow) => r.ordinalPosition)
+
+        if (r.isEmpty) None
+        else {
+            val pkName = r.first.pkName
+
+            // check all rows have the same name
+            for (PrimaryKeyInfoRow(p, _, _, _) <- r)
+                if (p != pkName)
+                    throw new IllegalStateException("got different names for pk: " + p + ", " + pkName)
+
+            // MySQL names primary key PRIMARY
+            val pkNameO = if (pkName != null && pkName != "PRIMARY") Some(pkName) else None
+
+            // XXX: IndexColumn: asc, length
+            Some(new PrimaryKeyModel(pkNameO, r.map(mapPrimaryKeyInfoRowToPrimaryKeyColumn _)))
+        }
+    }
     
     /**
      * Find all tables in specified catalog and schema.
@@ -208,6 +214,8 @@ object MetaDao {
     {
         def unique = !nonUnique
     }
+    
+    case class PrimaryKeyInfoRow(pkName: String, columnName: String, ordinalPosition: Int, vendorSpecific: Any)
     
 }
 

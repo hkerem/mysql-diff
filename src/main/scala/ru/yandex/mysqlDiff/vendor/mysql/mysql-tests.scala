@@ -294,6 +294,17 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
         )
     }
     
+    "PRIMARY KEY indexing leading part" in {
+        checkTwoTables(
+            """
+            CREATE TABLE pk_lp (name VARCHAR(100), PRIMARY KEY (name(9)))
+            """,
+            """
+            CREATE TABLE pk_lp (name VARCHAR(100), PRIMARY KEY (name))
+            """
+        )
+    }
+    
     "TABLE AUTO_INCREMENT" in {
         checkTable(
             """
