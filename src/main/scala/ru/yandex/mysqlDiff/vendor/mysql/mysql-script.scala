@@ -95,6 +95,12 @@ class MysqlScriptSerializer(context: Context) extends ScriptSerializer(context) 
         case _ => super.serializeTableElement(e)
     }
     
+    override def serializeTableOption(opt: TableOption) = opt match {
+        case MysqlCollateTableOption(name) => "COLLATE=" + name
+        case MysqlCharacterSetTableOption(name) => "CHARACTER SET=" + name
+        case MysqlEngineTableOption(name) => "ENGINE=" + name
+        case MysqlAutoIncrementTableOption(value) => "AUTO_INCREMENT=" + value
+    }
 }
 
 case class MysqlSetStatement(target: SqlExpr, value: SqlExpr) extends ScriptStatement {

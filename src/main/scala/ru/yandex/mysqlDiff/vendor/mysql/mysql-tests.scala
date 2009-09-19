@@ -262,6 +262,14 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
         )
     }
     
+    "TABLE AUTO_INCREMENT" in {
+        checkTable(
+            """
+            CREATE TABLE table_auto_inc (id INT NOT NULL PRIMARY KEY AUTO_INCREMENT) ENGINE=MyISAM AUTO_INCREMENT=11
+            """
+        )
+    }
+    
     "COLUMN COMMENT" in {
         checkTwoTables(
             "CREATE TABLE bottles (height INT COMMENT 'in cm')",

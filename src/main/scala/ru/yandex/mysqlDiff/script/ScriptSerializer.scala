@@ -212,11 +212,8 @@ class ScriptSerializer(context: Context) {
         (List(firstLine) ++ lines ++ List(lastLine)).mkString(options.stmtJoin)
     }
     
-    def serializeTableOption(opt: TableOption) = opt match {
-        case MysqlCollateTableOption(name) => "COLLATE=" + name
-        case MysqlCharacterSetTableOption(name) => "CHARACTER SET=" + name
-        case MysqlEngineTableOption(name) => "ENGINE=" + name
-    }
+    protected def serializeTableOption(opt: TableOption): String =
+        throw new MysqlDiffException("unknown table option: "+ opt)
     
     def serializeInsert(is: InsertStatement) = {
         val r = new ArrayBuffer[String]

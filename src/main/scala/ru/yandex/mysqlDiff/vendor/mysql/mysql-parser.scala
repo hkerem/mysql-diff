@@ -150,12 +150,16 @@ class MysqlParserCombinator(context: Context) extends SqlParserCombinator(contex
     def tableComment: Parser[TableOption] =
         ( "COMMENT" ~> opt("=") ~> stringConstant ^^ { MysqlCommentTableOption(_) } )
     
+    def tableAutoIncrement: Parser[TableOption] =
+        ("AUTO_INCREMENT" ~> opt("=") ~> naturalNumber) ^^ { MysqlAutoIncrementTableOption(_) }
+    
     override def tableOption: Parser[TableOption] =
         ( tableEngine
         | tableDefaultCharset
         | tableCollate
         | tableMinMaxRows
         | tableComment
+        | tableAutoIncrement
         )
     
     def convertToCharacterSet =
