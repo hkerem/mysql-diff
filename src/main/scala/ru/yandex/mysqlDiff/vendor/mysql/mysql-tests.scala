@@ -189,6 +189,14 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             """CREATE TABLE stud (aud BIT NOT NULL DEFAULT '\0')""")
     }
     
+    // http://bitbucket.org/stepancheg/mysql-diff/issue/24/default-value-for-tinyint
+    "TINYINT(4)" in {
+        checkTwoTables(
+            "CREATE TABLE tinyint_4 (xx TINYINT(4) NOT NULL DEFAULT '0')",
+            "CREATE TABLE tinyint_4 (xx TINYINT(4) NOT NULL DEFAULT '3')"
+            )
+    }
+    
     "DECIMAL DEFAULT VALUE" in {
         checkTable("CREATE TABLE decimal_dv (id INT, deci DECIMAL(10, 6) DEFAULT '0.000000')")
     }

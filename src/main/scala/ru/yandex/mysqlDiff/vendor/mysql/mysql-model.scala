@@ -501,16 +501,15 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         }
     }
     
-    protected override def fixDefaultValue(v: SqlExpr, dt: DataType) = super.fixDefaultValue(v, dt) match {
+    protected override def fixDefaultValue(v: SqlExpr, dt: DataType) = (super.fixDefaultValue(v, dt), dt) match {
         // MySQL boolean is actually int:
         // http://dev.mysql.com/doc/refman/5.0/en/boolean-values.html
-        case BooleanValue(true) => NumberValue(1)
-        case BooleanValue(false) => NumberValue(0)
-        case v: SqlValue if dt.name == "BIT" =>
-            MysqlDataTypes.castToBitSet(v)
-        case v @ StringValue(s) if dt.name == "BIT" || dt.name == "TINYINT" =>
-            MysqlDataTypes.castToBitSet(v)
-        case StringValue(s) if dataTypes.isAnyNumber(dt.name) =>
+        case (BooleanValue(true), _) => NumberValue(1)
+        case (BooleanValue(false), _) => NumberValue(0)
+        case (v @ StringValue(s),
+            MysqlNumericDataType("BIT", _, _, _, _) | MysqlNumericDataType("TINYINT", Some(1), _, _, _)) =>
+                MysqlDataTypes.castToBitSet(v)
+        case (StringValue(s), MysqlNumericDataType(_, _, _, _, _)) =>
             try {
                 NumberValue(s)
             } catch {
@@ -518,7 +517,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
                     throw new MysqlDiffException(
                         "cannot parse string value '"+ s +"' as number for type " + dt, e)
             }
-        case x => x
+        case (x, _) => x
     }
     
     override def fixColumn(column: ColumnModel, table: TableModel) = {
