@@ -270,6 +270,18 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
         )
     }
     
+    // http://bitbucket.org/stepancheg/mysql-diff/issue/21/support-indexes-with-leading-part
+    "INDEX with leading part" in {
+        checkTwoTables(
+            """
+            CREATE TABLE index_lp (name VARCHAR(100), INDEX(name))
+            """,
+            """
+            CREATE TABLE index_lp (name VARCHAR(100), INDEX(name(20)))
+            """
+        )
+    }
+    
     "TABLE AUTO_INCREMENT" in {
         checkTable(
             """
