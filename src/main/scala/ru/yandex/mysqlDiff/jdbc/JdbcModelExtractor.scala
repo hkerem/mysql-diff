@@ -220,8 +220,10 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
                 else Some(StringValue(s))
             }
             else if (dataTypes.isAnyNumber(dataType.name)) {
-                if (s == "") Some(NumberValue(0))
-                else Some(sqlParserCombinator.parseValue(s))
+                s match {
+                    case "" | "\0" => Some(NumberValue(0))
+                    case _ => Some(sqlParserCombinator.parseValue(s))
+                }
             }
             else Some(StringValue(s))
         }
