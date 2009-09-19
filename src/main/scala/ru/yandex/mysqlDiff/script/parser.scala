@@ -396,7 +396,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def insertDataRow: Parser[Seq[SqlExpr]] = "(" ~> rep1sep(sqlExpr, ",") <~ ")"
     
     def insert: Parser[InsertStatement] =
-        (("INSERT" ~> opt("IGNORE") <~ "INTO") ~ name ~ opt(nameList) <~ "VALUES") ~ rep1sep(insertDataRow, ",") ^^
+        (("INSERT" ~> opt("IGNORE") <~ opt("INTO")) ~ name ~ opt(nameList) <~ "VALUES") ~ rep1sep(insertDataRow, ",") ^^
             { case ignore ~ name ~ columns ~ data => new InsertStatement(name, ignore.isDefined, columns, data) }
     
     def updateSet: Parser[(String, SqlExpr)] = name ~ ("=" ~> sqlExpr) ^^ { case a ~ b => (a, b) }
