@@ -511,7 +511,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         // http://dev.mysql.com/doc/refman/5.0/en/boolean-values.html
         case (BooleanValue(true), _) => NumberValue(1)
         case (BooleanValue(false), _) => NumberValue(0)
-        case (v @ StringValue(s),
+        case (v @ StringValue("\0"),
             MysqlNumericDataType("BIT", _, _, _, _) | MysqlNumericDataType("TINYINT", Some(1), _, _, _)) =>
                 MysqlDataTypes.castToBitSet(v)
         case (StringValue(s), MysqlNumericDataType(_, _, _, _, _)) =>

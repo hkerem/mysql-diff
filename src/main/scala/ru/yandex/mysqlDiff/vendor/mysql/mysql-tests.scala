@@ -189,6 +189,11 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             """CREATE TABLE stud (aud BIT NOT NULL DEFAULT '\0')""")
     }
     
+    "TINYINT(1) DEFAULT '1'" in {
+        checkTable(
+            """CREATE TABLE tinyint_1 (a TINYINT(1) NOT NULL DEFAULT '1')""")
+    }
+    
     // http://bitbucket.org/stepancheg/mysql-diff/issue/24/default-value-for-tinyint
     "TINYINT(4)" in {
         checkTwoTables(
