@@ -50,6 +50,9 @@ case class ModelParser(val context: Context) {
         case CreateSequenceStatement(name) => sc.withDb(sc.db.createSequence(SequenceModel(name)))
         case DropSequenceStatement(name) => sc.withDb(sc.db.dropSequence(name))
         case st @ CreateIndexStatement(_, table, _) => sc.withDb(sc.db.alterTable(table, createIndex(st, _)))
+        
+        // ignore DML statements for now
+        case d: DmlStatement => sc
     }
     
     private def parseColumn(c: Column) = {
