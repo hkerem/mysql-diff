@@ -270,6 +270,20 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
         )
     }
     
+    "TABLE change COMMENT" in {
+        checkTwoTables(
+            "CREATE TABLE table_comment_1 (id INT) COMMENT 'paper'",
+            "CREATE TABLE table_comment_1 (id INT) COMMENT 'scissors'"
+        )
+    }
+    
+    "TABLE add COMMENT" in {
+        checkTwoTables(
+            "CREATE TABLE table_comment_2 (id INT)",
+            "CREATE TABLE table_comment_2 (id INT) COMMENT 'scissors'"
+        )
+    }
+    
     "COLUMN COMMENT" in {
         checkTwoTables(
             "CREATE TABLE bottles (height INT COMMENT 'in cm')",

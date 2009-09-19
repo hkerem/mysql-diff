@@ -466,6 +466,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
             }
         }
         val scr = super.parseCreateTable(ct, sc)
+        
         val scr2 = scr.specific.asInstanceOf[MysqlVendorSpecific].storageEngine match {
             case Some(engine) =>
                 scr.alterTable(ct.name, t => t.withDefaultOptions(Seq(MysqlEngineTableOption(engine))))
@@ -481,7 +482,10 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
                         throw new UnsupportedFeatureException("FOREIGN KEY is supported only by InnoDB")
             }
         }
-        scr2
+        
+        val scr3 = scr2.alterTable(ct.name, t => t.withDefaultOptions(Seq(MysqlCommentTableOption(""))))
+        
+        scr3
     }
     
     protected override def fixDataType(dataType: DataType, column: ColumnModel, table: TableModel) = {

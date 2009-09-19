@@ -57,7 +57,9 @@ class MysqlMetaDao(jt: JdbcTemplate) extends MetaDao(jt) {
     def mapTableOptions(rs: ResultSet) =
         (rs.getString("TABLE_NAME"), Seq(
                 MysqlEngineTableOption(rs.getString("ENGINE")),
-                MysqlCollateTableOption(rs.getString("TABLE_COLLATION"))
+                MysqlCollateTableOption(rs.getString("TABLE_COLLATION")),
+                // stupid MySQL developers print some left information in the TABLE_COMMENT column
+                MysqlCommentTableOption(rs.getString("TABLE_COMMENT").replaceFirst("(; |^)InnoDB free: .*", ""))
                 ))
     
     def findMysqlTablesOptions(schema: String): Seq[(String, Seq[TableOption])] = {
@@ -345,6 +347,24 @@ object MysqlJdbcModelExtractorTests
         execute("CREATE TABLE cats (id INT) COLLATE=cp1251_bin")
         val table = extractTable("cats")
         table.options.properties must contain(MysqlCollateTableOption("cp1251_bin"))
+    }
+    
+    "fetch TABLE COMMENT MyISAM" in {
+        ddlTemplate.recreateTable("CREATE TABLE table_comment_fetch_myisam (id INT) COMMENT='stone' ENGINE=MyISAM")
+        val table = extractTable("table_comment_fetch_myisam")
+        table.options.properties must contain(MysqlCommentTableOption("stone"))
+    }
+    
+    "fetch TABLE COMMENT InnoDB" in {
+        ddlTemplate.recreateTable("CREATE TABLE table_comment_fetch_innodb (id INT) COMMENT='stone' ENGINE=InnoDB")
+        val table = extractTable("table_comment_fetch_innodb")
+        table.options.properties must contain(MysqlCommentTableOption("stone"))
+    }
+    
+    "fetch TABLE empty COMMENT InnoDB" in {
+        ddlTemplate.recreateTable("CREATE TABLE table_comment_fetch_innodb_empty (id INT) ENGINE=InnoDB")
+        val table = extractTable("table_comment_fetch_innodb_empty")
+        table.options.properties must contain(MysqlCommentTableOption(""))
     }
     
     "DEFAULT NOW()" in {

@@ -100,7 +100,14 @@ class MysqlScriptSerializer(context: Context) extends ScriptSerializer(context) 
         case MysqlCharacterSetTableOption(name) => "CHARACTER SET=" + name
         case MysqlEngineTableOption(name) => "ENGINE=" + name
         case MysqlAutoIncrementTableOption(value) => "AUTO_INCREMENT=" + value
+        case MysqlCommentTableOption(comment) => "COMMENT=" + serializeString(comment)
     }
+    
+    override def serializeCreateTableTableOption(opt: TableOption) = opt match {
+        case MysqlCommentTableOption("") => None
+        case _ => super.serializeCreateTableTableOption(opt)
+    }
+
 }
 
 case class MysqlSetStatement(target: SqlExpr, value: SqlExpr) extends ScriptStatement {

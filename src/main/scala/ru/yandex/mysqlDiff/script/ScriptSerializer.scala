@@ -207,10 +207,16 @@ class ScriptSerializer(context: Context) {
         
         val firstLine = "CREATE TABLE " + serializeName(name) + " ("
         val lastLine = ")" +
-            (if (tableOptions.isEmpty) "" else " " + tableOptions.map(serializeTableOption _).mkString(" "))
+            (tableOptions.flatMap(serializeCreateTableTableOption _) match {
+                case Seq() => ""
+                case l => " " + l.mkString(" ")
+            })
         
         (List(firstLine) ++ lines ++ List(lastLine)).mkString(options.stmtJoin)
     }
+    
+    protected def serializeCreateTableTableOption(opt: TableOption): Option[String] =
+        Some(serializeTableOption(opt))
     
     protected def serializeTableOption(opt: TableOption): String =
         throw new MysqlDiffException("unknown table option: "+ opt)
