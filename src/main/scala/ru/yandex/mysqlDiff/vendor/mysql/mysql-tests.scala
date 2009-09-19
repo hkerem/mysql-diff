@@ -169,6 +169,13 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             "CREATE TABLE IF NOT EXISTS tag_cloud_global (tag varchar(64) collate utf8_bin) DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
     }
     
+    "complex bug with charset and collation" in {
+        checkTable(
+            """
+            CREATE TABLE charset_collation (zz VARCHAR(3) CHARACTER SET latin1) ENGINE=InnoDB DEFAULT CHARSET=utf8
+            """)
+    }
+    
     "PRIMARY KEY not declared as NOT NULL" in {
         checkTable(
             "CREATE TABLE pk_null (id VARCHAR(10), PRIMARY KEY(id))")

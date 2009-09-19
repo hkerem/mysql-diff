@@ -499,9 +499,15 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         
         super.fixDataType(dataType, column, table) match {
             case dt: MysqlCharsetAwareDataType =>
-                dt
-                    .withDefaultCharset(tableCharacterSet(table))
-                    .withDefaultCollate(tableCollation(table))
+                (dt.charset, dt.collate) match {
+                    case (Some(cs), Some(cl)) => dt
+                    case (Some(cs), None) =>
+                        dt.withCollate(MysqlCharsets.defaultCollation(cs))
+                    case (None, Some(cl)) =>
+                        dt.withCharset(MysqlCharsets.defaultCharset(cl))
+                    case (None, None) =>
+                        dt.withCharset(tableCharacterSet(table)).withCollate(tableCollation(table))
+                }
             case dt => dt
         }
     }
