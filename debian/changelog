@@ -1,3 +1,9 @@
+yandex-mysql-diff (0.3.20090920023941.717ff75c8251) unstable; urgency=low
+
+  * incver to build debian package
+
+ -- Stepan Koltsov <stepancheg@yandex-team.ru>  Tue,  3 Nov 2009 20:20:09 +0300
+
 yandex-mysql-diff (0.3.20090309203110.e96949f11c58) unstable; urgency=low
 
   * incver to build debian package
