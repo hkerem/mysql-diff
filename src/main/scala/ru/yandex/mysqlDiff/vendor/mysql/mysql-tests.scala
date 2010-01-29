@@ -315,13 +315,22 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
     
     "TABLE AUTO_INCREMENT with increment" in {
         dropTable("aiwi")
+        dropTable("aiwi2")
         val script = "CREATE TABLE aiwi (ID INT PRIMARY KEY AUTO_INCREMENT, v INT) ENGINE=MyISAM AUTO_INCREMENT=122"
+        val script2 = script.replaceFirst("aiwi", "aiwi2")
+        
         execute(script)
+        execute(script2)
+        
         execute("INSERT INTO aiwi (v) VALUES (1)")
         val dbModel = jdbcModelExtractor.extractTable("aiwi")
         val localModel = modelParser.parseCreateTableScript(script)
         diffMaker.compareTables(dbModel, localModel) must beLike { case None => true }
         diffMaker.compareTables(localModel, dbModel) must beLike { case None => true }
+        
+        val dbModel2 = jdbcModelExtractor.extractTable("aiwi2").withName("aiwi")
+        diffMaker.compareTables(dbModel, dbModel2) must beLike { case None => true }
+        diffMaker.compareTables(dbModel2, dbModel) must beLike { case None => true }
     }
     
     "TABLE change COMMENT" in {
