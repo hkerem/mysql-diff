@@ -231,17 +231,31 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
     }
     
     "bug with non-unique CONSTRAINT names" in {
-        checkTwoDatabases(
-            """
-            CREATE TABLE nu_a (id INT PRIMARY KEY);
-            CREATE TABLE nu_b (a_id INT);
-            CREATE TABLE nu_c (a_id INT, CONSTRAINT c866 FOREIGN KEY zc (a_id) REFERENCES nu_a(id))
-            """,
+        val version = jt.query("SELECT @@version").single(rs => MysqlServerVersion.parse(rs.getString(1)))
+        if (version < MysqlServerVersion(5, 1, 0)) {
+            checkTwoDatabases(
+                """
+                CREATE TABLE nu_a (id INT PRIMARY KEY);
+                CREATE TABLE nu_b (a_id INT);
+                CREATE TABLE nu_c (a_id INT, CONSTRAINT c866 FOREIGN KEY zc (a_id) REFERENCES nu_a(id))
+                """,
+                """
+                CREATE TABLE nu_a (id INT PRIMARY KEY);
+                CREATE TABLE nu_b (a_id INT, CONSTRAINT c866 FOREIGN KEY zb (a_id) REFERENCES nu_a(id));
+                CREATE TABLE nu_c (a_id INT)
+                """)
+        }
+    }
+    
+    "MySQL 5.1 weird CONSTRAINT name FOREIGN KEY name behaviour" in {
+        // MySQL 5.1 seems to use constraint name for foreign key name
+        checkDatabase(
             """
             CREATE TABLE nu_a (id INT PRIMARY KEY);
             CREATE TABLE nu_b (a_id INT, CONSTRAINT c866 FOREIGN KEY zb (a_id) REFERENCES nu_a(id));
             CREATE TABLE nu_c (a_id INT)
-            """)
+            """
+        )
     }
     
     "bug with ADD FOREIGN KEY referenced to newly created table" in {

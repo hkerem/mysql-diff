@@ -407,7 +407,9 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
     
     protected override def alterTableOperation(op: Operation, table: TableModel): TableModel = op match {
         case AddExtra(MysqlForeignKey(fk, indexNameOption)) =>
-            if (true && indexNameOption.isDefined)
+            // MySQL 5.1 seems to ignore foreign keys names
+            // http://bitbucket.org/stepancheg/mysql-diff/wiki/EvilMysql/ForeignKeyConstraint
+            if (false && indexNameOption.isDefined)
                 table
                     .addForeignKey(fk)
                     .addIndex(IndexModel(indexNameOption, fk.localColumns, foreignKeyIndexExplicit))
@@ -436,6 +438,9 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
     
     protected override def parseCreateTableExtra(e: TableElement, ct: CreateTableStatement) = e match {
         case MysqlForeignKey(fk, indexName) =>
+            // MySQL 5.1 uses constraint name for index name
+            val indexNameToUse = fk.name
+            
             // another MySQL magic
             val haveAnotherIndex = ct.elements.exists {
                 case Index(IndexModel(_, columns, _)) =>
@@ -451,7 +456,7 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
                 case _ => false
             }
             if (haveAnotherIndex) Seq(fk)
-            else Seq(fk, IndexModel(indexName, fk.localColumns, foreignKeyIndexExplicit))
+            else Seq(fk, IndexModel(indexNameToUse, fk.localColumns, foreignKeyIndexExplicit))
             /*
             if (true && indexName.isDefined) // XXX: index name is lost
                 Seq(fk, IndexModel(indexName, fk.localColumns, foreignKeyIndexExplicit))

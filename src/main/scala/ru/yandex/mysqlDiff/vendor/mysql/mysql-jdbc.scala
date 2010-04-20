@@ -325,7 +325,9 @@ object MysqlJdbcModelExtractorTests
         fkp.externalTable must_== "person"
         fkp.name must_== Some("fk2c")
         val ip = citizen.indexes.find(_.columnNames.toList == List("pid1", "pid2")).get
-        ip.name must_== Some("fk2i")
+        // behavior is different in mysql 5.0 and 5.1
+        // http://bitbucket.org/stepancheg/mysql-diff/wiki/EvilMysql/ForeignKeyConstraint
+        Seq("fk2i", "fk2c") must contain(ip.name.get)
         
         city.foreignKeys must haveSize(0)
         person.foreignKeys must haveSize(0)
