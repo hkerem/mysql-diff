@@ -101,6 +101,8 @@ class MysqlScriptSerializer(context: Context) extends ScriptSerializer(context) 
         case MysqlEngineTableOption(name) => "ENGINE=" + name
         case MysqlAutoIncrementTableOption(value) => "AUTO_INCREMENT=" + value
         case MysqlCommentTableOption(comment) => "COMMENT=" + serializeString(comment)
+        case MysqlMinRowsTableOption(rows) => "MIN_ROWS=" + rows
+        case MysqlMaxRowsTableOption(rows) => "MAX_ROWS=" + rows
     }
     
     override def serializeCreateTableTableOption(opt: TableOption) = opt match {
