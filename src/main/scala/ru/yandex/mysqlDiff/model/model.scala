@@ -397,8 +397,9 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     
     require(indexNames.unique.size == indexNames.size,
         "repeating index names in table " + name + " model")
-    require(indexes.map(_.columnNames.toList).unique.size == indexes.size,
-        "repeating indexes in table " + name + " model")
+    for ((columnNames, indexes) <- indexes.groupBy(_.columnNames.toList) if indexes.length > 1) {
+        throw new Exception("repeating indexes in table " + name + " model: " + columnNames)
+    }
     
     require(primaryKeys.length <= 1)
     

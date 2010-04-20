@@ -19,7 +19,7 @@ class MysqlDiffSerializer(context: Context) extends DiffSerializer(context) {
     override def dropExtraStmt(k: TableExtra, table: TableModel) = k match {
         case i: IndexModel =>
             AlterTableStatement(table.name, List(
-                TableDdlStatement.DropIndex(i.name.getOrThrow("cannot drop unnamed index"))))
+                TableDdlStatement.DropIndex(i.name.getOrThrow("cannot drop unnamed index "+ i +"; table "+ table.name))))
         case _ => super.dropExtraStmt(k, table)
     }
     

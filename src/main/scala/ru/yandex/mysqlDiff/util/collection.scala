@@ -1,6 +1,7 @@
 package ru.yandex.mysqlDiff.util
 
 import scala.collection.immutable.Set
+import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayBuffer
 
 trait CollectionImplicits {
@@ -8,8 +9,21 @@ trait CollectionImplicits {
     implicit def optionExtras[A](option: Option[A]) = new OptionExtras(option)
 }
 
+object CollectionImplicits extends CollectionImplicits
+
+import CollectionImplicits._
+
 class SeqExtras[A](seq: Seq[A]) {
     def unique = Set(seq: _*)
+   
+    def groupBy[B](f: A => B): Map[B, Seq[A]] =
+        seq match {
+            case Seq() => Map()
+            case Seq(a, rest @ _*) =>
+                val m = rest.groupBy(f)
+                val l: Seq[A] = Seq(a) ++ m.getOrElse(f(a), Seq())
+                m.update(f(a), l)
+        }
     
     def partition3(f: A => Int): (Seq[A], Seq[A], Seq[A]) = {
         val r = (new ArrayBuffer[A], new ArrayBuffer[A], new ArrayBuffer[A])
@@ -93,6 +107,13 @@ object CollectionTests extends org.specs.Specification {
         List((2, "2"), (3, "3")) must_== inBoth.toList
     }
     
+    "groupBy" in {
+        val a = Seq(1, 2, 33, 444, 55)
+        val m = a.groupBy(_.toString.length)
+        m(1).toList must_== List(1, 2)
+        m(2).toList must_== List(33, 55)
+        m(3).toList must_== List(444)
+    }
 }
 
 // vim: set ts=4 sw=4 et:
