@@ -533,6 +533,10 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
                     throw new MysqlDiffException(
                         "cannot parse string value '"+ s +"' as number for type " + dt, e)
             }
+        case (NumberValue(0), DefaultDataType("DATE", _)) => StringValue("0000-00-00")
+        case (NumberValue(0), DefaultDataType("TIME", _)) => StringValue("00:00:00")
+        case (NumberValue(0), DefaultDataType("DATETIME", _)) => StringValue("0000-00-00 00:00:00")
+        case (NumberValue(0), DefaultDataType("TIMESTAMP", _)) => StringValue("0000-00-00 00:00:00")
         case (x, _) => x
     }
     

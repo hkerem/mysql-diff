@@ -218,6 +218,32 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             "CREATE TABLE service_with_mediumint_unsigned (bg_color MEDIUMINT UNSIGNED)")
     }
     
+    "DEFAULT DATE 0000-00-00" in {
+        checkTable(
+            "CREATE TABLE date_0000000 (d DATE DEFAULT '0000-00-00')")
+    }
+    
+    "DEFAULT DATE 0" in {
+        checkTable(
+            "CREATE TABLE date_0 (d DATE DEFAULT 0)")
+    }
+    
+    "DEFAULT TIME 0" in {
+        checkTable(
+            "CREATE TABLE time_0 (d TIME DEFAULT 0)")
+    }
+    
+    "DEFAULT DATETIME 0" in {
+        checkTable(
+            "CREATE TABLE datetime_0 (d DATETIME DEFAULT 0)")
+    }
+    
+    "DEFAULT TIMESTAMP 0" in {
+        // XXX: test is broken
+        checkTable(
+            "CREATE TABLE timestamp_0 (d TIMESTAMP DEFAULT 0)")
+    }
+    
     "bug with PRIMARY KEY added" in {
         checkTwoTables(
             "CREATE TABLE im_cs1 (checksum VARCHAR(255), added INT, PRIMARY KEY(checksum), KEY(added))",
