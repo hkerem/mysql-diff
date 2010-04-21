@@ -393,6 +393,22 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             "CREATE TABLE bottles (height INT)"
         )
     }
+    
+    "ENGINE copied in CREATE TABLE LIKE" in {
+        // test repeated twice because I don't know what default engine is
+        checkDatabase(
+            """
+            CREATE TABLE engine_copied_template (id INT) ENGINE=MyISAM;
+            CREATE TABLE engine_copied LIKE engine_copied_template
+            """
+        )
+        checkDatabase(
+            """
+            CREATE TABLE engine_copied_template (id INT) ENGINE=InnoDB;
+            CREATE TABLE engine_copied LIKE engine_copied_template
+            """
+        )
+    }
 }
 
 object MysqlDdlTemplateTests extends DdlTemplateTests(MysqlTestDataSourceParameters.connectedContext) {

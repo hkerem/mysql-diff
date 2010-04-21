@@ -77,14 +77,17 @@ case class ModelParser(val context: Context) {
     def parseCreateTable(ct: CreateTableStatement, sc: ScriptEvaluation): ScriptEvaluation = sc.withDb({
         import sc.db
         
-        val CreateTableStatement(name, ifNotExists, TableElementList(elements), options) = ct
+        val CreateTableStatement(name, ifNotExists, TableElementList(elements), _) = ct
         
         val columns = new ArrayBuffer[ColumnModel]
         val extras = new ArrayBuffer[TableExtra]
+        val options = new ArrayBuffer[TableOption]
+        options ++= ct.options
         elements.map {
             case LikeClause(t) =>
                 columns ++= db.table(t).columns
                 extras ++= db.table(t).extras
+                options ++= db.table(t).options
             
             case column @ Column(name, dataType, attrs) =>
                 
@@ -124,7 +127,7 @@ case class ModelParser(val context: Context) {
                 ColumnModel(c.name, c.dataType, properties)
         }
         
-        db.createTable(fixTable(TableModel(name, columns2.toList, extras, ct.options)))
+        db.createTable(fixTable(TableModel(name, columns2.toList, extras, options)))
     })
     
     def createIndex(st: CreateIndexStatement, t: TableModel) =
