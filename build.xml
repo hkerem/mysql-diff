@@ -59,10 +59,13 @@
 
     <target name="compile" depends="init">
         <mkdir dir="target/classes"/>
-        <scalac srcdir="src/main/scala" destdir="target/classes"
+        <scalac destdir="target/classes"
                 deprecation="on" unchecked="on" encoding="UTF-8"
                 classpathref="build.classpath" force="changed"
-                />
+                >
+            <src path="src/main/scala"/>
+            <src path="scala-misc/src"/>
+        </scalac>
                 <!--
                 addparams="-Xprint:typer"
                 -->
