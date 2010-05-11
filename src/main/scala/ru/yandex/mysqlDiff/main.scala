@@ -3,8 +3,8 @@ package ru.yandex.mysqlDiff
 
 import java.io.File
 
-import misc.jdbc._
-import misc.io._
+import ru.yandex.small.jdbc._
+import ru.yandex.small.io._
 
 import diff._
 import model._

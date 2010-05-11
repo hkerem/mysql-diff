@@ -2,7 +2,7 @@ package ru.yandex.mysqlDiff.jdbc
 
 import java.sql.DriverManager
 
-import ru.yandex.misc.jdbc._
+import ru.yandex.small.jdbc._
 
 import Implicits._
 

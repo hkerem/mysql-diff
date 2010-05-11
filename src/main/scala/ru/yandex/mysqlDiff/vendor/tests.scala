@@ -1,6 +1,6 @@
 package ru.yandex.mysqlDiff.vendor
 
-import misc.jdbc._
+import ru.yandex.small.jdbc._
 
 import util._
 import jdbc._

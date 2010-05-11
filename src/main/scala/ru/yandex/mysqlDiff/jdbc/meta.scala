@@ -3,7 +3,7 @@ package ru.yandex.mysqlDiff.jdbc
 import java.sql._
 import util._
 
-import misc.jdbc._
+import ru.yandex.small.jdbc._
 
 import model._
 

@@ -9,7 +9,7 @@ import scala.util.parsing.combinator.syntactical._
 import scala.util.parsing.combinator.lexical._
 import java.util.regex.{Pattern, Matcher}
 
-import ru.yandex.misc.io._
+import ru.yandex.small.io._
 
 import model._
 

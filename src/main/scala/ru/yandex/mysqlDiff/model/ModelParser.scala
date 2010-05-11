@@ -1,6 +1,6 @@
 package ru.yandex.mysqlDiff.model
 
-import ru.yandex.misc.io._
+import ru.yandex.small.io._
 
 import Implicits._
 

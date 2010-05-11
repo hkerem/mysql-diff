@@ -7,8 +7,8 @@ import util._
 /** Global implicits conversions */
 object Implicits
     extends util.CollectionImplicits
-    with ru.yandex.misc.jdbc.JdbcImplicits
-    with ru.yandex.misc.io.IoImplicits
+    with ru.yandex.small.jdbc.JdbcImplicits
+    with ru.yandex.small.io.IoImplicits
     with util.StringImplicits
 {
     // I believe it must be added to scala.Predef
