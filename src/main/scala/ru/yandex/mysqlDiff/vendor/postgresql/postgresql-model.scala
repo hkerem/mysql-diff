@@ -1,4 +1,5 @@
-package ru.yandex.mysqlDiff.vendor.postgresql
+package ru.yandex.mysqlDiff
+package vendor.postgresql
 
 import model._
 

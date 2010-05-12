@@ -1,4 +1,5 @@
-package ru.yandex.mysqlDiff.ant
+package ru.yandex.mysqlDiff
+package ant
 
 import org.apache.tools.ant._
 import java.io.File

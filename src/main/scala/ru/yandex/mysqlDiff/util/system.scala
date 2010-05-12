@@ -1,4 +1,5 @@
-package ru.yandex.mysqlDiff.util
+package ru.yandex.mysqlDiff
+package util
 
 object SystemInfo {
     def javaVersion =

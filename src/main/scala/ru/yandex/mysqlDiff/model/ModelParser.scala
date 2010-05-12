@@ -1,4 +1,5 @@
-package ru.yandex.mysqlDiff.model
+package ru.yandex.mysqlDiff
+package model
 
 import ru.yandex.small.io._
 

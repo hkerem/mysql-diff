@@ -1,4 +1,6 @@
-package ru.yandex.mysqlDiff.vendor.postgresql
+package ru.yandex.mysqlDiff
+package vendor
+package postgresql
 
 import java.sql._
 

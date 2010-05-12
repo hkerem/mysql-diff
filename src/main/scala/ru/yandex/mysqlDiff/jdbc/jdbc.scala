@@ -1,4 +1,5 @@
-package ru.yandex.mysqlDiff.jdbc
+package ru.yandex.mysqlDiff
+package jdbc
 
 import java.sql.DriverManager
 
@@ -10,11 +11,13 @@ import Implicits._
  * Commandline query tool.
  */
 object QueryTool {
-    def main(args: Array[String]) {
+    def main(args0: Array[String]) {
         def usage() {
             Console.err.println("usage: QueryTool jdbc-url query")
         }
-        
+
+        val args: Seq[String] = args0.toSeq
+
         args match {
             case Seq(jdbcUrl, q) =>
                 for (c <- LiteDataSource.driverManager(jdbcUrl)) {

@@ -1,4 +1,5 @@
-package ru.yandex.mysqlDiff.vendor.mysql
+package ru.yandex.mysqlDiff
+package vendor.mysql
 
 import model._
 import script._

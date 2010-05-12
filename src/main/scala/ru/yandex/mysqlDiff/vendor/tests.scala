@@ -1,4 +1,5 @@
-package ru.yandex.mysqlDiff.vendor
+package ru.yandex.mysqlDiff
+package vendor
 
 import ru.yandex.small.jdbc._
 

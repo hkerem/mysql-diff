@@ -1,4 +1,5 @@
-package ru.yandex.mysqlDiff.util
+package ru.yandex.mysqlDiff
+package util
 
 trait StringImplicits {
     implicit def stringExtras(string: String) = new StringExtras(string)

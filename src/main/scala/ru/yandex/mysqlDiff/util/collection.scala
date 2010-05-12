@@ -1,7 +1,7 @@
-package ru.yandex.mysqlDiff.util
+package ru.yandex.mysqlDiff
+package util
 
 import scala.collection.immutable.Set
-import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayBuffer
 
 trait CollectionImplicits {
@@ -16,15 +16,6 @@ import CollectionImplicits._
 class SeqExtras[A](seq: Seq[A]) {
     def unique = Set(seq: _*)
    
-    def groupBy[B](f: A => B): Map[B, Seq[A]] =
-        seq match {
-            case Seq() => Map()
-            case Seq(a, rest @ _*) =>
-                val m = rest.groupBy(f)
-                val l: Seq[A] = Seq(a) ++ m.getOrElse(f(a), Seq())
-                m.update(f(a), l)
-        }
-    
     def partition3(f: A => Int): (Seq[A], Seq[A], Seq[A]) = {
         val r = (new ArrayBuffer[A], new ArrayBuffer[A], new ArrayBuffer[A])
         for (e <- seq) {

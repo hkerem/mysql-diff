@@ -105,7 +105,9 @@ abstract class MainSupport extends CheckJavaVersion {
         printCl("system classloader", ClassLoader.getSystemClassLoader)
     }
     
-    def main(args: Array[String]): Unit = {
+    def main(args0: Array[String]): Unit = {
+        val args: Seq[String] = args0.toSeq
+
         args match {
             case Seq("--debugenv") =>
                 debug()

@@ -1,4 +1,5 @@
-package ru.yandex.mysqlDiff.vendor.mysql
+package ru.yandex.mysqlDiff
+package vendor.mysql
 
 import model._
 import script._
@@ -13,7 +14,7 @@ class MysqlLexical extends script.SqlLexical {
     val hexDigits = Set[Char]() ++ "0123456789abcdefABCDEF".toArray
     def hexDigit = elem("hex digit", hexDigits.contains(_))
     
-    def identChar = letter | elem('_')
+    override def identChar = letter | elem('_')
     
     override def token: Parser[Token] =
         ( '0' ~ 'x' ~ rep1(hexDigit) ^^ { case o ~ x ~ b => NumericLit("0x" + b.mkString("")) }

@@ -1,4 +1,6 @@
-package ru.yandex.mysqlDiff.vendor.mysql
+package ru.yandex.mysqlDiff
+package vendor
+package mysql
 
 import java.sql._
 

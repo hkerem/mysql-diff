@@ -1,4 +1,5 @@
-package ru.yandex.mysqlDiff.jdbc
+package ru.yandex.mysqlDiff
+package jdbc
 
 import java.sql._
 

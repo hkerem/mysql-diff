@@ -1,4 +1,5 @@
-package ru.yandex.mysqlDiff.util.getopt
+package ru.yandex.mysqlDiff
+package util.getopt
 
 class GetoptException(message: String) extends Exception(message)
 

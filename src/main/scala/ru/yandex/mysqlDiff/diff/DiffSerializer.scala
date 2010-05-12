@@ -1,4 +1,5 @@
-package ru.yandex.mysqlDiff.diff
+package ru.yandex.mysqlDiff
+package diff
 
 import model._
 import script._

@@ -1,4 +1,5 @@
-package ru.yandex.mysqlDiff.vendor
+package ru.yandex.mysqlDiff
+package vendor
 
 class VendorTests(testsSelector: TestsSelector) extends org.specs.Specification {
     include(new mysql.MysqlTests(testsSelector.includeMysql))
