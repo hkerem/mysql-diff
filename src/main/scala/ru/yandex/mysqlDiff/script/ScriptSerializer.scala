@@ -309,7 +309,7 @@ class ScriptSerializer(context: Context) {
     def serializeDefaultDataType(dataType: DefaultDataType) =
         dataType.name + dataType.length.map("(" + _ + ")").getOrElse("")
    
-    def serializeDataType(dataType: DataType) = dataType match {
+    def serializeDataType(dataType: DataType) = (dataType: @unchecked) match {
         case dataType: DefaultDataType => serializeDefaultDataType(dataType)
         case NumericDataType(None, None) => "NUMERIC"
         case NumericDataType(Some(precision), None) => "NUMERIC(" + precision + ")"
