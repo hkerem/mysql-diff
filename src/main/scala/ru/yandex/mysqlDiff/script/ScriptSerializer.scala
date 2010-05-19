@@ -204,7 +204,7 @@ class ScriptSerializer(context: Context) {
         def mapTableElement(e: TableElement) =
             serializeTableElement(e) + (if (options.verbose) " /* " + e.toString + " */" else "")
         val l = elements.map(mapTableElement _).reverse
-        val lines = (List(l.first) ++ l.drop(1).map(_ + "," + options.afterComma)).reverse.map(options.indent + _)
+        val lines = (List(l.head) ++ l.drop(1).map(_ + "," + options.afterComma)).reverse.map(options.indent + _)
         
         val firstLine = "CREATE TABLE " + serializeName(name) + " ("
         val lastLine = ")" +

@@ -46,7 +46,7 @@ class MetaDao(jt: JdbcTemplate) {
 
         if (r.isEmpty) None
         else {
-            val pkName = r.first.pkName
+            val pkName = r.head.pkName
 
             // check all rows have the same name
             for (PrimaryKeyInfoRow(p, _, _, _) <- r)
@@ -105,7 +105,7 @@ class MetaDao(jt: JdbcTemplate) {
             val rowsWithName = r.filter(_.indexName == indexName)
             val rows = stableSort(rowsWithName, (r: IndexInfoRow) => r.ordinalPosition)
             
-            val unique = rows.first.unique
+            val unique = rows.head.unique
             val columnNames = rows.map(_.columnName)
             
             // XXX: asc, length for IndexColumn
@@ -132,7 +132,7 @@ class MetaDao(jt: JdbcTemplate) {
             // XXX: asc, length for IndexColumn
             ForeignKeyModel(keyName, rows.map(x => IndexColumn(x.fkColumnName)),
                     externalTableNames.elements.next, rows.map(_.pkColumnName),
-                    Some(rows.first.updateRule), Some(rows.first.deleteRule))
+                    Some(rows.head.updateRule), Some(rows.head.deleteRule))
         }
     }
     

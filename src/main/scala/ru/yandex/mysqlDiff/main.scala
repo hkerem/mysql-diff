@@ -39,7 +39,7 @@ class Utils(context: Context) {
             new DatabaseModel(Seq(jdbcModelExtractor.extractTable(table)))
         } else {
             var str = ReaderResource.file(arg).read()
-            val tableModel = modelParser.parseModel(str).decls.filter(_.name == table).first
+            val tableModel = modelParser.parseModel(str).decls.filter(_.name == table).head
             new DatabaseModel(Seq(tableModel))
         }
     }

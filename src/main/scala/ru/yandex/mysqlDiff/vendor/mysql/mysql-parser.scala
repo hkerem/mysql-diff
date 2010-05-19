@@ -215,7 +215,7 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
                         "CONSTRAINT dc_fk FOREIGN KEY dc_idx (dc_id) REFERENCES datacenters(id))")
         val fks = t.elements.filter { case _: MysqlForeignKey => true; case _ => false }
         fks must haveSize(1)
-        fks.first must beLike {
+        fks.head must beLike {
             case MysqlForeignKey(
                     ForeignKeyModel(Some("dc_fk"), Seq(IndexColumn("dc_id", true, None)), "datacenters", Seq("id"), _, _),
                     Some("dc_idx"))
@@ -237,7 +237,7 @@ object MysqlParserCombinatorTests extends SqlParserCombinatorTests(MysqlContext)
         val t = parseCreateTable(
             "CREATE TABLE users (login VARCHAR(10), UNIQUE KEY login_key(login))")
         t.uniqueKeys must haveSize(1)
-        val UniqueKey(UniqueKeyModel(Some("login_key"), columns)) = t.uniqueKeys.first
+        val UniqueKey(UniqueKeyModel(Some("login_key"), columns)) = t.uniqueKeys.head
         columns.map(_.name).toList must_== List("login")
     }
     

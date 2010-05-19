@@ -36,7 +36,7 @@ class PostgresqlDiffSerializer(override val context: Context) extends DiffSerial
     override def changeColumnStmt(cd: ChangeColumnDiff, table: TableModel) = {
         require(cd.renameTo.isEmpty) // not yet
         require(cd.diff.length == 1)
-        AlterTableStatement(table.name, List(AlterColumn(cd.name, columnPropertyDiffStmt(cd.diff.first))))
+        AlterTableStatement(table.name, List(AlterColumn(cd.name, columnPropertyDiffStmt(cd.diff.head))))
     }
 }
 

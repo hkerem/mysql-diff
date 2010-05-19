@@ -419,7 +419,7 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     def explicitEntries = columns ++ explicitExtras
     
     private def primaryKeys = extras.flatMap { case p: PrimaryKeyModel => Some(p); case _ => None }
-    def primaryKey = primaryKeys.firstOption
+    def primaryKey = primaryKeys.headOption
     
     def indexes = extras.flatMap { case i: IndexModel => Some(i); case _ => None }
     def indexNames = indexes.flatMap(_.name)

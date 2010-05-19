@@ -130,7 +130,7 @@ class DiffSerializer(val context: Context) {
         val (Seq(thatSingleColumnForPk @ _*), Seq(rest2 @ _*)) = rest.partition {
             case CreateColumnDiff(c)
                 if (addPkSc.length > 0) &&
-                    c.name == addPkSc.first.asInstanceOf[PrimaryKeyModel].columnNames.first => true
+                    c.name == addPkSc.head.asInstanceOf[PrimaryKeyModel].columnNames.head => true
             case _ => false
         }
         require(addPkSc.length == thatSingleColumnForPk.length)

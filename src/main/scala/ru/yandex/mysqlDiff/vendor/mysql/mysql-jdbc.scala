@@ -272,7 +272,7 @@ object MysqlJdbcModelExtractorTests
             "CREATE TABLE index_c_p (c1 VARCHAR(100), c2 VARCHAR(50), INDEX ind (c1(10), c2)) ENGINE=InnoDB")
         val table = extractTable("index_c_p")
         table.indexes must haveSize(1)
-        val index = table.indexes.first
+        val index = table.indexes.head
         index.columns must haveSize(2)
         index.columns(0).length must_== Some(10)
         index.columns(1).length must_== None
@@ -283,7 +283,7 @@ object MysqlJdbcModelExtractorTests
         ddlTemplate.recreateTable(
             "CREATE TABLE pk_lp_extr (name VARCHAR(20), PRIMARY KEY (name(3)))")
         val table = extractTable("pk_lp_extr")
-        table.primaryKey.get.columns.first must_== IndexColumn("name", true, Some(3))
+        table.primaryKey.get.columns.head must_== IndexColumn("name", true, Some(3))
     }
     
     "PK is not in indexes list" in {

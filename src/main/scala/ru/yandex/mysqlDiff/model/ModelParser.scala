@@ -114,7 +114,7 @@ case class ModelParser(val context: Context) {
         val pks = extras.flatMap { case pk: PrimaryKeyModel => Some(pk); case _ => None }
         require(pks.length <= 1)
         
-        val pk = pks.firstOption
+        val pk = pks.headOption
         
         val columns2 = columns.map {
             c =>

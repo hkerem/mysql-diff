@@ -603,7 +603,7 @@ class SqlParserCombinatorTests(context: Context) extends org.specs.Specification
         insert.table must_== "users"
         insert.columns.get.toList must_== List("id", "login")
         insert.data.length must_== 1
-        insert.data.first.toList must_== List(NumberValue(15), StringValue("vasya"))
+        insert.data.head.toList must_== List(NumberValue(15), StringValue("vasya"))
     }
     
     "parse UPDATE" in {
