@@ -19,7 +19,7 @@ abstract class PropertyType {
 }
 
 // XXX: add HasProperties trait
-case class PropertyMap[T <: PropertyType, V <: Property](val properties: Seq[V]) {
+class PropertyMap[T <: PropertyType, V <: Property](val properties: Seq[V]) {
     //type V = T#Value
     
     def propertyTypes = properties.map(_.propertyType)
@@ -122,7 +122,7 @@ object DataTypePrecisionKey
 object DataTypeScaleKey
 object ElementTypeKey
 
-abstract case class DataType(name: String) {
+abstract class DataType(val name: String) {
     require(name.toUpperCase == name, "data type name must be upper-case")
     require(name.matches("[\\w ]+"))
     
@@ -327,7 +327,7 @@ case class IndexModel(name: Option[String], override val columns: Seq[IndexColum
     //require(name.isDefined || !explicit)
 }
 
-abstract case class ConstraintModel(name: Option[String]) extends TableExtra {
+abstract class ConstraintModel(val name: Option[String]) extends TableExtra {
     require(name.isEmpty || name.get.length > 0)
 }
 case class UniqueKeyModel(override val name: Option[String], override val columns: Seq[IndexColumn])

@@ -156,7 +156,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         | ("SET DEFAULT" ^^^ ImportedKeySetNull)
         )
     
-    private abstract case class OnSomething(p: ImportedKeyRule)
+    private abstract class OnSomething(val p: ImportedKeyRule)
     private case class OnDelete(override val p: ImportedKeyRule) extends OnSomething(p)
     private case class OnUpdate(override val p: ImportedKeyRule) extends OnSomething(p)
     
