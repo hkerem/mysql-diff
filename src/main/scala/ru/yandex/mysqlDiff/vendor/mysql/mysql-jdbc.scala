@@ -183,7 +183,7 @@ class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
                         MysqlParserCombinator.parseDataType(mysqlColumn.columnType)
                     } else if (MysqlDataTypes.characterDataTypeNames.contains(columnType)) {
                         val length = mysqlColumn.characterMaximumLength match {
-                            case x if x <= 0 || x >= Math.MAX_INT => None
+                            case x if x <= 0 || x >= Int.MaxValue => None
                             case x => Some(x.toInt)
                         }
                         

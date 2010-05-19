@@ -131,7 +131,7 @@ class MetaDao(jt: JdbcTemplate) {
             
             // XXX: asc, length for IndexColumn
             ForeignKeyModel(keyName, rows.map(x => IndexColumn(x.fkColumnName)),
-                    externalTableNames.elements.next, rows.map(_.pkColumnName),
+                    externalTableNames.iterator.next, rows.map(_.pkColumnName),
                     Some(rows.head.updateRule), Some(rows.head.deleteRule))
         }
     }
