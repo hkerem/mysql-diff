@@ -19,7 +19,7 @@ base() {
 }
 
 if [ "$#" = 0 ]; then
-    base scala.tools.nsc.MainGenericRunner -nocompdaemon
+    base scala.tools.nsc.MainGenericRunner -nocompdaemon -usejavacp
 else
     base "$@"
 fi
