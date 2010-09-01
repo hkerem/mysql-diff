@@ -10,7 +10,7 @@ import model._
 import Implicits._
 
 trait TestDataSourceParameters {
-    val defaultTestDsUrl: String
+    def defaultTestDsUrl: String
     val dbName =
         this.getClass.getName
             .replaceFirst("^ru.yandex.mysqlDiff.vendor.", "")
@@ -22,8 +22,8 @@ trait TestDataSourceParameters {
         case null | "" => defaultTestDsUrl
         case x => x
     }
-    val testDsUser: String
-    val testDsPassword: String
+    def testDsUser: String
+    def testDsPassword: String
     
     val ds = LiteDataSource.driverManager(testDsUrl, testDsUser, testDsPassword)
     

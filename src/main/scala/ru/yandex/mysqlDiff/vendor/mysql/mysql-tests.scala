@@ -12,9 +12,9 @@ import util._
 
 object MysqlTestDataSourceParameters extends TestDataSourceParameters {
     
-    override val defaultTestDsUrl = "jdbc:mysql://localhost:3306/mysql_diff_tests"
-    override val testDsUser = "test"
-    override val testDsPassword = "test"
+    override def defaultTestDsUrl = "jdbc:mysql://localhost:3306/mysql_diff_tests"
+    override def testDsUser = "test"
+    override def testDsPassword = "test"
     
     override val connectedContext = new MysqlConnectedContext(ds)
 }
@@ -23,7 +23,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
     import connectedContext._
     import context._
     
-    override val scriptPreamble = "SET storage_engine = InnoDB"
+    override def scriptPreamble = "SET storage_engine = InnoDB"
     
     "CAP-101" in {
         val t2 = checkTwoTables(

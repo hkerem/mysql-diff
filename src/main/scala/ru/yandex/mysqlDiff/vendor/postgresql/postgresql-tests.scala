@@ -22,9 +22,9 @@ object PostgresqlTestDataSourceParameters extends TestDataSourceParameters {
     /// connect to database from console
     // PGPASSWORD=test psql --host=localhost --user test mysql_diff_tests
     
-    override val defaultTestDsUrl = "jdbc:postgresql:mysql_diff_tests"
-    override val testDsUser = "test"
-    override val testDsPassword = "test"
+    override def defaultTestDsUrl = "jdbc:postgresql:mysql_diff_tests"
+    override def testDsUser = "test"
+    override def testDsPassword = "test"
     
     override val connectedContext = new PostgresqlConnectedContext(ds)
 }

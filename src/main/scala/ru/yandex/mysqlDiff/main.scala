@@ -46,7 +46,7 @@ class Utils(context: Context) {
 }
 
 abstract class MainSupport extends CheckJavaVersion {
-    val helpBanner: String
+    def helpBanner: String
     
     val verboseOpt = getopt.Opt("verbose", false)
     val dbenvOpt = getopt.Opt("dbenv", true)
@@ -121,7 +121,7 @@ abstract class MainSupport extends CheckJavaVersion {
 }
 
 object Diff extends MainSupport {
-    override val helpBanner = "mysqlDiff.sh from_file|from_jdbc_url to_file|to_jdbc_url"
+    override def helpBanner = "mysqlDiff.sh from_file|from_jdbc_url to_file|to_jdbc_url"
 
     override def main(args: Array[String]): Unit = {
         super.main(args)
@@ -176,7 +176,7 @@ object Diff extends MainSupport {
 }
 
 object Dump extends MainSupport {
-    override val helpBanner = "$0 file|jdbc_url"
+    override def helpBanner = "$0 file|jdbc_url"
     
     override def main(args: Array[String]): Unit = {
         super.main(args)

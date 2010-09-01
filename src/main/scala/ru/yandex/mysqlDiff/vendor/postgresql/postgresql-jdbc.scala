@@ -18,7 +18,7 @@ class PostgresqlMetaDao(jt: JdbcTemplate) extends MetaDao(jt) {
 class PostgresqlJdbcModelExtractor(connectedContext: ConnectedContext)
     extends JdbcModelExtractor(connectedContext)
 {
-    override val urlDbIsCatalog = true
+    override def urlDbIsCatalog = true
     
     trait PostgresqlSchemaExtractor extends SchemaExtractor {
     }

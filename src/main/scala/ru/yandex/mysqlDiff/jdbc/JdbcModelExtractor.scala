@@ -38,7 +38,7 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
      * True iff last part of URL denotes DB catalog (PostgreSQL),
      * and false iff denotes schema (MySQL).
      */
-    val urlDbIsCatalog = false
+    def urlDbIsCatalog = true
     
     /** Value to be passed as first param to <code>DatabaseMetaData</code> methods */
     def currentCatalog: String = if (urlDbIsCatalog) currentDb else null
