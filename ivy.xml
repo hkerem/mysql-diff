@@ -28,7 +28,7 @@
             Specs is a very nice testing library: http://code.google.com/p/specs/
             Unfortunately, author does not own specs.org domain. Hope, package name will be renamed soon.
         -->
-        <dependency org="org.scala-tools.testing" name="specs_2.8.0.RC2" rev="1.6.5-SNAPSHOT" conf="compile->master"/>
+        <dependency org="org.scala-tools.testing" name="specs_2.8.0" rev="1.6.5" conf="compile->master"/>
 
         <dependency org="org.slf4j" name="slf4j-api" rev="1.5.6" conf="compile->*"/>
         <dependency org="org.slf4j" name="slf4j-simple" rev="1.5.6" conf="runtime->*"/>
@@ -45,9 +45,9 @@
         
         <dependency org="org.apache.ant" name="ant" rev="1.7.0" conf="compile->*"/>
         
-        <dependency org="org.scala-lang" name="scala-library" rev="2.8.0.RC2" conf="api->*"/>
+        <dependency org="org.scala-lang" name="scala-library" rev="2.8.0" conf="api->*"/>
         
-        <dependency org="org.scala-lang" name="scala-compiler" rev="2.8.0.RC2" conf="tools->*"/>
+        <dependency org="org.scala-lang" name="scala-compiler" rev="2.8.0" conf="tools->*"/>
         
         <exclude org="xerces"/>
         <exclude org="xml-apis"/>
