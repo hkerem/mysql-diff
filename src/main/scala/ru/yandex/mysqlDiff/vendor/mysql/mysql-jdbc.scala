@@ -213,7 +213,10 @@ class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
             val cachedMysqlColumns = new Lazy(metaDao.findMysqlTablesColumns(currentCatalog, currentSchema))
             
             override def getMysqlColumns(tableName: String) =
-                cachedMysqlColumns.get.find(_._1 == tableName).get._2
+                cachedMysqlColumns.get.find(_._1 == tableName) match {
+                    case Some(x) => x._2
+                    case None => throw new MysqlDiffException("no definition for table: " + tableName)
+                }
         }
     
     protected override def newSingleTableSchemaExtractor() =
