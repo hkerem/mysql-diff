@@ -62,6 +62,7 @@
         <scalac destdir="target/classes"
                 deprecation="on" unchecked="on" encoding="UTF-8"
                 classpathref="build.classpath" force="changed"
+                addparams="-Xwarninit"
                 >
             <src path="src/main/scala"/>
             <src path="scala-misc/src"/>
