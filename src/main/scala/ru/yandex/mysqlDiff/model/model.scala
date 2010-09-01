@@ -156,7 +156,6 @@ case class DefaultDataType(override val name: String, length: Option[Int])
 }
 
 case class NumericDataType(precision: Option[Int], scale: Option[Int]) extends DataType("NUMERIC") {
-    override val name = "NUMERIC"
     override def customProperties =
         (precision.map(DataTypePrecisionKey -> _) ++ scale.map(DataTypeScaleKey -> _)).toList
 }
