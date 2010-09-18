@@ -16,6 +16,8 @@ lib
 .DS_Store
 tmp
 build.properties
-build
 demo-diff.sql
 ppb-db
+
+syntax:regexp
+^build$
