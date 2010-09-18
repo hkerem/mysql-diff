@@ -12,25 +12,17 @@ import vendor.mysql._
 import Implicits._
 
 object ScriptSerializer {
-    case class Options(
-        stmtJoin: String = " ",
-        indent: String = "",
-        afterComma: String = "",
-        verbose: Boolean = false
-    )
-    
-    val options = Options()
+    case class Options(multiline: Boolean = false) {
+        def stmtJoin =
+            if (multiline) "\n"
+            else " "
+    }
     
     object Options {
-        val multiline = options.copy(
-            stmtJoin = "\n",
-            indent = "    "
-        )
+        val singleline = new Options()
+        val multiline = singleline.copy(true)
         
-        val singleline = options.copy(
-            stmtJoin = " ",
-            afterComma = " "
-        )
+        val default = singleline
     }
     
 }
@@ -52,7 +44,13 @@ class ScriptSerializer(context: Context) {
             }
             serialize(stmt, options) + tail
         }
-        stmts.map(serializeInList _).mkString(options.stmtJoin) + options.stmtJoin
+        val stmtTail =
+            if (options.multiline)
+                "\n"
+            else
+                ""
+        
+        stmts.map(serializeInList _).mkString(options.stmtJoin) + stmtTail
     }
 
     def serialize(stmt: ScriptElement, options: Options): String = stmt match {
@@ -198,9 +196,12 @@ class ScriptSerializer(context: Context) {
     def serializeCreateTable(ct: CreateTableStatement, options: Options): String = {
         val CreateTableStatement(name, ifNotExists, TableElementList(elements), tableOptions) = ct
         def mapTableElement(e: TableElement) =
-            serializeTableElement(e) + (if (options.verbose) " /* " + e.toString + " */" else "")
+            serializeTableElement(e)
         val l = elements.map(mapTableElement _).reverse
-        val lines = (List(l.head) ++ l.drop(1).map(_ + "," + options.afterComma)).reverse.map(options.indent + _)
+        val (afterComma, indent) =
+            if (options.multiline) ("\n", "  ")
+            else (" ", "")
+        val lines = (List(l.head) ++ l.drop(1).map(_ + "," + afterComma)).reverse.map(indent + _)
         
         val firstLine = "CREATE TABLE " + serializeName(name) + " ("
         val lastLine = ")" +
@@ -209,7 +210,7 @@ class ScriptSerializer(context: Context) {
                 case l => " " + l.mkString(" ")
             })
         
-        (List(firstLine) ++ lines ++ List(lastLine)).mkString(options.stmtJoin)
+        (List(firstLine) ++ lines ++ List(lastLine)).mkString(if (options.multiline) "\n" else "")
     }
     
     protected def serializeCreateTableTableOption(opt: TableOption): Option[String] =
@@ -379,7 +380,7 @@ object ScriptSerializerTests extends MySpecification {
         val serialized = scriptSerializer.serialize(script, options)
         
         //println("'" + serialized + "'")
-        assert(serialized == "DROP TABLE users; /* h */ DROP TABLE users; DROP TABLE users; /* h */ /* h */ DROP TABLE users;")
+        serialized must_== "DROP TABLE users; /* h */ DROP TABLE users; DROP TABLE users; /* h */ /* h */ DROP TABLE users;"
     }
     
     "serialize default value" in {
