@@ -23,7 +23,7 @@ class PostgresqlConnectedContext(ds0: LiteDataSource) extends ConnectedContext(P
     override val metaDao = new PostgresqlMetaDao(jt)
 }
 
-class PostgresqlTests(includeOnline: Boolean) extends org.specs.Specification {
+class PostgresqlTests(includeOnline: Boolean) extends MySpecification {
     include(PostgresqlParserCombinatorTests)
     if (includeOnline) include(PostgresqlOnlineTests)
 }

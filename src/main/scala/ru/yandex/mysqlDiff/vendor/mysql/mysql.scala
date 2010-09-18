@@ -174,7 +174,7 @@ object MysqlCharsets {
 
 }
 
-object MysqlCharsetsTests extends org.specs.Specification {
+object MysqlCharsetsTests extends MySpecification {
     import MysqlCharsets._
     
     "defaultCollation" in {
@@ -207,7 +207,7 @@ object MysqlServerVersion {
         }
 }
 
-object MysqlServerVersionTests extends org.specs.Specification {
+object MysqlServerVersionTests extends MySpecification {
     "compare" in {
         MysqlServerVersion(6, 0, 0) > MysqlServerVersion(5, 2, 0) must beTrue
         MysqlServerVersion(5, 2, 1) > MysqlServerVersion(5, 2, 0) must beTrue
@@ -219,7 +219,7 @@ object MysqlServerVersionTests extends org.specs.Specification {
     }
 }
 
-class MysqlTests(includeOnline: Boolean) extends org.specs.Specification {
+class MysqlTests(includeOnline: Boolean) extends MySpecification {
     include(MysqlServerVersionTests)
     include(MysqlCharsetsTests)
     include(MysqlModelParserTests)

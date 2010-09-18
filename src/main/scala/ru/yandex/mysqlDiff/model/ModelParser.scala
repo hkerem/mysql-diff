@@ -224,7 +224,7 @@ case class ModelParser(val context: Context) {
     }
 }
 
-class ModelParserTests(context: Context) extends org.specs.Specification {
+class ModelParserTests(context: Context) extends MySpecification {
     import context._
     import modelParser._
     

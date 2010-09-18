@@ -477,7 +477,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     }
 }
 
-class SqlParserCombinatorTests(context: Context) extends org.specs.Specification {
+class SqlParserCombinatorTests(context: Context) extends MySpecification {
     import context._
     import sqlParserCombinator._
     

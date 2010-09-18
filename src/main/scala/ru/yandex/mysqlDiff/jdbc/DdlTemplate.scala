@@ -68,7 +68,7 @@ class DdlTemplate(connectedContext: ConnectedContext) {
     
 }
 
-class DdlTemplateTests(connectedContext: ConnectedContext) extends org.specs.Specification {
+class DdlTemplateTests(connectedContext: ConnectedContext) extends MySpecification {
     import connectedContext._
     import connectedContext.context._
     

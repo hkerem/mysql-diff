@@ -36,7 +36,7 @@ trait TestDataSourceParameters {
  * Base for online tests
  */
 abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
-    extends org.specs.Specification with diff.DiffMakerMatchers
+    extends MySpecification with diff.DiffMakerMatchers
 {
     import connectedContext._
     

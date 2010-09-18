@@ -265,7 +265,7 @@ class JdbcModelExtractor(connectedContext: ConnectedContext) {
 }
 
 class JdbcModelExtractorTests(connectedContext: ConnectedContext)
-    extends org.specs.Specification
+    extends MySpecification
 {
     import connectedContext._
     import connectedContext.context._

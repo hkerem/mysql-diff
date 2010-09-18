@@ -22,7 +22,7 @@ class StringExtras(string: String) {
         replace("\n", "\\n").replace("\t", "\\t").replace("\0", "\\0")
 }
 
-object StringTests extends org.specs.Specification {
+object StringTests extends MySpecification {
     import StringImplicits._
     
     "%" in {

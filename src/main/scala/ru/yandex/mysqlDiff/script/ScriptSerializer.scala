@@ -366,7 +366,7 @@ class ScriptSerializer(context: Context) {
     
 }
 
-object ScriptSerializerTests extends org.specs.Specification {
+object ScriptSerializerTests extends MySpecification {
     val context = Environment.defaultContext
     import context._
     

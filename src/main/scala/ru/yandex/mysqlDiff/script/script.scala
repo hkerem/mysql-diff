@@ -269,7 +269,7 @@ case class VariableExpr(name: String) extends SqlExpr
 
 case class FunctionCallExpr(name: String, params: Seq[SqlExpr]) extends SqlExpr
 
-object ScriptTests extends org.specs.Specification {
+object ScriptTests extends MySpecification {
 }
 
 // vim: set ts=4 sw=4 et:

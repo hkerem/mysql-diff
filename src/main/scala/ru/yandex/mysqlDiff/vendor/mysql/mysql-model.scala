@@ -159,7 +159,7 @@ object MysqlDataTypes extends DataTypes {
     }
 }
 
-object MysqlDataTypesTests extends org.specs.Specification {
+object MysqlDataTypesTests extends MySpecification {
     import MysqlContext._
     import modelParser._
     

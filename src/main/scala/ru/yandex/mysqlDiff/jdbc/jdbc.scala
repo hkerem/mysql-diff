@@ -48,7 +48,7 @@ object QueryTool {
     }
 }
 
-class JdbcTests(testsSelector: TestsSelector) extends org.specs.Specification {
+class JdbcTests(testsSelector: TestsSelector) extends MySpecification {
     include(new MetaDaoTests(testsSelector))
 }
 

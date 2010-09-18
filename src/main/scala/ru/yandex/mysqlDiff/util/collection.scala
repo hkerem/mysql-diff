@@ -84,7 +84,7 @@ object CollectionUtils {
     
 }
 
-object CollectionTests extends org.specs.Specification {
+object CollectionTests extends MySpecification {
     
     "compareSeqs" in {
         val a = List(1, 2, 3, 5)

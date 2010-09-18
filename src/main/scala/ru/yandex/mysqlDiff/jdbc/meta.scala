@@ -220,7 +220,7 @@ object MetaDao {
     
 }
 
-abstract class DbMetaDaoTests(ds: LiteDataSource) extends org.specs.Specification {
+abstract class DbMetaDaoTests(ds: LiteDataSource) extends MySpecification {
     // XXX: write some tests
     
     val jt = new JdbcTemplate(ds)
@@ -233,7 +233,7 @@ abstract class DbMetaDaoTests(ds: LiteDataSource) extends org.specs.Specificatio
 
 object PostgresqlMetaDaoTests extends DbMetaDaoTests(vendor.postgresql.PostgresqlTestDataSourceParameters.ds)
 
-class MetaDaoTests(testsSelector: TestsSelector) extends org.specs.Specification {
+class MetaDaoTests(testsSelector: TestsSelector) extends MySpecification {
     if (testsSelector.includeMysql) include(MysqlMetaDaoTests)
     if (testsSelector.includePostgresql) include(PostgresqlMetaDaoTests)
 }

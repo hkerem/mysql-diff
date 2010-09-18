@@ -204,7 +204,7 @@ abstract class DataTypes {
     }
 }
 
-object DataTypesTests extends org.specs.Specification {
+object DataTypesTests extends MySpecification {
     import Environment.defaultContext._
     
     // no tests yet
@@ -230,7 +230,7 @@ object ColumnProperties {
     val empty = new ColumnProperties(Nil)
 }
 
-object ColumnPropertiesTests extends org.specs.Specification {
+object ColumnPropertiesTests extends MySpecification {
     "isNotNull" in {
         new ColumnProperties(List(Nullability(true))).isNotNull must_== false
         new ColumnProperties(List(Nullability(false))).isNotNull must_== true
@@ -682,7 +682,7 @@ case object DataTypePropertyType extends ColumnPropertyType {
     override type Value = DataTypeProperty
 }
 
-object ModelTests extends org.specs.Specification {
+object ModelTests extends MySpecification {
     include(ColumnPropertiesTests)
     include(DataTypesTests)
 

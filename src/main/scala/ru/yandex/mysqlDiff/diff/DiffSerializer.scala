@@ -281,7 +281,7 @@ class DiffSerializer(val context: Context) {
     }
 }
 
-object DiffSerializerTests extends org.specs.Specification {
+object DiffSerializerTests extends MySpecification {
     
     import AlterTableStatement._
     import CreateTableStatement._

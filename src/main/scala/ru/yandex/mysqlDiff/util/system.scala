@@ -15,7 +15,7 @@ object SystemInfo {
         }
 }
 
-object SystemInfoTests extends org.specs.Specification {
+object SystemInfoTests extends MySpecification {
     "javaVersionMajor" in {
         SystemInfo.javaVersionMajor must beGreaterThanOrEqualTo(5)
         SystemInfo.javaVersionMajor must beLessThanOrEqualTo(7)

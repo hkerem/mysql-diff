@@ -1,5 +1,16 @@
 package ru.yandex.mysqlDiff
 
+
+object MysqlDiffSpecsConfiguration extends org.specs.util.Configuration {
+    override def examplesWithoutExpectationsMustBePending = false
+}
+    
+abstract class MySpecification extends org.specs.Specification {
+    // evil hack
+    org.specs.util.Configuration.config = MysqlDiffSpecsConfiguration
+}
+
+
 /** All online tests are turned off by default */
 trait TestsSelector {
     def includeOnline = false
@@ -19,7 +30,7 @@ object OfflineTestsSelector extends TestsSelector {
     override def includeOnline = false
 }
 
-class SomeTests(testsSelector: TestsSelector) extends org.specs.Specification with CheckJavaVersion {
+class SomeTests(testsSelector: TestsSelector) extends MySpecification with CheckJavaVersion {
     include(script.SqlParserCombinatorTests)
     include(model.ModelTests)
     include(model.ModelParserTests)
@@ -45,7 +56,7 @@ object PostgresqlTests extends SomeTests(new TestsSelector { override def includ
 
 object TestsFromTeamcity extends org.specs.runner.TeamCityRunner(Tests)
 
-//class TempTests extends org.specs.Specification
+//class TempTests extends MySpecification
 //object TestTestsWithTs extends TempTests with org.specs.runner.TeamCityReporter
 
 // vim: set ts=4 sw=4 et:

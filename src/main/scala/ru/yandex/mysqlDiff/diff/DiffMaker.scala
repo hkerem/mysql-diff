@@ -262,7 +262,7 @@ trait DiffMakerMatchers {
 
 }
 
-object DiffMakerTests extends org.specs.Specification {
+object DiffMakerTests extends MySpecification {
     import Environment.defaultContext._
 
     import org.specs.matcher.Matcher

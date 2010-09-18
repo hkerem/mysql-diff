@@ -77,7 +77,7 @@ case class Result(options: Seq[(Opt, String)], rest: Seq[String]) {
         Result(this.options ++ that.options, this.rest ++ that.rest)
 }
 
-object GetoptTests extends org.specs.Specification {
+object GetoptTests extends MySpecification {
     "just args" in {
         Options(Seq()).parse(Seq("ar", "bg")) must beLike {
             case Result(Seq(), Seq("ar", "bg")) => true
