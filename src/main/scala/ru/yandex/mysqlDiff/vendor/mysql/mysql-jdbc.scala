@@ -200,7 +200,7 @@ class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
                 val defaultValue = parseDefaultValueFromDb(defaultValueFromDb, dataType).map(DefaultValue(_))
                 
                 val props = Seq[ColumnProperty]() ++ defaultValue ++ Some(MysqlComment(mysqlColumn.columnComment))
-                base.overrideProperties(props).withDataType(dataType)
+                base.overrideProperties(props).copy(dataType=dataType)
             }
         }
         

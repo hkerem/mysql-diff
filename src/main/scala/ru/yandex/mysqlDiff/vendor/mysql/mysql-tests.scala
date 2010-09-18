@@ -370,7 +370,7 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
         diffMaker.compareTables(dbModel, localModel) must beLike { case None => true }
         diffMaker.compareTables(localModel, dbModel) must beLike { case None => true }
         
-        val dbModel2 = jdbcModelExtractor.extractTable("aiwi2").withName("aiwi")
+        val dbModel2 = jdbcModelExtractor.extractTable("aiwi2").copy(name="aiwi")
         diffMaker.compareTables(dbModel, dbModel2) must beLike { case None => true }
         diffMaker.compareTables(dbModel2, dbModel) must beLike { case None => true }
     }

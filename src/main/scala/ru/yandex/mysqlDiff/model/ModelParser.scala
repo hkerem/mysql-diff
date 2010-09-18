@@ -16,14 +16,10 @@ case class ModelParser(val context: Context) {
     import TableDdlStatement._
     
     case class ScriptEvaluation(db: DatabaseModel, specific: ScriptEvaluation.VendorSpecific) {
-        def withDb(db: DatabaseModel) =
-            new ScriptEvaluation(db, specific)
         def alterTable(name: String, f: TableModel => TableModel) =
-            withDb(db.alterTable(name, f))
-        def withSpecific(specific: ScriptEvaluation.VendorSpecific) =
-            new ScriptEvaluation(db, specific)
+            copy(db=db.alterTable(name, f))
         def mapSpecific(f: ScriptEvaluation.VendorSpecific => ScriptEvaluation.VendorSpecific) =
-            withSpecific(f(specific))
+            copy(specific=f(specific))
     }
     
     object ScriptEvaluation {
@@ -46,11 +42,11 @@ case class ModelParser(val context: Context) {
     def evalStmt(stmt: ScriptStatement, sc: ScriptEvaluation) = stmt match {
         // XXX: handle IF NOT EXISTS
         case ct: CreateTableStatement => parseCreateTable(ct, sc)
-        case DropTableStatement(name, _) => sc.withDb(sc.db.dropTable(name))
-        case st @ AlterTableStatement(name, _) => sc.withDb(sc.db.alterTable(name, alterTable(st, _)))
-        case CreateSequenceStatement(name) => sc.withDb(sc.db.createSequence(SequenceModel(name)))
-        case DropSequenceStatement(name) => sc.withDb(sc.db.dropSequence(name))
-        case st @ CreateIndexStatement(_, table, _) => sc.withDb(sc.db.alterTable(table, createIndex(st, _)))
+        case DropTableStatement(name, _) => sc.copy(db=sc.db.dropTable(name))
+        case st @ AlterTableStatement(name, _) => sc.copy(db=sc.db.alterTable(name, alterTable(st, _)))
+        case CreateSequenceStatement(name) => sc.copy(db=sc.db.createSequence(SequenceModel(name)))
+        case DropSequenceStatement(name) => sc.copy(db=sc.db.dropSequence(name))
+        case st @ CreateIndexStatement(_, table, _) => sc.copy(db=sc.db.alterTable(table, createIndex(st, _)))
         
         // ignore DML statements for now
         case d: DmlStatement => sc
@@ -75,7 +71,7 @@ case class ModelParser(val context: Context) {
         }
     }
     
-    def parseCreateTable(ct: CreateTableStatement, sc: ScriptEvaluation): ScriptEvaluation = sc.withDb({
+    def parseCreateTable(ct: CreateTableStatement, sc: ScriptEvaluation): ScriptEvaluation = sc.copy(db={
         import sc.db
         
         val CreateTableStatement(name, ifNotExists, TableElementList(elements), _) = ct
@@ -141,7 +137,7 @@ case class ModelParser(val context: Context) {
     }
     
     def fixColumn(column: ColumnModel, table: TableModel) = {
-        val c1 = column.withDataType(fixDataType(column.dataType, column, table)) match {
+        val c1 = column.copy(dataType=fixDataType(column.dataType, column, table)) match {
             case c if table.isPk(c.name) => fixPkColumn(c)
             case c => fixRegularColumn(c)
         }

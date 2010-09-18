@@ -143,12 +143,6 @@ case class DefaultDataType(override val name: String, length: Option[Int])
     extends DataType(name) with DataTypeWithLength
 {
     
-    def withName(n: String) =
-        new DefaultDataType(n, this.length)
-    
-    def withLength(l: Option[Int]) =
-        new DefaultDataType(this.name, l)
-    
     override def customProperties = length.map(DataTypeLengthKey -> _).toList
     
     override def toString =
@@ -282,12 +276,6 @@ case class ColumnModel(val name: String, val dataType: DataType, properties: Col
     def removeProperty(p: ColumnProperty) =
         withProperties(this.properties.removeProperty(p))
 
-    
-    def withDataType(dt: DataType) =
-        new ColumnModel(this.name, dt, this.properties)
-    
-    def withName(n: String) =
-        new ColumnModel(n, this.dataType, this.properties)
     
     def isNotNull = properties.isNotNull
     def defaultValue = properties.defaultValue
@@ -542,9 +530,6 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     /** Columns is contained in PK */
     def isPk(name: String) =
         primaryKey.isDefined && primaryKey.get.columnNames.contains(name)
-    
-    def withName(n: String) =
-        new TableModel(n, columns, extras, options)
     
     def withColumns(cs: Seq[ColumnModel]) =
         new TableModel(name, cs, extras, options)
