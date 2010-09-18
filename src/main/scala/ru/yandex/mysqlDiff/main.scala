@@ -127,15 +127,26 @@ object Diff extends MainSupport {
         super.main(args)
         
         var verbose = false
-        var dbenv = "mysql"
         
         val getopt.Result(options, restArgs) = getopt.Options(Seq(verboseOpt, dbenvOpt)).parse(args)
+        
+        val dbenvsFromParams = restArgs.flatMap(p =>
+            if (p.startsWith("jdbc:"))
+                Some(p.substring("jdbc:".length).replaceFirst(":.*", ""))
+            else
+                None
+        )
+        
+        var dbenvsFromOptions = Seq[String]()
+        
         for ((opt, value) <- options) {
             opt.name match {
                 case "verbose" => verbose = true
-                case "dbenv" => dbenv = value
+                case "dbenv" => dbenvsFromOptions = Seq(value)
             }
         }
+        
+        val dbenv = (dbenvsFromParams ++ dbenvsFromOptions).head
         
         val context = Environment.context(dbenv)
         import context._
