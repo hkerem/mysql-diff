@@ -44,6 +44,13 @@ class PostgresqlJdbcModelExtractorTests(connectedContext: ConnectedContext)
         val t = extractTable("powerbooks")
         t.column("col").defaultValue must_== Some(NullValue)
     }
+    
+    "extract SEQUENCE" in {
+        jt.execute("DROP SEQUENCE IF EXISTS seq_11")
+        jt.execute("CREATE SEQUENCE seq_11")
+        val db = jdbcModelExtractor.extract()
+        db.sequence("seq_11").name must_== "seq_11"
+    }
 }
 
 // vim: set ts=4 sw=4 et:
