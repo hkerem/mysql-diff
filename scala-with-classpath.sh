@@ -20,7 +20,7 @@ if test -d `dirname $0`/target/scala_2.8.0/classes; then
 fi
 
 base() {
-    JAVA_OPTS=-Xss10m javacmd -classpath $classes_dir:`dirname $0`/lib/dep/'*' "$@"
+    javacmd -Xss10m -classpath $classes_dir:`dirname $0`/lib/dep/'*' "$@"
 }
 
 if [ "$#" = 0 ]; then
