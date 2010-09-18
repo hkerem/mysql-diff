@@ -227,9 +227,7 @@ object Dump extends MainSupport {
                 exit(1)
         }
         
-        object serializeOptions extends ScriptSerializer.Options.Multiline {
-            override def verbose = verboseValue
-        }
+        val serializeOptions = ScriptSerializer.Options.multiline.copy(verbose=verboseValue)
         
         if (verboseValue) {
             modelDumper.dumpDatabase(db, indent="-- ")

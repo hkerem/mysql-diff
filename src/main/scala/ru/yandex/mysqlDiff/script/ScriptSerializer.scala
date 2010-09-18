@@ -12,29 +12,25 @@ import vendor.mysql._
 import Implicits._
 
 object ScriptSerializer {
-    abstract class Options {
-        def stmtJoin: String
-        def scriptTail: String = stmtJoin
-        def indent = ""
-        def afterComma = ""
-        def verbose = false
-    }
+    case class Options(
+        stmtJoin: String = " ",
+        indent: String = "",
+        afterComma: String = "",
+        verbose: Boolean = false
+    )
+    
+    val options = Options()
     
     object Options {
-        trait Multiline extends Options {
-            override def stmtJoin = "\n"
-            override def indent = "    "
-        }
+        val multiline = options.copy(
+            stmtJoin = "\n",
+            indent = "    "
+        )
         
-        object multiline extends Multiline
-        
-        trait Singleline extends Options {
-            override def stmtJoin = " "
-            override def scriptTail = ""
-            override def afterComma = " "
-        }
-        
-        object singleline extends Singleline
+        val singleline = options.copy(
+            stmtJoin = " ",
+            afterComma = " "
+        )
     }
     
 }
@@ -56,7 +52,7 @@ class ScriptSerializer(context: Context) {
             }
             serialize(stmt, options) + tail
         }
-        stmts.map(serializeInList _).mkString(options.stmtJoin) + options.scriptTail
+        stmts.map(serializeInList _).mkString(options.stmtJoin) + options.stmtJoin
     }
 
     def serialize(stmt: ScriptElement, options: Options): String = stmt match {
