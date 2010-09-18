@@ -231,7 +231,10 @@ object Dump extends MainSupport {
             override def verbose = verboseValue
         }
         
-        //print(ModelSerializer.serializeDatabaseToText(db))
+        if (verboseValue) {
+            modelDumper.dumpDatabase(db, indent="-- ")
+            println()
+        }
         print(scriptSerializer.serialize(modelSerializer.serializeDatabase(db), serializeOptions))
     }
 }
