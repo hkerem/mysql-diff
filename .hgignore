@@ -18,6 +18,8 @@ tmp
 build.properties
 demo-diff.sql
 ppb-db
+*.lock
+*.log
 
 syntax:regexp
 ^build$

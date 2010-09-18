@@ -14,8 +14,13 @@ javacmd() {
     fi
 }
 
+classes_dir=`dirname $0`/target/classes
+if test -d `dirname $0`/target/scala_2.8.0/classes; then
+    classes_dir=`dirname $0`/target/scala_2.8.0/classes
+fi
+
 base() {
-    JAVA_OPTS=-Xss10m javacmd -classpath `dirname $0`/target/classes:`dirname $0`/lib/dep/'*' "$@"
+    JAVA_OPTS=-Xss10m javacmd -classpath $classes_dir:`dirname $0`/lib/dep/'*' "$@"
 }
 
 if [ "$#" = 0 ]; then
