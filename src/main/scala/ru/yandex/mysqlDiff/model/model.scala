@@ -11,6 +11,7 @@ import Implicits._
 
 class TableName(name: String, schema: Option[String], catalog: Option[String])
 
+/** Base class for strongly typed property */
 abstract class Property {
     def propertyType: PropertyType
 }
@@ -18,48 +19,63 @@ abstract class PropertyType {
     type Value <: Property
 }
 
+/** Stronly typed properties */
 // XXX: add HasProperties trait
 class PropertyMap[T <: PropertyType, V <: Property](val properties: Seq[V]) {
     //type V = T#Value
     
+    /* Get types of properties in this map */
     def propertyTypes = properties.map(_.propertyType)
     
     // check there are no duplicate property types
     require(propertyTypes.unique.size == properties.length)
     
-    protected def copy(properties: Seq[V]): this.type = new PropertyMap[T, V](properties).asInstanceOf[this.type]
+    protected def copy(properties: Seq[V]): this.type =
+        new PropertyMap[T, V](properties).asInstanceOf[this.type]
     
+    /** Find a property value by name */
     def find[U <: T](pt: U): Option[U#Value] =
         properties.find(_.propertyType == pt).map(_.asInstanceOf[U#Value])
     
+    /** Change properties by specified function */
     def map(f: V => V): this.type =
         copy(properties.map(f))
     
+    /** Add property, if no property of this type exists */
     def withDefaultProperty(property: V): this.type =
         if (find(property.propertyType.asInstanceOf[T]).isDefined) this
         else copy(properties ++ Seq(property))
     
+    /** Repeat {@link #withDefaultProperty} for each property in the list */
     def withDefaultProperties(ps: Seq[V]): this.type = {
         var r: this.type = this
         for (p <- ps) r = r.withDefaultProperty(p)
         r
     }
     
+    /** Remove property with given type from this map */
     def removePropertyByType(pt: T): this.type =
         copy(properties.filter(_.propertyType != pt))
     
+    /** Remove property from this map iff it type and value equal to given */
     def removeProperty(p: V): this.type =
         copy(properties.filter(_ != p))
     
+    /** Add property to this map, remove old property of that type if it is in this map */
     def overrideProperty(o: V): this.type =
         copy(removePropertyByType(o.propertyType.asInstanceOf[T]).properties ++ List(o))
     
+    /** Repeat {@link #overrideProperty} for each property in the list */
     def overrideProperties(ps: Seq[V]): this.type = {
         var r: this.type = this
         for (p <- ps) r = r.overrideProperty(p)
         r
     }
     
+    /**
+     * Add property to this map.
+     * This method fails if there is already property of this type in the map.
+     */
     def addProperty(p: V): this.type =
         copy(properties ++ List(p))
     
@@ -67,8 +83,10 @@ class PropertyMap[T <: PropertyType, V <: Property](val properties: Seq[V]) {
 
 abstract class SqlValue extends script.SqlExpr
 
+/** Representation of SQL constant */
 case object NullValue extends SqlValue
 
+/** SQL NUMBER. Represented as BigDecimal, and this should be changed */
 class NumberValue(val value: BigDecimal) extends SqlValue {
     require(value != null)
     
@@ -80,9 +98,13 @@ class NumberValue(val value: BigDecimal) extends SqlValue {
     override def toString = "NumberValue("+ value.toString +")"
 }
 
+/** NumberValue utilities */
 object NumberValue {
+    /** Construct */
     def apply(value: BigDecimal): NumberValue = new NumberValue(value)
+    /** Construct */
     def apply(value: Int): NumberValue = apply(BigDecimal(value))
+    /** Parse string to NumberValue */
     def apply(value: String): NumberValue =
         try {
             apply(BigDecimal(value))
@@ -94,8 +116,10 @@ object NumberValue {
     def unapply(nv: NumberValue): Option[Int] = Some(nv.value.intValue)
 }
 
+/** SQL VARCHAR */
 case class StringValue(value: String) extends SqlValue
 
+/** SQL BOOLEAN */
 case class BooleanValue(value: Boolean) extends SqlValue
 
 /** Any date time value 4.4.3.4 */
@@ -113,7 +137,11 @@ case class DateValue(override val value: String) extends TemporalValue
 case class TimeValue(override val value: String) extends TemporalValue
 case class TimeWithTimeZoneValue(override val value: String) extends WithTimeZoneValue
 
-// used as default value
+/**
+ * Representation of <code>NOW()</code> function.
+ * Used to store default value.
+ * XXX: should extends SqlExpr
+ */
 case object NowValue extends SqlValue
 
 object DataTypeNameKey
@@ -122,14 +150,20 @@ object DataTypePrecisionKey
 object DataTypeScaleKey
 object ElementTypeKey
 
+/** Base class for data types */
 abstract class DataType(val name: String) {
     require(name.toUpperCase == name, "data type name must be upper-case")
     require(name.matches("[\\w ]+"))
     
     def properties: Seq[(Any, Any)] = Seq(DataTypeNameKey -> name) ++ customProperties
+    /**
+     * Representation of this type as sequence of properties.
+     * Used for type comparison.
+     */
     def customProperties: Seq[(Any, Any)]
 }
 
+/** Some types like VARCHAR have length */
 trait DataTypeWithLength {
     val name: String
     val length: Option[Int]
@@ -139,6 +173,7 @@ object DataTypeWithLength {
     def unapply(dt: DataTypeWithLength) = Some((dt.name, dt.length))
 }
 
+/** Universal data type representation */
 case class DefaultDataType(override val name: String, length: Option[Int])
     extends DataType(name) with DataTypeWithLength
 {
@@ -149,11 +184,13 @@ case class DefaultDataType(override val name: String, length: Option[Int])
         name + length.map("(" + _ + ")").getOrElse("")
 }
 
+/** Universal numeric data type representation */
 case class NumericDataType(precision: Option[Int], scale: Option[Int]) extends DataType("NUMERIC") {
     override def customProperties =
         (precision.map(DataTypePrecisionKey -> _) ++ scale.map(DataTypeScaleKey -> _)).toList
 }
 
+/** Universal array representation */
 case class ArrayDataType(elementType: DataType) extends DataType("ARRAY") {
     // XXX: does not work for multidim arrays
     override def customProperties = List(ElementTypeKey -> elementType)
@@ -206,6 +243,7 @@ object DataTypesTests extends MySpecification {
 
 abstract class TableEntry
 
+/** Column properties */
 case class ColumnProperties(ps: Seq[ColumnProperty])
     extends PropertyMap[ColumnPropertyType, ColumnProperty](ps)
 {
@@ -214,6 +252,7 @@ case class ColumnProperties(ps: Seq[ColumnProperty])
     /** True iff NOT NULL or unknown */
     def isNotNull = find(NullabilityPropertyType).map(!_.nullable).getOrElse(false)
     
+    /** Get the default value */
     def defaultValue: Option[script.SqlExpr] = find(DefaultValuePropertyType).map(_.value)
     
     /** True iff all properties are model properties */
@@ -221,7 +260,7 @@ case class ColumnProperties(ps: Seq[ColumnProperty])
 }
 
 object ColumnProperties {
-    val empty = new ColumnProperties(Nil)
+    val empty = new ColumnProperties(Seq())
 }
 
 object ColumnPropertiesTests extends MySpecification {
@@ -257,11 +296,14 @@ object ColumnPropertiesTests extends MySpecification {
     }
 }
 
-case class ColumnModel(val name: String, val dataType: DataType, properties: ColumnProperties)
+/** Table column model */
+case class ColumnModel(
+    val name: String,
+    val dataType: DataType,
+    properties: ColumnProperties = ColumnProperties.empty
+)
     extends TableEntry
 {
-    def this(name: String, dataType: DataType) = this(name, dataType, ColumnProperties.empty)
-    
     require(properties.isModelProperties)
     
     def withProperties(ps: ColumnProperties) =
@@ -276,8 +318,9 @@ case class ColumnModel(val name: String, val dataType: DataType, properties: Col
     def removeProperty(p: ColumnProperty) =
         withProperties(this.properties.removeProperty(p))
 
-    
+    /** Shortcut */
     def isNotNull = properties.isNotNull
+    /** Shortcut */
     def defaultValue = properties.defaultValue
 }
 
@@ -299,30 +342,36 @@ trait UniqueOrIndexModel extends TableExtra {
     def columnNames = columns.map(_.name)
 }
 
-// length and asc is for MySQL
-case class IndexColumn(name: String, asc: Boolean, length: Option[Int])
+/**
+ * Representation of a column within index.
+ * Length and asc are MySQL extensions.
+ */
+case class IndexColumn(name: String, asc: Boolean = true, length: Option[Int] = None)
 
-object IndexColumn {
-    def apply(name: String) = new IndexColumn(name, true, None)
-}
-
+/** Representation of index */
 case class IndexModel(name: Option[String], override val columns: Seq[IndexColumn], explicit: Boolean)
     extends UniqueOrIndexModel
 {
+    // index cannot be empty
     require(columns.length > 0)
+    // no column is allowed to be exist twice in the index
     require(columnNames.unique.size == columnNames.length)
-    //require(name.isDefined || !explicit)
 }
 
+/** Base for table constraints */
 abstract class ConstraintModel(val name: Option[String]) extends TableExtra {
     require(name.isEmpty || name.get.length > 0)
 }
+
+/** UNIQUE */
 case class UniqueKeyModel(override val name: Option[String], override val columns: Seq[IndexColumn])
     extends ConstraintModel(name) with UniqueOrIndexModel
 
+/** PRIMARY KEY */
 case class PrimaryKeyModel(override val name: Option[String], columns: Seq[IndexColumn])
     extends ConstraintModel(name)
 {
+    /** Shortcut */
     def columnNames = columns.map(_.name)
 }
 
@@ -337,6 +386,7 @@ object ImportedKeyCascade extends ImportedKeyRule
 object ImportedKeySetNull extends ImportedKeyRule
 object ImportedKeySetDefault extends ImportedKeyRule
 
+/** FOREIGN KEY */
 case class ForeignKeyModel(override val name: Option[String],
         localColumns: Seq[IndexColumn],
         externalTable: String,
@@ -345,11 +395,14 @@ case class ForeignKeyModel(override val name: Option[String],
         deleteRule: Option[ImportedKeyRule])
     extends ConstraintModel(name)
 {
+    /** Shortcut */
     def localColumnNames = localColumns.map(_.name)
     
+    // consistency check
     require(localColumns.length == externalColumns.length)
     // XXX: check externalColumns unique
     
+    /** Properties are for comparison */
     def properties: Seq[(Any, Any)] =
         Seq("localColumns" -> localColumns.toList,
                 "externalTable" -> externalTable,
@@ -374,6 +427,9 @@ case class TableOptions(ps: Seq[TableOption])
     override def copy(options: Seq[TableOption]) = new TableOptions(options).asInstanceOf[this.type]
 }
 
+/**
+ * TABLE. Central thing in the model.
+ */
 case class TableModel(override val name: String, columns: Seq[ColumnModel], extras: Seq[TableExtra], options: TableOptions)
     extends DatabaseDecl(name: String)
 {
@@ -393,6 +449,7 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     
     require(primaryKeys.length <= 1)
     
+    /** Shortcut */
     def explicitIndexes =
         indexes.filter(_.explicit)
     
@@ -405,8 +462,10 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     
     def explicitEntries = columns ++ explicitExtras
     
+    // helper method
     private def primaryKeys = extras.flatMap { case p: PrimaryKeyModel => Some(p); case _ => None }
-    def primaryKey = primaryKeys.headOption
+    /** Shortcut */
+    def primaryKey = primaryKeys.headOption // should be .singleOption
     
     def indexes = extras.flatMap { case i: IndexModel => Some(i); case _ => None }
     def indexNames = indexes.flatMap(_.name)
@@ -439,6 +498,7 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
         uniqueKeys.find(_.columnNames.toList == columns.toList)
             .getOrThrow("table " + this.name + " has no unique keys with columns " + columns.mkString(", "))
     
+    // alter operations
     
     def addColumn(c: ColumnModel) =
         withColumns(columns ++ Seq(c))
@@ -551,28 +611,39 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
 // XXX: add type
 case class SequenceModel(override val name: String) extends DatabaseDecl(name)
 
+/**
+ * Top level database object. All such objects must have names.
+ */
 abstract class DatabaseDecl(val name: String) {
 }
 
+/** Database */
 case class DatabaseModel(decls: Seq[DatabaseDecl])
 {
     // no objects with same name
     require(decls.map(_.name).unique.size == decls.length)
     
+    /** Concatenate models */
     def ++(that: DatabaseModel) =
         DatabaseModel(this.decls ++ that.decls)
     
+    /** Get tables */
     def tables: Seq[TableModel] =
         decls.flatMap {
             case t: TableModel => Some(t)
             case _ => None
         }
     
+    /**
+     * Get single table from this database.
+     * Throw if database contains more then one table or anything except tables.
+     */
     def singleTable: TableModel = decls match {
         case Seq(t: TableModel) => t
         case _ => throw new MysqlDiffException("expecting single table")
     }
     
+    /** Get sequences */
     def sequences: Seq[SequenceModel] =
         decls.flatMap {
             case s: SequenceModel => Some(s)
@@ -580,45 +651,64 @@ case class DatabaseModel(decls: Seq[DatabaseDecl])
         }
     
     
+    /** Get table by name */
     def table(name: String) = findTable(name).getOrElse(throw new MysqlDiffException("DB has no table " + name))
     
+    /** Get sequence by name */
     def sequence(name: String) = findSequence(name).get
     
+    /** Find table by name, return <code>None</code> if not found */
     def findTable(name: String) = tables.find(_.name == name)
     
+    /** Find sequence by name, return <code>None</code> if not found */
     def findSequence(name: String) = sequences.find(_.name == name)
     
+    /**
+     * Remove table by name from this database.
+     * Table must exist.
+     */
     def dropTable(name: String) = {
         table(name) // check exists
         dropTableIfExists(name)
     }
     
+    /**
+     * Remove sequence by name from this database.
+     * Table must exist.
+     */
     def dropSequence(name: String) = {
         sequence(name) // check exists
         dropSequenceIfExists(name)
     }
 
+    /** Filter tables by given function. Keep other objects intact */
     def filterTables(tableP: TableModel => Boolean) =
         new DatabaseModel(decls.filter {
             case decl: TableModel => tableP(decl)
             case _ => true
         })
 
+    /** Drop table by name if exists */
     def dropTableIfExists(name: String) = filterTables(_.name != name)
 
+    /** Drop sequence by name if exists */
     def dropSequenceIfExists(name: String) =
         // XXX: check it is sequence
         new DatabaseModel(decls.filter(_.name != name))
     
+    /** Add declaration to the database */
     def createDecl(decl: DatabaseDecl) =
         new DatabaseModel(decls ++ Seq(decl))
     
+    /** Add table to the database */
     def createTable(table: TableModel) =
         createDecl(table)
     
+    /** Add sequence to the database */
     def createSequence(sequence: SequenceModel) =
         createDecl(sequence)
     
+    /** Change table by name with given function. Table must exist */
     def alterTable(name: String, alter: TableModel => TableModel) = {
         table(name) // check exists
         new DatabaseModel(decls.map {
