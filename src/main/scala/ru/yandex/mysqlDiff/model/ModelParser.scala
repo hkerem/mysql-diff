@@ -94,6 +94,9 @@ case class ModelParser(val context: Context) {
                     case InlinePrimaryKey =>
                         extras += PrimaryKeyModel(None, Seq(IndexColumn(column.name)))
                     
+                    case InlineUnique =>
+                        extras += UniqueKeyModel(None, Seq(IndexColumn(column.name)))
+                    
                     case InlineReferences(References(table, Seq(tColumn), updateRule, deleteRule)) =>
                         extras += ForeignKeyModel(None, Seq(IndexColumn(column.name)), table, Seq(tColumn),
                                 updateRule, deleteRule)

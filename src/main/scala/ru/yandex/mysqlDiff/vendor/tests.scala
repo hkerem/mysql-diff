@@ -244,12 +244,25 @@ abstract class OnlineTestsSupport(val connectedContext: ConnectedContext)
         checkTwoDatabases12(script1, script2)
     }
     
+    // XXX: move tests outside
+    
     "identical, simple table" in {
         checkTable("CREATE TABLE c (idc INT NOT NULL)")
     }
     
     "bug with NULL PRIMARY KEY" in {
         checkTable("CREATE TABLE null_pk (id INT NULL DEFAULT NULL, PRIMARY KEY(id))")
+    }
+   
+    "inline UNIQUE" in {
+        checkTwoTables(
+            """
+            CREATE TABLE trees (kind VARCHAR(100))
+            """,
+            """
+            CREATE TABLE trees (kind VARCHAR(100) UNIQUE)
+            """
+        )
     }
     
     /* XXX: need drop table

@@ -19,9 +19,17 @@ class MysqlDiffSerializer(context: Context) extends DiffSerializer(context) {
     
     override def dropExtraStmt(k: TableExtra, table: TableModel) = k match {
         case i: IndexModel =>
-            AlterTableStatement(table.name, List(
+            AlterTableStatement(table.name, Seq(
                 TableDdlStatement.DropIndex(i.name.getOrThrow("cannot drop unnamed index "+ i +"; table "+ table.name))))
-        case _ => super.dropExtraStmt(k, table)
+        case k =>
+            AlterTableStatement(table.name, Seq(k match {
+                    case _: PrimaryKeyModel =>
+                        TableDdlStatement.DropPrimaryKey
+                    case u: UniqueKeyModel =>
+                        TableDdlStatement.DropUniqueKey(u.name.getOrThrow("cannot drop unnamed unique key"))
+                    case f: ForeignKeyModel =>
+                        TableDdlStatement.DropForeignKey(f.name.getOrThrow("cannot drop unnamed foreign key"))
+                }))
     }
     
     override def createExtraStmt(k: TableExtra, table: TableModel) = k match {
@@ -39,6 +47,7 @@ class MysqlDiffSerializer(context: Context) extends DiffSerializer(context) {
             }
         case _ => super.createExtraStmt(k, table)
     }
+    
 }
 
 // vim: set ts=4 sw=4 et:

@@ -295,6 +295,7 @@ class ScriptSerializer(context: Context) {
         case DropColumn(name) => "DROP COLUMN " + name
         case AlterColumn(name, op) => "ALTER COLUMN " + name + " " + serializeAlterColumnOperation(op)
         
+        case DropConstraint(name) => "DROP CONSTRAINT " + name
         case DropPrimaryKey => "DROP PRIMARY KEY"
         case DropIndex(name) => "DROP INDEX " + name
         case DropForeignKey(name) => "DROP FOREIGN KEY " + name
@@ -349,7 +350,7 @@ class ScriptSerializer(context: Context) {
     def serializeUniqueKey(uk: UniqueKeyModel) = {
         val words = new ArrayBuffer[String]
         if (uk.name.isDefined) words += "CONSTRAINT " + uk.name.get
-        words += "UNIQUE KEY(" + uk.columns.map(serializeIndexColumn _).mkString(", ") + ")"
+        words += "UNIQUE (" + uk.columns.map(serializeIndexColumn _).mkString(", ") + ")"
         words.mkString(" ")
     }
     

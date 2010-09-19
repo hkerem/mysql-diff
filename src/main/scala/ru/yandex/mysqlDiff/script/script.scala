@@ -175,6 +175,8 @@ object TableDdlStatement {
     
     case class DropColumn(name: String) extends DropOperation with ColumnOperation
     
+    case class DropConstraint(name: String) extends DropOperation with ExtraOperation
+    
     case object DropPrimaryKey extends DropOperation with ExtraOperation
     
     case class DropIndex(name: String) extends DropOperation with ExtraOperation

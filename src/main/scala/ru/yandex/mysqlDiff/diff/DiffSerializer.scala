@@ -43,18 +43,12 @@ class DiffSerializer(val context: Context) {
                         new TableDdlStatement.Column(col) addProperty TableDdlStatement.InlinePrimaryKey, None)))
         }
     
-    protected def dropExtraStmt(k: TableExtra, table: TableModel) = k match {
+    protected def dropExtraStmt(k: TableExtra, table: TableModel): DdlStatement = k match {
+        case c: ConstraintModel =>
+            AlterTableStatement(table.name, Seq(
+                DropConstraint(c.name.getOrThrow("cannot drop unnamed constraint"))))
         case i: IndexModel =>
             DropIndexStatement(i.name.getOrThrow("cannot drop unnamed index"))
-        case k =>
-            AlterTableStatement(table.name, List(k match {
-                    case _: PrimaryKeyModel =>
-                        TableDdlStatement.DropPrimaryKey
-                    case u: UniqueKeyModel =>
-                        TableDdlStatement.DropUniqueKey(u.name.getOrThrow("cannot drop unnamed unique key"))
-                    case f: ForeignKeyModel =>
-                        TableDdlStatement.DropForeignKey(f.name.getOrThrow("cannot drop unnamed foreign key"))
-                }))
     }
     
     protected def createExtraStmt(k: TableExtra, table: TableModel) = k match {
