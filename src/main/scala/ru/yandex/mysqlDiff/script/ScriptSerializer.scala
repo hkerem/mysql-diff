@@ -91,7 +91,7 @@ class ScriptSerializer(context: Context) {
     }
     
     def serializeDropIndexStatement(stmt: DropIndexStatement) =
-        "DROP INDEX " + stmt.name
+        "DROP INDEX " + serializeName(stmt.name)
     
     def serializeIndexDdlStatement(stmt: IndexDdlStatement, options: Options): String = stmt match {
         case stmt: CreateIndexStatement => serializeCreateIndexStatement(stmt)
@@ -163,7 +163,7 @@ class ScriptSerializer(context: Context) {
         case InlinePrimaryKey => Some("PRIMARY KEY")
         case InlineReferences(References(table, Seq(column), updateRule, deleteRule)) =>
             val words = new ArrayBuffer[String]
-            words += "REFERENCES " + table + "(" + column + ")"
+            words += "REFERENCES " + serializeName(table) + "(" + serializeName(column) + ")"
             words ++= updateRule.map(p => "ON UPDATE " + serializeImportedKeyRule(p))
             words ++= deleteRule.map(p => "ON DELETE " + serializeImportedKeyRule(p))
             Some(words.mkString(" "))
@@ -185,11 +185,11 @@ class ScriptSerializer(context: Context) {
     
     def serializeTableElement(e: TableElement): String = e match {
         case c @ Column(name, dataType, attrs) =>
-            name + " " + serializeDataType(dataType) +
+            serializeName(name) + " " + serializeDataType(dataType) +
                     (if (attrs.isEmpty) ""
                     else " " + attrs.flatMap(cp => serializeColumnProperty(cp, c)).mkString(" "))
         case Index(index) => serializeIndex(index)
-        case LikeClause(name) => "LIKE " + name
+        case LikeClause(name) => "LIKE " + serializeName(name)
         case c: Constraint => serializeConstraint(c)
     }
     
@@ -224,7 +224,7 @@ class ScriptSerializer(context: Context) {
         r += "INSERT"
         if (is.ignore) r += "IGNORE"
         r += "INTO"
-        r += is.table
+        r += serializeName(is.table)
         if (is.columns.isDefined)
             r += ("(" + is.columns.get.mkString(", ") + ")")
         r += "VALUES"
@@ -238,17 +238,17 @@ class ScriptSerializer(context: Context) {
         val words = new ArrayBuffer[String]
         words += "DROP TABLE"
         if (ifExists) words += "IF EXISTS"
-        words += name
+        words += serializeName(name)
         words.mkString(" ")
     }
     
     def serializeChangeTable(st: AlterTableStatement) =
-        "ALTER TABLE " + st.name + " " +
+        "ALTER TABLE " + serializeName(st.name) + " " +
             st.ops.map(serializeAlterTableOperation(_)).mkString(", ")
     
     def serializeColumnPosition(position: ColumnPosition) = position match {
         case ColumnFirst => "FIRST"
-        case ColumnAfter(column) => "AFTER " + column
+        case ColumnAfter(column) => "AFTER " + serializeName(column)
     }
     
     def serializeAddColumn(ac: AddColumn) = {
@@ -264,7 +264,7 @@ class ScriptSerializer(context: Context) {
         val ChangeColumn(oldName, column, pos) = cc
         val words = new ArrayBuffer[String]
         words += "CHANGE COLUMN"
-        words += oldName
+        words += serializeName(oldName)
         words += serializeColumn(column)
         words ++= pos.map(serializeColumnPosition _)
         words.mkString(" ")
@@ -292,14 +292,14 @@ class ScriptSerializer(context: Context) {
         
         case cc: ChangeColumn => serializeChangeColumn(cc)
         case mc: ModifyColumn => serializeModifyColumn(mc)
-        case DropColumn(name) => "DROP COLUMN " + name
-        case AlterColumn(name, op) => "ALTER COLUMN " + name + " " + serializeAlterColumnOperation(op)
+        case DropColumn(name) => "DROP COLUMN " + serializeName(name)
+        case AlterColumn(name, op) => "ALTER COLUMN " + serializeName(name) + " " + serializeAlterColumnOperation(op)
         
-        case DropConstraint(name) => "DROP CONSTRAINT " + name
+        case DropConstraint(name) => "DROP CONSTRAINT " + serializeName(name)
         case DropPrimaryKey => "DROP PRIMARY KEY"
-        case DropIndex(name) => "DROP INDEX " + name
-        case DropForeignKey(name) => "DROP FOREIGN KEY " + name
-        case DropUniqueKey(name) => "DROP KEY " + name
+        case DropIndex(name) => "DROP INDEX " + serializeName(name)
+        case DropForeignKey(name) => "DROP FOREIGN KEY " + serializeName(name)
+        case DropUniqueKey(name) => "DROP KEY " + serializeName(name)
         
         case ChangeTableOption(o) => serializeTableOption(o)
     }
@@ -326,7 +326,7 @@ class ScriptSerializer(context: Context) {
     
     def serializePrimaryKey(pk: PrimaryKeyModel) = {
         val words = new ArrayBuffer[String]
-        if (pk.name.isDefined) words += "CONSTRAINT " + pk.name.get
+        if (pk.name.isDefined) words += "CONSTRAINT " + serializeName(pk.name.get)
         words += "PRIMARY KEY"
         words += ("(" + pk.columns.map(serializeIndexColumn _).mkString(", ") + ")")
         words.mkString(" ")
@@ -336,11 +336,11 @@ class ScriptSerializer(context: Context) {
     def serializeForeignKey(fk: ForeignKeyModel) = {
         val ForeignKeyModel(name, localColumns, externalTable, externalColumns, updateRule, deleteRule) = fk
         val words = new ArrayBuffer[String]
-        if (name.isDefined) words += "CONSTRAINT " + fk.name.get
+        if (name.isDefined) words += "CONSTRAINT " + serializeName(fk.name.get)
         words += "FOREIGN KEY"
         words += ("(" + localColumns.map(serializeIndexColumn _).mkString(", ") + ")")
         words += "REFERENCES"
-        words += externalTable
+        words += serializeName(externalTable)
         words += ("(" + externalColumns.mkString(", ") + ")")
         words ++= updateRule.map(p => "ON UPDATE " + serializeImportedKeyRule(p))
         words ++= deleteRule.map(p => "ON DELETE " + serializeImportedKeyRule(p))
@@ -349,7 +349,7 @@ class ScriptSerializer(context: Context) {
     
     def serializeUniqueKey(uk: UniqueKeyModel) = {
         val words = new ArrayBuffer[String]
-        if (uk.name.isDefined) words += "CONSTRAINT " + uk.name.get
+        if (uk.name.isDefined) words += "CONSTRAINT " + serializeName(uk.name.get)
         words += "UNIQUE (" + uk.columns.map(serializeIndexColumn _).mkString(", ") + ")"
         words.mkString(" ")
     }
@@ -357,7 +357,7 @@ class ScriptSerializer(context: Context) {
     def serializeIndex(index: IndexModel) = {
         val words = new ArrayBuffer[String]
         words += "INDEX"
-        words ++= index.name
+        words ++= index.name.map(serializeName _)
         words += ("(" + index.columns.map(serializeIndexColumn _).mkString(", ") + ")")
         words.mkString(" ")
     }
