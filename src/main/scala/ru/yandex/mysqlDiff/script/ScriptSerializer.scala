@@ -71,7 +71,7 @@ class ScriptSerializer(context: Context) {
         else name
     
     def serializeString(string: String) =
-        "'" + string + "'" // XXX: escape
+        "'" + string.replace("'", "''") + "'"
     
     def serializeTableDdlStatement(stmt: TableDdlStatement, options: Options): String = stmt match {
         case st: CreateTableStatement => serializeCreateTable(st, options)
@@ -392,6 +392,7 @@ object ScriptSerializerTests extends MySpecification {
         scriptSerializer.serializeValue(NullValue) must_== "NULL"
         scriptSerializer.serializeValue(NumberValue(15)) must_== "15"
         scriptSerializer.serializeValue(StringValue("hello")) must_== "'hello'"
+        scriptSerializer.serializeValue(StringValue("'hello world'")) must_== "'''hello world'''"
         scriptSerializer.serializeValue(NowValue) must_== "NOW()" // XXX: or CURRENT_TIMESTAMP
         scriptSerializer.serializeValue(DateValue("2009-03-09")) must_== "DATE '2009-03-09'"
     }

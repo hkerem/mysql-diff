@@ -41,9 +41,14 @@ class SqlLexical extends StdLexical {
             opt('e' ~ opt('-') ~ rep1(digit))
         ) ^^ { case x => NumericLit(join(x)) }
     
+    protected def sqlString: Parser[Token] =
+        ('\'' ~ rep(chrExcept('\'', '\n', EofCh) | ('\'' ~ '\'')) ~ '\'') ^^
+            { case x => StringLit(join(x)) }
+    
     /** SQL-specific hacks */
     override def token: Parser[Token] =
         ( '"' ~ rep( chrExcept('"', '\n', EofCh) ) ~ '"' ^^ { case '"' ~ chars ~ '"' => Identifier(chars mkString "") }
+        | sqlString
         | nl
         | super.token )
     
@@ -97,7 +102,7 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
         keywordSeq(chars.split(" "))
     
     protected def parseStringLit(input: String) =
-        input.replaceFirst("^[\"']", "").replaceFirst("[\"']$", "")
+        input.replaceFirst("^[\"']", "").replaceFirst("[\"']$", "").replace("''", "'")
     
     def stringConstant: Parser[String] =
         stringLit ^^ { x => parseStringLit(x) }
@@ -688,6 +693,10 @@ class SqlParserCombinatorTests(context: Context) extends MySpecification {
     "parseValue BOOLEAN" in {
         parseValue("TRUE") must_== BooleanValue(true)
         parseValue("FALSE") must_== BooleanValue(false)
+    }
+    
+    "parseValue quoed string" in {
+        parseValue("'hello ''world'' '''''") must_== StringValue("hello 'world' ''")
     }
     
     "parseValue TIMSTAMP WITHOUT TIME ZONE" in {
