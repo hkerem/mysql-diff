@@ -245,6 +245,12 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
             "CREATE TABLE timestamp_0 (d TIMESTAMP DEFAULT 0)")
     }
     
+    "TIMESTAMP is NOT NULL by default" in {
+        // TIMESTAMP columns are NOT NULL by default // http://dev.mysql.com/doc/refman/5.1/en/timestamp.html
+        checkTable(
+            "CREATE TABLE timestamp_nn (d TIMESTAMP DEFAULT '2010-09-23 17:18:19')")
+    }
+    
     "bug with PRIMARY KEY added" in {
         checkTwoTables(
             "CREATE TABLE im_cs1 (checksum VARCHAR(255), added INT, PRIMARY KEY(checksum), KEY(added))",
