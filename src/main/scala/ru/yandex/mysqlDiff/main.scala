@@ -146,6 +146,7 @@ object Diff extends MainSupport {
             }
         }
         
+        // XXX: does not print help because of this
         val dbenv = (dbenvsFromParams ++ dbenvsFromOptions).head
         
         val context = Environment.context(dbenv)
