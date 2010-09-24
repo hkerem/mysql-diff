@@ -48,8 +48,10 @@ case class ModelParser(val context: Context) {
         case DropSequenceStatement(name) => sc.copy(db=sc.db.dropSequence(name))
         case st @ CreateIndexStatement(_, table, _) => sc.copy(db=sc.db.alterTable(table, createIndex(st, _)))
         
+        // ignore VIEW statements for now
+        case _: CreateViewStatement => sc
         // ignore DML statements for now
-        case d: DmlStatement => sc
+        case _: DmlStatement => sc
     }
     
     /** Parse COLUMN withing CREATE TABLE or ALTER TABLE */
