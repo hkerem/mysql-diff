@@ -95,14 +95,21 @@ class MysqlMetaDao(jt: JdbcTemplate) extends MetaDao(jt) {
     }
     
     def findMysqlTablesColumns(catalog: String, schema: String): Seq[(String, Seq[MysqlColumnInfo])] = {
+        Validate.notNull(schema)
         val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? ORDER BY table_name"
         val columns = query(q, schema).seq(mapColumnsRow _)
         groupBy[MysqlColumnInfo, String](columns)(_.tableName)
     }
     
     def findMysqlTableColumns(catalog: String, schema: String, tableName: String) = {
+        Validate.notNull(schema, "schema")
+        Validate.notNull(tableName, "tableName")
         val q = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema = ? AND table_name = ?"
-        query(q, schema, tableName).seq(mapColumnsRow _)
+        query(q, schema, tableName).seq(mapColumnsRow _) match {
+            case Seq() => throw new MysqlDiffException(
+                "no columns found in schema "+ schema +", table "+ tableName +"")
+            case l => l
+        }
     }
     
     protected override def mapIndexInfoRowToIndexColumn(row: IndexInfoRow) =
@@ -144,6 +151,8 @@ class MysqlJdbcModelExtractor(connectedContext: MysqlConnectedContext)
     import context._
     
     override def useParserToParseDefaultValue = false
+    
+    override def urlDbIsCatalog = false
     
     protected class MysqlAllTablesSchemaExtractor extends AllTablesSchemaExtractor
     
