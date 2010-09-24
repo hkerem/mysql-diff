@@ -42,7 +42,8 @@ case class ModelParser(val context: Context) {
     def evalStmt(stmt: ScriptStatement, sc: ScriptEvaluation) = stmt match {
         // XXX: handle IF NOT EXISTS
         case ct: CreateTableStatement => parseCreateTable(ct, sc)
-        case DropTableStatement(name, _) => sc.copy(db=sc.db.dropTable(name))
+        case DropTableStatement(name, true) => sc.copy(db=sc.db.dropTableIfExists(name))
+        case DropTableStatement(name, false) => sc.copy(db=sc.db.dropTable(name))
         case st @ AlterTableStatement(name, _) => sc.copy(db=sc.db.alterTable(name, alterTable(st, _)))
         case CreateSequenceStatement(name) => sc.copy(db=sc.db.createSequence(SequenceModel(name)))
         case DropSequenceStatement(name) => sc.copy(db=sc.db.dropSequence(name))
@@ -267,6 +268,11 @@ class ModelParserTests(context: Context) extends MySpecification {
     "DROP TABLE" in {
         val db = modelParser.parseModel("CREATE TABLE a (id INT); CREATE TABLE b (id INT); DROP TABLE a")
         db.tables must beLike { case Seq(TableModel("b", _, _, _)) => true }
+    }
+    
+    "DROP TABLE IF EXISTS" in {
+        val db = modelParser.parseModel("DROP TABLE IF EXISTS ghg")
+        db.tables must beEmpty
     }
     
     "ALTER TABLE" in {
