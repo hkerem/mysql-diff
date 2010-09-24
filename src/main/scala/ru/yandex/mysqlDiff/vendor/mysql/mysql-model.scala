@@ -497,6 +497,20 @@ class MysqlModelParser(override val context: Context) extends ModelParser(contex
         scr3
     }
     
+    protected override def parseColumn(c: Column) = {
+        val Column(name, dataType, attrs) = c
+        val hasNullability = attrs.exists(_ match {
+            case ModelColumnProperty(Nullability(_)) => true
+            case _ => false
+        })
+        val isTimestamp = dataType.name == "TIMESTAMP"
+        // TIMESTAMP columns are NOT NULL by default // http://dev.mysql.com/doc/refman/5.1/en/timestamp.html
+        if (!hasNullability && isTimestamp)
+            super.parseColumn(c.addProperty(ModelColumnProperty(Nullability(false))))
+        else
+            super.parseColumn(c)
+    }
+    
     protected override def fixDataType(dataType: DataType, column: ColumnModel, table: TableModel) = {
         // Unspecified collation and charset are taken from table defaults
         // http://dev.mysql.com/doc/refman/5.1/en/charset-column.html

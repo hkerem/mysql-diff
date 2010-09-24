@@ -52,7 +52,8 @@ case class ModelParser(val context: Context) {
         case d: DmlStatement => sc
     }
     
-    private def parseColumn(c: Column) = {
+    /** Parse COLUMN withing CREATE TABLE or ALTER TABLE */
+    protected def parseColumn(c: Column) = {
         val Column(name, dataType, attrs) = c
         new ColumnModel(name, dataType, c.modelProperties)
     }

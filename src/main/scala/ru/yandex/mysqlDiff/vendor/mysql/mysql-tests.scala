@@ -241,7 +241,6 @@ object MysqlOnlineTests extends OnlineTestsSupport(MysqlTestDataSourceParameters
     }
     
     "DEFAULT TIMESTAMP 0" in {
-        // XXX: test is broken
         checkTable(
             "CREATE TABLE timestamp_0 (d TIMESTAMP DEFAULT 0)")
     }
