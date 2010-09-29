@@ -48,6 +48,7 @@ class SqlLexical extends StdLexical {
     /** SQL-specific hacks */
     override def token: Parser[Token] =
         ( '"' ~ rep( chrExcept('"', '\n', EofCh) ) ~ '"' ^^ { case '"' ~ chars ~ '"' => Identifier(chars mkString "") }
+        | '*' ^^^ Identifier("*")
         | sqlString
         | nl
         | super.token )
@@ -66,7 +67,7 @@ class SqlLexical extends StdLexical {
     )
     
     // All operators must be listed here
-    delimiters += ("(", ")", "=", ",", ";", "=", "!=", "-", "*", ":", "::", "[", "]")
+    delimiters += ("(", ")", "=", ".", ",", ";", "=", "!=", "-", ":", "::", "[", "]")
     
 }
 
@@ -191,7 +192,14 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     def column: Parser[TableDdlStatement.Column] = name ~ dataType ~ rep(columnAttr) ^^
             { case name ~ dataType ~ attrs => TableDdlStatement.Column(name, dataType, attrs) }
     
-    def name: Parser[String] = ident
+    protected def isSqlKeyword(word: String) =
+        word.equalsIgnoreCase("WHERE") // XXX
+    
+    override def ident: Parser[String] =
+        elem("identifier", t => t.isInstanceOf[lexical.Identifier] && !isSqlKeyword(t.chars)) ^^ (_.chars)
+    
+    //def name: Parser[String] = ident <~ opt("." ~> (ident | star)) // XXX
+    def name: Parser[String] = rep1sep(ident, ".") ^^ { case seq => seq.last }
     
     def nameList: Parser[Seq[String]] = "(" ~> repsep(name, ",") <~ ")"
     
@@ -243,7 +251,11 @@ class SqlParserCombinator(context: Context) extends StandardTokenParsers {
     
     def searchCondition: Parser[SqlExpr] = orCondition
     
-    def from: Parser[Seq[String]] = "FROM" ~> rep1sep(name, ",")
+    def nameAndAlias: Parser[String] = name <~ opt(name) // XXX: name ignored
+    
+    def from: Parser[Seq[String]] =
+        "FROM" ~> rep1sep(nameAndAlias, ",") <~ // XXX: join ignored
+            rep("JOIN" ~ nameAndAlias ~ "ON" ~ name ~ "=" ~ name)
     
     def select: Parser[SelectStatement] = ("SELECT" ~> rep1sep(sqlExpr, ",")) ~ from ~ opt("WHERE" ~> searchCondition) ^^
         { case exprs ~ names ~ where => SelectStatement(exprs, names, where) }
@@ -515,6 +527,17 @@ class SqlParserCombinatorTests(context: Context) extends MySpecification {
         v.select.expr must beLike { case Seq(SelectStar) => true }
     }
     
+    "parse CREATE VIEW advanced" in {
+        val v = parseCreateView(
+            """
+            CREATE VIEW v_rights AS
+                SELECT tap.t_id, tap.a_id, tap.number, tap.volume, ri.*
+                FROM positions tap
+                JOIN rights ri on ri.position_id = tap.position_id
+            """
+        )
+    }
+    
     "parse DROP VIEW" in {
         parse(dropView)("DROP VIEW users_v") must beLike { case DropViewStatement("users_v") => true }
     }
@@ -706,6 +729,11 @@ class SqlParserCombinatorTests(context: Context) extends MySpecification {
     "ignore semicolons" in {
         val stmts = parse(script)("CREATE TABLE a (id INT); ; CREATE TABLE b (id INT) ;;")
         stmts must haveSize(2)
+    }
+    
+    "name" in {
+        parse(sqlParserCombinator.name)("dfdf") must_== "dfdf"
+        parse(sqlParserCombinator.name)("dfdf.abab") must_== "abab" // XXX: must be both
     }
 }
 
