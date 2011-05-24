@@ -62,14 +62,16 @@ class MysqlMetaDao(jt: JdbcTemplate) extends MetaDao(jt) {
                 // stupid MySQL developers print some left information in the TABLE_COMMENT column
                 MysqlCommentTableOption(rs.getString("TABLE_COMMENT").replaceFirst("(; |^)InnoDB free: .*", ""))
                 ))
+
+    private val INFORMATION_SCHEMA_TABLES_FIELDS = Seq("TABLE_NAME", "ENGINE", "TABLE_COLLATION", "TABLE_COMMENT")
     
     def findMysqlTablesOptions(schema: String): Seq[(String, Seq[TableOption])] = {
-        val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ?"
+        val q = "SELECT " + INFORMATION_SCHEMA_TABLES_FIELDS.mkString(", ") + " FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ?"
         query(q, schema).seq(mapTableOptions _)
     }
     
     def findMysqlTableOptions(schema: String, tableName: String): Seq[TableOption] = {
-        val q = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ? AND table_name = ?"
+        val q = "SELECT " + INFORMATION_SCHEMA_TABLES_FIELDS.mkString(", ") + " FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = ? AND table_name = ?"
         query(q, schema, tableName).single(mapTableOptions _)._2
     }
     
