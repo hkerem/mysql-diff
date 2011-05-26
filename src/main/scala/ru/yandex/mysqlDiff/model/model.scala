@@ -600,6 +600,8 @@ case class TableModel(override val name: String, columns: Seq[ColumnModel], extr
     def withOptions(os: TableOptions) =
         new TableModel(name, columns, extras, os)
         
+    def withName(n: String) =
+        new TableModel(n, columns, extras, options)
     
     def overrideOptions(os: Seq[TableOption]) =
         withOptions(this.options.overrideProperties(os))
