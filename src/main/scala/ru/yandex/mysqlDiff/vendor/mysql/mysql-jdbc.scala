@@ -81,19 +81,14 @@ class MysqlMetaDao(jt: JdbcTemplate) extends MetaDao(jt) {
     override def findTableOptions(catalog: String, schema: String, tableName: String): Seq[TableOption] =
         findMysqlTableOptions(schema, tableName)
     
-    /** Supermagic utility, even author does not understand how it works */
-    protected def groupBy[A, B](seq: Seq[A])(f: A => B): Seq[(B, Seq[A])] = {
-        def g(seq: Seq[(B, A)]): Seq[(B, Seq[A])] = seq match {
-            case Seq() => List()
-            case Seq((b, a)) => List((b, List(a)))
-            case Seq((b1, a1), rest @ _*) =>
-                g(rest) match {
-                    case Seq((`b1`, l), rest @ _*) => (b1, a1 :: l.toList) :: rest.toList
-                    case r => (b1, List(a1)) :: r.toList
-                }
+    def groupBy[A, B](seq: Seq[A])(f: A => B): Seq[(B, Seq[A])] = {
+        import scala.collection.mutable._
+        val result = new HashMap[B, ListBuffer[A]]()
+        for (a <- seq) {
+            val list = result.getOrElseUpdate(f(a), new ListBuffer[A]())
+            list += a
         }
-            
-        g(seq.map(a => (f(a), a)))
+        result.toSeq
     }
     
     def findMysqlTablesColumns(catalog: String, schema: String): Seq[(String, Seq[MysqlColumnInfo])] = {
